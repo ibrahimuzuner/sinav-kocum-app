@@ -1,0 +1,45 @@
+name: iOS IPA Derleme
+
+on:
+  workflow_dispatch: # GitHub arayüzünden tek tıkla başlatma
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+    steps:
+      - name: Depoyu Klonla
+        uses: actions/checkout@v4
+
+      - name: Flutter Kurulumu
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.29.3'
+          channel: 'stable'
+          cache: true
+
+      - name: Bağımlılıkları İndir
+        run: flutter pub get
+
+      - name: CocoaPods Pod Kurulumu
+        run: |
+          cd ios
+          pod install --repo-update
+          cd ..
+
+      - name: iOS Projesini Derle
+        run: flutter build ios --release --no-codesign
+
+      - name: IPA Paketini Oluştur
+        run: |
+          mkdir -p Payload
+          cp -R build/ios/iphoneos/Runner.app Payload/
+          zip -r SinavCalismaTakip.ipa Payload
+          rm -rf Payload
+
+      - name: IPA Dosyasını Çıktı Olarak Paylaş (Artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: SinavCalismaTakip-iOS-IPA
+          path: SinavCalismaTakip.ipa

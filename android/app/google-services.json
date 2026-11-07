@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "104704232110",
+    "project_id": "sinavkocum-2e212",
+    "storage_bucket": "sinavkocum-2e212.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:104704232110:android:a1abfd662ed07a3a113b3f",
+        "android_client_info": {
+          "package_name": "com.sinavtakip.app.exam_tracker"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB0gbVTJWYKLFQBUQWgbalCqg4qV1azOUE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:104704232110:android:a1abfd662ed07a3a113b3f",
+        "android_client_info": {
+          "package_name": "com.sinavtakip.app.exam.tracker"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB0gbVTJWYKLFQBUQWgbalCqg4qV1azOUE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
