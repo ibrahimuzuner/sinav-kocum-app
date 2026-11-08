@@ -26,8 +26,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
   // Register Form
   final _registerFormKey = GlobalKey<FormState>();
-  final TextEditingController _regFirstNameController = TextEditingController();
-  final TextEditingController _regLastNameController = TextEditingController();
+  final TextEditingController _regFullNameController = TextEditingController();
   final TextEditingController _regEmailController = TextEditingController();
   final TextEditingController _regPasswordController = TextEditingController();
   bool _regObscurePassword = true;
@@ -61,8 +60,7 @@ class _AuthScreenState extends State<AuthScreen> {
   void dispose() {
     _loginEmailController.dispose();
     _loginPasswordController.dispose();
-    _regFirstNameController.dispose();
-    _regLastNameController.dispose();
+    _regFullNameController.dispose();
     _regEmailController.dispose();
     _regPasswordController.dispose();
     _customDepartmentController.dispose();
@@ -211,207 +209,190 @@ class _AuthScreenState extends State<AuthScreen> {
 
   // --- GİRİŞ YAP FORMU ---
   Widget _buildLoginForm(bool isDark) {
-    return Form(
-      key: _loginFormKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('E-Posta Adresi', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          TextFormField(
-            controller: _loginEmailController,
-            keyboardType: TextInputType.emailAddress,
-            textCapitalization: TextCapitalization.none,
-            autocorrect: false,
-            enableSuggestions: false,
-            decoration: const InputDecoration(
-              hintText: 'ornek@email.com',
-              prefixIcon: Icon(Icons.email_outlined),
+    return AutofillGroup(
+      child: Form(
+        key: _loginFormKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('E-Posta Adresi', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _loginEmailController,
+              keyboardType: TextInputType.emailAddress,
+              textCapitalization: TextCapitalization.none,
+              autocorrect: false,
+              autofillHints: const [AutofillHints.email, AutofillHints.username],
+              decoration: const InputDecoration(
+                hintText: 'ornek@email.com',
+                prefixIcon: Icon(Icons.email_outlined),
+              ),
+              validator: (v) {
+                if (v == null || !v.contains('@') || !v.contains('.')) {
+                  return 'Geçerli bir e-posta adresi girin';
+                }
+                return null;
+              },
             ),
-            validator: (v) {
-              if (v == null || !v.contains('@') || !v.contains('.')) {
-                return 'Geçerli bir e-posta adresi girin';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 16),
+            const SizedBox(height: 16),
 
-          const Text('Şifre', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          TextFormField(
-            controller: _loginPasswordController,
-            obscureText: _loginObscurePassword,
-            decoration: InputDecoration(
-              hintText: '••••••••',
-              prefixIcon: const Icon(Icons.lock_outline_rounded),
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _loginObscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                  size: 20,
+            const Text('Şifre', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _loginPasswordController,
+              obscureText: _loginObscurePassword,
+              autofillHints: const [AutofillHints.password],
+              decoration: InputDecoration(
+                hintText: '••••••••',
+                prefixIcon: const Icon(Icons.lock_outline_rounded),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _loginObscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                    size: 20,
+                  ),
+                  onPressed: () => setState(() => _loginObscurePassword = !_loginObscurePassword),
                 ),
-                onPressed: () => setState(() => _loginObscurePassword = !_loginObscurePassword),
               ),
+              validator: (v) {
+                if (v == null || v.length < 4) {
+                  return 'Şifrenizi girin';
+                }
+                return null;
+              },
             ),
-            validator: (v) {
-              if (v == null || v.length < 4) {
-                return 'Şifrenizi girin';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 24),
+            const SizedBox(height: 24),
 
-          // Giriş Yap Butonu
-          SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: ElevatedButton(
-              onPressed: _isLoggingIn
-                  ? null
-                  : () async {
-                      if (_loginFormKey.currentState!.validate()) {
-                        setState(() => _isLoggingIn = true);
-                        final userProvider = Provider.of<UserProvider>(context, listen: false);
-                        final success = await userProvider.loginWithEmail(
-                          email: _loginEmailController.text.trim(),
-                          password: _loginPasswordController.text,
-                        );
-                        if (!mounted) return;
-                        setState(() => _isLoggingIn = false);
-
-                        if (!success) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text(
-                                'Bu e-posta ile kayıtlı bir hesap bulunamadı veya bağlantı kurulamadı. Lütfen e-postayı kontrol edin.',
-                              ),
-                              backgroundColor: Colors.red.shade700,
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            ),
+            // Giriş Yap Butonu
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                onPressed: _isLoggingIn
+                    ? null
+                    : () async {
+                        if (_loginFormKey.currentState!.validate()) {
+                          setState(() => _isLoggingIn = true);
+                          final userProvider = Provider.of<UserProvider>(context, listen: false);
+                          final success = await userProvider.loginWithEmail(
+                            email: _loginEmailController.text.trim(),
+                            password: _loginPasswordController.text,
                           );
+                          if (!mounted) return;
+                          setState(() => _isLoggingIn = false);
+
+                          if (!success) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text(
+                                  'Bu e-posta ile kayıtlı bir hesap bulunamadı veya bağlantı kurulamadı. Lütfen e-postayı kontrol edin.',
+                                ),
+                                backgroundColor: Colors.red.shade700,
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                            );
+                          }
                         }
-                      }
-                    },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF4F46E5),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                elevation: 2,
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF4F46E5),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  elevation: 2,
+                ),
+                child: _isLoggingIn
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2.5,
+                        ),
+                      )
+                    : const Text('E-Posta ile Giriş Yap', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ),
-              child: _isLoggingIn
-                  ? const SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2.5,
-                      ),
-                    )
-                  : const Text('E-Posta ile Giriş Yap', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   // --- KAYIT OL FORMU ---
   Widget _buildRegisterForm(bool isDark) {
-    return Form(
-      key: _registerFormKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Ad Soyad
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Adınız', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      controller: _regFirstNameController,
-                      decoration: const InputDecoration(
-                        hintText: 'Ahmet',
-                        prefixIcon: Icon(Icons.person_outline_rounded),
-                      ),
-                      validator: (v) => v == null || v.trim().isEmpty ? 'Adınızı girin' : null,
-                    ),
-                  ],
-                ),
+    return AutofillGroup(
+      child: Form(
+        key: _registerFormKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Ad Soyad
+            const Text('Adınız Soyadınız', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _regFullNameController,
+              textCapitalization: TextCapitalization.words,
+              autofillHints: const [AutofillHints.name],
+              decoration: const InputDecoration(
+                hintText: 'Adınız Soyadınız',
+                prefixIcon: Icon(Icons.person_outline_rounded),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Soyadınız', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      controller: _regLastNameController,
-                      decoration: const InputDecoration(
-                        hintText: 'Yılmaz',
-                        prefixIcon: Icon(Icons.badge_outlined),
-                      ),
-                      validator: (v) => v == null || v.trim().isEmpty ? 'Soyadınızı girin' : null,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-
-          // E-posta
-          const Text('E-Posta Adresi', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          TextFormField(
-            controller: _regEmailController,
-            keyboardType: TextInputType.emailAddress,
-            textCapitalization: TextCapitalization.none,
-            autocorrect: false,
-            enableSuggestions: false,
-            decoration: const InputDecoration(
-              hintText: 'ogrenci@email.com',
-              prefixIcon: Icon(Icons.email_outlined),
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) {
+                  return 'Lütfen adınızı ve soyadınızı girin';
+                }
+                return null;
+              },
             ),
-            validator: (v) {
-              if (v == null || !v.contains('@') || !v.contains('.')) {
-                return 'Geçerli bir e-posta adresi girin';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 14),
+            const SizedBox(height: 14),
 
-          // Şifre
-          const Text('Şifre', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          TextFormField(
-            controller: _regPasswordController,
-            obscureText: _regObscurePassword,
-            decoration: InputDecoration(
-              hintText: 'En az 6 karakter',
-              prefixIcon: const Icon(Icons.lock_outline_rounded),
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _regObscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                  size: 20,
-                ),
-                onPressed: () => setState(() => _regObscurePassword = !_regObscurePassword),
+            // E-posta
+            const Text('E-Posta Adresi', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _regEmailController,
+              keyboardType: TextInputType.emailAddress,
+              textCapitalization: TextCapitalization.none,
+              autocorrect: false,
+              autofillHints: const [AutofillHints.email],
+              decoration: const InputDecoration(
+                hintText: 'ogrenci@email.com',
+                prefixIcon: Icon(Icons.email_outlined),
               ),
+              validator: (v) {
+                if (v == null || !v.contains('@') || !v.contains('.')) {
+                  return 'Geçerli bir e-posta adresi girin';
+                }
+                return null;
+              },
             ),
-            validator: (v) {
-              if (v == null || v.length < 6) {
-                return 'Şifre en az 6 karakter olmalı';
-              }
-              return null;
-            },
-          ),
+            const SizedBox(height: 14),
+
+            // Şifre
+            const Text('Şifre', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _regPasswordController,
+              obscureText: _regObscurePassword,
+              autofillHints: const [AutofillHints.newPassword],
+              decoration: InputDecoration(
+                hintText: 'En az 6 karakter',
+                prefixIcon: const Icon(Icons.lock_outline_rounded),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _regObscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                    size: 20,
+                  ),
+                  onPressed: () => setState(() => _regObscurePassword = !_regObscurePassword),
+                ),
+              ),
+              validator: (v) {
+                if (v == null || v.length < 6) {
+                  return 'Şifre en az 6 karakter olmalı';
+                }
+                return null;
+              },
+            ),
           const SizedBox(height: 14),
 
           // Doğum Tarihi
@@ -747,9 +728,14 @@ class _AuthScreenState extends State<AuthScreen> {
                       ? _customDepartmentController.text.trim()
                       : _selectedDepartment;
 
+                  final fullName = _regFullNameController.text.trim();
+                  final nameParts = fullName.split(RegExp(r'\s+'));
+                  final firstName = nameParts.isNotEmpty ? nameParts.first : fullName;
+                  final lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
+
                   await userProvider.registerUser(
-                    firstName: _regFirstNameController.text.trim(),
-                    lastName: _regLastNameController.text.trim(),
+                    firstName: firstName,
+                    lastName: lastName,
                     email: _regEmailController.text.trim(),
                     birthDate: _birthDate,
                     targetExam: _selectedExam,
@@ -765,7 +751,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('🎉 Hoş geldin ${_regFirstNameController.text.trim()}! Doğrulama bağlantısı e-postana gönderildi.'),
+                        content: Text('🎉 Hoş geldin $firstName! Doğrulama bağlantısı e-postana gönderildi.'),
                         backgroundColor: const Color(0xFF10B981),
                         behavior: SnackBarBehavior.floating,
                         duration: const Duration(seconds: 4),
@@ -785,8 +771,9 @@ class _AuthScreenState extends State<AuthScreen> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildSocialDivider() {
     return const Row(

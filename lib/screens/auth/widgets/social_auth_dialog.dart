@@ -31,6 +31,23 @@ class _SocialAccountPickerModalState extends State<SocialAccountPickerModal> {
   final TextEditingController _emailController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
+  bool _showAdminShortcuts = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final lastEmail = userProvider.lastSocialEmail;
+      if (lastEmail != null && lastEmail.isNotEmpty && _emailController.text.isEmpty) {
+        if (mounted) {
+          setState(() {
+            _emailController.text = lastEmail;
+          });
+        }
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -98,194 +115,327 @@ class _SocialAccountPickerModalState extends State<SocialAccountPickerModal> {
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       ),
       child: SingleChildScrollView(
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Sürükleme Tutamacı
-              Center(
-                child: Container(
-                  width: 44,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF475569) : const Color(0xFFCBD5E1),
-                    borderRadius: BorderRadius.circular(2),
+        child: AutofillGroup(
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Sürükleme Tutamacı
+                Center(
+                  child: Container(
+                    width: 44,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF475569) : const Color(0xFFCBD5E1),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              // Başlık & Logo
-              Row(
-                children: [
-                  Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      color: widget.isGoogle
-                          ? const Color(0xFFEA4335).withValues(alpha: 0.12)
-                          : (isDark ? Colors.white.withValues(alpha: 0.12) : const Color(0xFF0F172A).withValues(alpha: 0.08)),
-                      borderRadius: BorderRadius.circular(12),
+                // Başlık & Logo
+                Row(
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: widget.isGoogle
+                            ? const Color(0xFFEA4335).withValues(alpha: 0.12)
+                            : (isDark ? Colors.white.withValues(alpha: 0.12) : const Color(0xFF0F172A).withValues(alpha: 0.08)),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Center(
+                        child: widget.isGoogle
+                            ? Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: const BoxDecoration(color: Color(0xFFEA4335), shape: BoxShape.circle),
+                                child: const Text('G', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                              )
+                            : Icon(Icons.apple_rounded, size: 26, color: isDark ? Colors.white : Colors.black),
+                      ),
                     ),
-                    child: Center(
-                      child: widget.isGoogle
-                          ? Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: const BoxDecoration(color: Color(0xFFEA4335), shape: BoxShape.circle),
-                              child: const Text('G', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                            )
-                          : Icon(Icons.apple_rounded, size: 26, color: isDark ? Colors.white : Colors.black),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.isGoogle ? 'Google ile Oturum Aç' : 'Apple Kimliği ile Giriş Yap',
+                            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            widget.isGoogle
+                                ? 'Sınav Koçum için Google hesabınızı seçin'
+                                : 'Sınav Koçum için Apple Kimliğinizi kullanın',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+
+                // Varsa SADECE BU CİHAZDA daha önce oturum açmış hesapları göster
+                if (savedProfiles.isNotEmpty) ...[
+                  Text(
+                    'Bu Cihazdaki Hesaplar',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
+                  const SizedBox(height: 8),
+                  ...savedProfiles.map((profile) {
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                        ),
+                      ),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                        leading: CircleAvatar(
+                          backgroundColor: const Color(0xFF4F46E5),
+                          radius: 18,
+                          child: Text(
+                            profile.firstName.isNotEmpty ? profile.firstName[0].toUpperCase() : 'Ö',
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                        ),
+                        title: Text(profile.fullName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                        subtitle: Text(profile.email, style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8))),
+                        trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF94A3B8)),
+                        onTap: () => _onEmailSubmitted(profile.email),
+                      ),
+                    );
+                  }),
+                  const SizedBox(height: 14),
+                  const Row(
+                    children: [
+                      Expanded(child: Divider()),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 10),
+                        child: Text('veya farklı bir e-posta girin', style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8))),
+                      ),
+                      Expanded(child: Divider()),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                ] else if (userProvider.lastSocialEmail != null && userProvider.lastSocialEmail!.isNotEmpty) ...[
+                  // Bu cihazda son girilen sosyal hesap kısayolu
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 14),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF4F46E5).withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFF4F46E5).withValues(alpha: 0.2)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.history_rounded, color: Color(0xFF4F46E5), size: 22),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Bu Cihazda Son Kullanılan', style: TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w600)),
+                              Text(userProvider.lastSocialEmail!, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                        ),
+                        ElevatedButton(
+                          onPressed: () => _onEmailSubmitted(userProvider.lastSocialEmail!),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF4F46E5),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          child: const Text('Giriş Yap', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
+                // Safari / Android Otomatik Tamamlama Bilgi Notu
+                Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: widget.isGoogle
+                        ? const Color(0xFFEA4335).withValues(alpha: 0.08)
+                        : (isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.05)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        widget.isGoogle ? Icons.account_circle_outlined : Icons.apple_rounded,
+                        size: 18,
+                        color: widget.isGoogle ? const Color(0xFFEA4335) : (isDark ? Colors.white70 : Colors.black87),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          widget.isGoogle
+                              ? 'Google / Gmail hesabınızı seçin ya da klavyenizdeki öneriye dokunun.'
+                              : 'Safari klavyenizdeki Apple Kimliğinize dokunarak tek tıkla tamamlayabilirsiniz.',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: isDark ? Colors.white70 : Colors.black87,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // E-posta Giriş Alanı
+                Text(
+                  widget.isGoogle ? 'Google / Gmail E-posta Adresi' : 'Apple ID / iCloud E-posta Adresi',
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _emailController,
+                  autofocus: true,
+                  keyboardType: TextInputType.emailAddress,
+                  textCapitalization: TextCapitalization.none,
+                  autocorrect: false,
+                  autofillHints: const [AutofillHints.email, AutofillHints.username],
+                  decoration: InputDecoration(
+                    hintText: widget.isGoogle ? 'ornek.ogrenci@gmail.com' : 'ornek.ogrenci@icloud.com',
+                    prefixIcon: Icon(widget.isGoogle ? Icons.mail_outline_rounded : Icons.apple_rounded),
+                    suffixIcon: _emailController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear_rounded, size: 18),
+                            onPressed: () => setState(() => _emailController.clear()),
+                          )
+                        : null,
+                  ),
+                  validator: (val) {
+                    if (val == null || val.trim().isEmpty) {
+                      return 'Lütfen bir e-posta adresi girin';
+                    }
+                    if (!val.contains('@') || !val.contains('.')) {
+                      return 'Geçerli bir e-posta adresi girin';
+                    }
+                    return null;
+                  },
+                  onChanged: (text) => setState(() {}),
+                ),
+                const SizedBox(height: 10),
+
+                // Hızlı Tamamlama Çipleri
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    _buildQuickEmailChip('@icloud.com'),
+                    _buildQuickEmailChip('@gmail.com'),
+                    _buildQuickEmailChip('@hotmail.com'),
+                    _buildQuickEmailChip('@outlook.com'),
+                  ],
+                ),
+                const SizedBox(height: 20),
+
+                // Devam Et Butonu
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton.icon(
+                    onPressed: _isLoading ? null : () => _onEmailSubmitted(_emailController.text),
+                    icon: _isLoading
+                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : const Icon(Icons.arrow_forward_rounded, color: Colors.white),
+                    label: const Text(
+                      'Hesapla Devam Et',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF4F46E5),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                  ),
+                ),
+
+                // 👑 Yönetici & Kurucu Hızlı Girişi (İbrahim Uzuner)
+                const SizedBox(height: 14),
+                Center(
+                  child: TextButton.icon(
+                    onPressed: () => setState(() => _showAdminShortcuts = !_showAdminShortcuts),
+                    icon: const Icon(Icons.shield_outlined, size: 16, color: Color(0xFFF59E0B)),
+                    label: Text(
+                      _showAdminShortcuts ? 'Yönetici Girişini Gizle' : '👑 Yönetici & Kurucu Hızlı Girişi',
+                      style: const TextStyle(fontSize: 12, color: Color(0xFFF59E0B), fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+                if (_showAdminShortcuts) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF0F172A) : const Color(0xFFFFFBEB),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.4)),
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          widget.isGoogle ? 'Google ile Oturum Aç' : 'Apple Kimliği ile Giriş Yap',
-                          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                        const Text(
+                          '👑 Yönetici Hesabı (İbrahim Uzuner)',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFFB45309)),
                         ),
-                        Text(
-                          widget.isGoogle
-                              ? 'Sınav Koçum için Google hesabınızı seçin'
-                              : 'Sınav Koçum için Apple Kimliğinizi kullanın',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 38,
+                          child: OutlinedButton.icon(
+                            onPressed: _isLoading ? null : () => _onEmailSubmitted('ibrahim.uzuner@icloud.com'),
+                            icon: const Icon(Icons.apple_rounded, size: 18),
+                            label: const Text('ibrahim.uzuner@icloud.com (Apple)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                            style: OutlinedButton.styleFrom(
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 38,
+                          child: OutlinedButton.icon(
+                            onPressed: _isLoading ? null : () => _onEmailSubmitted('ibrahimuzumer@hotmail.com'),
+                            icon: const Icon(Icons.mail_outline_rounded, size: 18),
+                            label: const Text('ibrahimuzumer@hotmail.com (Hotmail)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                            style: OutlinedButton.styleFrom(
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.close_rounded),
-                    onPressed: () => Navigator.pop(context),
-                  ),
                 ],
-              ),
-              const SizedBox(height: 18),
-
-              // Varsa SADECE BU CİHAZDA daha önce oturum açmış hesapları göster
-              if (savedProfiles.isNotEmpty) ...[
-                Text(
-                  'Bu Cihazdaki Hesaplar',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                ...savedProfiles.map((profile) {
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-                      ),
-                    ),
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-                      leading: CircleAvatar(
-                        backgroundColor: const Color(0xFF4F46E5),
-                        radius: 18,
-                        child: Text(
-                          profile.firstName.isNotEmpty ? profile.firstName[0].toUpperCase() : 'Ö',
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
-                        ),
-                      ),
-                      title: Text(profile.fullName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                      subtitle: Text(profile.email, style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8))),
-                      trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF94A3B8)),
-                      onTap: () => _onEmailSubmitted(profile.email),
-                    ),
-                  );
-                }),
-                const SizedBox(height: 14),
-                const Row(
-                  children: [
-                    Expanded(child: Divider()),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 10),
-                      child: Text('veya farklı bir e-posta girin', style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8))),
-                    ),
-                    Expanded(child: Divider()),
-                  ],
-                ),
-                const SizedBox(height: 14),
               ],
-
-              // E-posta Giriş Alanı
-              Text(
-                widget.isGoogle ? 'Google / Gmail E-posta Adresi' : 'Apple ID / iCloud E-posta Adresi',
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                textCapitalization: TextCapitalization.none,
-                autocorrect: false,
-                enableSuggestions: false,
-                decoration: InputDecoration(
-                  hintText: widget.isGoogle ? 'ornek.ogrenci@gmail.com' : 'ornek.ogrenci@icloud.com',
-                  prefixIcon: Icon(widget.isGoogle ? Icons.mail_outline_rounded : Icons.apple_rounded),
-                  suffixIcon: _emailController.text.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear_rounded, size: 18),
-                          onPressed: () => setState(() => _emailController.clear()),
-                        )
-                      : null,
-                ),
-                validator: (val) {
-                  if (val == null || val.trim().isEmpty) {
-                    return 'Lütfen bir e-posta adresi girin';
-                  }
-                  if (!val.contains('@') || !val.contains('.')) {
-                    return 'Geçerli bir e-posta adresi girin';
-                  }
-                  return null;
-                },
-                onChanged: (text) => setState(() {}),
-              ),
-              const SizedBox(height: 10),
-
-              // Hızlı Tamamlama Çipleri
-              Wrap(
-                spacing: 8,
-                children: [
-                  _buildQuickEmailChip('@gmail.com'),
-                  _buildQuickEmailChip('@icloud.com'),
-                  _buildQuickEmailChip('@hotmail.com'),
-                ],
-              ),
-              const SizedBox(height: 20),
-
-              // Devam Et Butonu
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton.icon(
-                  onPressed: _isLoading ? null : () => _onEmailSubmitted(_emailController.text),
-                  icon: _isLoading
-                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                      : const Icon(Icons.arrow_forward_rounded, color: Colors.white),
-                  label: const Text(
-                    'Hesapla Devam Et',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF4F46E5),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -331,8 +481,7 @@ class SocialIdentityCompletionModal extends StatefulWidget {
 
 class _SocialIdentityCompletionModalState extends State<SocialIdentityCompletionModal> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _firstNameController = TextEditingController();
-  final TextEditingController _lastNameController = TextEditingController();
+  final TextEditingController _fullNameController = TextEditingController();
 
   DateTime _birthDate = DateTime(2007, 6, 15);
   String _selectedExam = ExamTypes.availableExams.first;
@@ -351,9 +500,14 @@ class _SocialIdentityCompletionModalState extends State<SocialIdentityCompletion
     // E-postanın başındaki isimden otomatik ad öner
     final namePart = widget.email.split('@').first;
     if (namePart.isNotEmpty) {
-      final clean = namePart.replaceAll(RegExp(r'[^a-zA-ZçÇğĞıİöÖşŞüÜ]'), '');
+      final clean = namePart.replaceAll(RegExp(r'[\._0-9]'), ' ').trim();
       if (clean.isNotEmpty) {
-        _firstNameController.text = clean[0].toUpperCase() + clean.substring(1);
+        final words = clean
+            .split(' ')
+            .where((w) => w.isNotEmpty)
+            .map((w) => w[0].toUpperCase() + w.substring(1).toLowerCase())
+            .toList();
+        _fullNameController.text = words.join(' ');
       }
     }
   }
@@ -370,8 +524,7 @@ class _SocialIdentityCompletionModalState extends State<SocialIdentityCompletion
 
   @override
   void dispose() {
-    _firstNameController.dispose();
-    _lastNameController.dispose();
+    _fullNameController.dispose();
     _customDepartmentController.dispose();
     super.dispose();
   }
@@ -397,9 +550,14 @@ class _SocialIdentityCompletionModalState extends State<SocialIdentityCompletion
         ? _customDepartmentController.text.trim()
         : _selectedDepartment;
 
+    final fullName = _fullNameController.text.trim();
+    final parts = fullName.split(RegExp(r'\s+'));
+    final firstName = parts.isNotEmpty ? parts.first : fullName;
+    final lastName = parts.length > 1 ? parts.sublist(1).join(' ') : '';
+
     await userProvider.registerUser(
-      firstName: _firstNameController.text.trim(),
-      lastName: _lastNameController.text.trim(),
+      firstName: firstName,
+      lastName: lastName,
       email: widget.email,
       birthDate: _birthDate,
       targetExam: _selectedExam,
@@ -416,7 +574,7 @@ class _SocialIdentityCompletionModalState extends State<SocialIdentityCompletion
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Tebrikler ${_firstNameController.text.trim()}, kaydın başarıyla oluşturuldu! Sınav hazırlığına başla 🎓'),
+          content: Text('Tebrikler $firstName, kaydın başarıyla oluşturuldu! Sınav hazırlığına başla 🎓'),
           behavior: SnackBarBehavior.floating,
           backgroundColor: const Color(0xFF10B981),
         ),
@@ -526,45 +684,18 @@ class _SocialIdentityCompletionModalState extends State<SocialIdentityCompletion
               ),
               const SizedBox(height: 18),
 
-              // Ad & Soyad Alanları
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Adınız', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 6),
-                        TextFormField(
-                          controller: _firstNameController,
-                          decoration: const InputDecoration(
-                            hintText: 'Ahmet',
-                            prefixIcon: Icon(Icons.person_outline_rounded),
-                          ),
-                          validator: (v) => v == null || v.trim().isEmpty ? 'Adınızı girin' : null,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Soyadınız', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 6),
-                        TextFormField(
-                          controller: _lastNameController,
-                          decoration: const InputDecoration(
-                            hintText: 'Demir',
-                            prefixIcon: Icon(Icons.badge_outlined),
-                          ),
-                          validator: (v) => v == null || v.trim().isEmpty ? 'Soyadınızı girin' : null,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+              // Ad Soyad Alanı
+              const Text('Adınız Soyadınız', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 6),
+              TextFormField(
+                controller: _fullNameController,
+                textCapitalization: TextCapitalization.words,
+                autofillHints: const [AutofillHints.name],
+                decoration: const InputDecoration(
+                  hintText: 'Adınız Soyadınız',
+                  prefixIcon: Icon(Icons.person_outline_rounded),
+                ),
+                validator: (v) => v == null || v.trim().isEmpty ? 'Lütfen adınızı ve soyadınızı girin' : null,
               ),
               const SizedBox(height: 14),
 

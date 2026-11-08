@@ -151,6 +151,7 @@ class UserProvider with ChangeNotifier {
   }
 
   List<UserProfileModel> get savedProfiles => _storage.loadAllUserProfiles();
+  String? get lastSocialEmail => _storage.getLastSocialEmail();
 
   UserProfileModel? findProfileByEmail(String email) {
     return _storage.findProfileByEmail(email);

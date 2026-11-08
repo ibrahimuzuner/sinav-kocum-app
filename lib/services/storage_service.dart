@@ -283,6 +283,11 @@ class StorageService {
     final raw = jsonEncode(profile.toJson());
     await _prefs.setString(_keyUserProfile, raw);
 
+    final cleanEmail = profile.email.trim().toLowerCase();
+    if (cleanEmail.isNotEmpty) {
+      await _prefs.setString('last_social_email', cleanEmail);
+    }
+
     final all = loadAllUserProfiles();
     final idx = all.indexWhere((p) => p.email.toLowerCase() == profile.email.toLowerCase());
     if (idx >= 0) {
@@ -291,6 +296,17 @@ class StorageService {
       all.add(profile);
     }
     await _prefs.setString('app_all_user_profiles', jsonEncode(all.map((p) => p.toJson()).toList()));
+  }
+
+  String? getLastSocialEmail() {
+    return _prefs.getString('last_social_email');
+  }
+
+  Future<void> setLastSocialEmail(String email) async {
+    final clean = email.trim().toLowerCase();
+    if (clean.isNotEmpty) {
+      await _prefs.setString('last_social_email', clean);
+    }
   }
 
   Future<void> clearUserProfile() async {
