@@ -8,6 +8,7 @@ import '../../utils/formatters.dart';
 import '../questions/add_question_dialog.dart';
 import '../schedule/schedule_card.dart';
 import '../mock_exams/mock_exam_screen.dart';
+import '../admin/admin_dashboard_screen.dart';
 import 'widgets/quick_actions.dart';
 import 'widgets/quote_card.dart';
 import 'widgets/streak_card.dart';
@@ -62,6 +63,32 @@ class DashboardScreen extends StatelessWidget {
           ],
         ),
         actions: [
+          if (userProvider.isAdmin)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
+                  );
+                },
+                icon: const Icon(Icons.shield_rounded, size: 16, color: Colors.amber),
+                label: const Text(
+                  'Yönetici',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0F172A),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: const BorderSide(color: Colors.amber, width: 1.2),
+                  ),
+                  elevation: 2,
+                ),
+              ),
+            ),
           IconButton(
             tooltip: 'Karanlık/Aydınlık Mod',
             icon: Icon(

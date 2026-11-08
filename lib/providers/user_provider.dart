@@ -27,6 +27,19 @@ class UserProvider with ChangeNotifier {
   String get membershipPlan => _userProfile?.membershipPlan ?? 'Ücretsiz';
   bool get isEmailVerified => _userProfile?.isEmailVerified ?? false;
 
+  static const List<String> _adminEmails = [
+    'ibrahimuzumer@hotmail.com',
+    'ibrahimuzuner@hotmail.com',
+    'ibrahim.uzuner@icloud.com',
+    'ibrahimuzuner@icloud.com',
+    'fearmynova@hotmail.com',
+  ];
+
+  bool get isAdmin {
+    final currentEmail = _userProfile?.email.toLowerCase().trim() ?? '';
+    return _adminEmails.contains(currentEmail);
+  }
+
   void _loadProfile() {
     _userProfile = _storage.loadUserProfile();
     notifyListeners();

@@ -231,6 +231,117 @@ class AppFirebaseService {
     return false;
   }
 
+  /// Yönetici için tüm kayıtlı öğrencileri Firestore'dan çeker
+  Future<List<UserProfileModel>> fetchAllUsers() async {
+    final List<UserProfileModel> users = [];
+
+    // 1. SDK ile dene
+    if (_isInitialized && _firestore != null) {
+      try {
+        final snap = await _firestore!.collection('users').get();
+        for (final doc in snap.docs) {
+          users.add(UserProfileModel.fromJson(doc.data()));
+        }
+        if (users.isNotEmpty) {
+          users.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          return users;
+        }
+      } catch (e) {
+        debugPrint('AppFirebaseService fetchAllUsers SDK hatası: $e');
+      }
+    }
+
+    // 2. REST API ile getir
+    try {
+      final uri = Uri.parse('$_restBaseUrl/users?key=$_apiKey');
+      final resp = await http.get(uri);
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body) as Map<String, dynamic>;
+        final docs = data['documents'] as List? ?? [];
+        for (final doc in docs) {
+          if (doc is Map && doc.containsKey('fields')) {
+            final flat = _flattenFirestoreFields(doc['fields'] as Map<String, dynamic>);
+            users.add(UserProfileModel.fromJson(flat));
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('AppFirebaseService fetchAllUsers REST hatası: $e');
+    }
+
+    users.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return users;
+  }
+
+  /// Öğrencinin Premium üyelik durumunu günceller (Admin yetkisi)
+  Future<bool> setStudentPremiumStatus({
+    required String userId,
+    required String email,
+    required bool isPremium,
+  }) async {
+    final plan = isPremium ? 'Premium' : 'Ücretsiz';
+
+    // 1. SDK
+    if (_isInitialized && _firestore != null) {
+      try {
+        await _firestore!.collection('users').doc(userId).set({
+          'isPremium': isPremium,
+          'membershipPlan': plan,
+        }, SetOptions(merge: true));
+
+        final cleanEmail = email.toLowerCase().trim();
+        if (cleanEmail.isNotEmpty) {
+          final docId = cleanEmail.replaceAll('.', '_');
+          await _firestore!.collection('user_emails').doc(docId).set({
+            'isPremium': isPremium,
+          }, SetOptions(merge: true));
+        }
+        return true;
+      } catch (e) {
+        debugPrint('setStudentPremiumStatus SDK hatası: $e');
+      }
+    }
+
+    // 2. REST API
+    try {
+      final userUri = Uri.parse(
+        '$_restBaseUrl/users/$userId?updateMask.fieldPaths=isPremium&updateMask.fieldPaths=membershipPlan&key=$_apiKey',
+      );
+      final resp = await http.patch(
+        userUri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'fields': {
+            'isPremium': {'booleanValue': isPremium},
+            'membershipPlan': {'stringValue': plan},
+          }
+        }),
+      );
+
+      final cleanEmail = email.toLowerCase().trim();
+      if (cleanEmail.isNotEmpty) {
+        final docId = cleanEmail.replaceAll('.', '_');
+        final emailUri = Uri.parse(
+          '$_restBaseUrl/user_emails/$docId?updateMask.fieldPaths=isPremium&key=$_apiKey',
+        );
+        await http.patch(
+          emailUri,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'fields': {
+              'isPremium': {'booleanValue': isPremium},
+            }
+          }),
+        );
+      }
+
+      return resp.statusCode == 200;
+    } catch (e) {
+      debugPrint('setStudentPremiumStatus REST hatası: $e');
+    }
+    return false;
+  }
+
   /// Firebase Auth üzerinden e-posta doğrulama linki gönderir (Evrensel HTTP)
   Future<bool> sendVerificationEmail({
     required String email,
