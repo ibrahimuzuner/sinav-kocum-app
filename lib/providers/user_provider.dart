@@ -143,8 +143,9 @@ class UserProvider with ChangeNotifier {
     required String email,
     required String password,
   }) async {
+    final cleanEmail = email.toLowerCase().trim();
     // 1. Önce yerelde kayıtlı mı kontrol et
-    final existing = _storage.findProfileByEmail(email);
+    final existing = _storage.findProfileByEmail(cleanEmail);
     if (existing != null) {
       _userProfile = existing;
       await _storage.saveUserProfile(existing);
@@ -155,7 +156,7 @@ class UserProvider with ChangeNotifier {
 
     // 2. Yerelde yoksa Firestore bulutundan sorgula
     try {
-      final cloudProfile = await _firebaseService.fetchProfileByEmail(email);
+      final cloudProfile = await _firebaseService.fetchProfileByEmail(cleanEmail);
       if (cloudProfile != null) {
         _userProfile = cloudProfile;
         await _storage.saveUserProfile(cloudProfile);

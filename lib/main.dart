@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'providers/settings_provider.dart';
@@ -24,10 +25,23 @@ void main() async {
 
   // Initialize Firebase safely (offline graceful fallback)
   try {
-    await Firebase.initializeApp();
+    if (kIsWeb) {
+      await Firebase.initializeApp(
+        options: const FirebaseOptions(
+          apiKey: 'AIzaSyB0gbVTJWYKLFQBUQWgbalCqg4qV1azOUE',
+          appId: '1:104704232110:web:a1abfd662ed07a3a113b3f',
+          messagingSenderId: '104704232110',
+          projectId: 'sinavkocum-2e212',
+          authDomain: 'sinavkocum-2e212.firebaseapp.com',
+          storageBucket: 'sinavkocum-2e212.firebasestorage.app',
+        ),
+      );
+    } else {
+      await Firebase.initializeApp();
+    }
     await AppFirebaseService().init();
   } catch (e) {
-    debugPrint('Firebase başlatma uyarısı (çevrimdışı modda çalışılıyor): $e');
+    debugPrint('Firebase başlatma uyarısı: $e');
   }
 
   // Initialize Storage

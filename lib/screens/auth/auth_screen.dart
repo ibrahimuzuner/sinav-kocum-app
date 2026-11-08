@@ -22,6 +22,7 @@ class _AuthScreenState extends State<AuthScreen> {
   final TextEditingController _loginEmailController = TextEditingController();
   final TextEditingController _loginPasswordController = TextEditingController();
   bool _loginObscurePassword = true;
+  bool _isLoggingIn = false;
 
   // Register Form
   final _registerFormKey = GlobalKey<FormState>();
@@ -263,22 +264,49 @@ class _AuthScreenState extends State<AuthScreen> {
             width: double.infinity,
             height: 52,
             child: ElevatedButton(
-              onPressed: () async {
-                if (_loginFormKey.currentState!.validate()) {
-                  final userProvider = Provider.of<UserProvider>(context, listen: false);
-                  await userProvider.loginWithEmail(
-                    email: _loginEmailController.text.trim(),
-                    password: _loginPasswordController.text,
-                  );
-                }
-              },
+              onPressed: _isLoggingIn
+                  ? null
+                  : () async {
+                      if (_loginFormKey.currentState!.validate()) {
+                        setState(() => _isLoggingIn = true);
+                        final userProvider = Provider.of<UserProvider>(context, listen: false);
+                        final success = await userProvider.loginWithEmail(
+                          email: _loginEmailController.text.trim(),
+                          password: _loginPasswordController.text,
+                        );
+                        if (!mounted) return;
+                        setState(() => _isLoggingIn = false);
+
+                        if (!success) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: const Text(
+                                'Bu e-posta ile kayıtlı bir hesap bulunamadı veya bağlantı kurulamadı. Lütfen e-postayı kontrol edin.',
+                              ),
+                              backgroundColor: Colors.red.shade700,
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                          );
+                        }
+                      }
+                    },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF4F46E5),
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 elevation: 2,
               ),
-              child: const Text('E-Posta ile Giriş Yap', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              child: _isLoggingIn
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2.5,
+                      ),
+                    )
+                  : const Text('E-Posta ile Giriş Yap', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             ),
           ),
         ],

@@ -1,20 +1,24 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import '../models/user_profile_model.dart';
 
 /// Firebase Cloud Firestore Senkronizasyon ve E-posta Doğrulama Servisi
 /// Bu servis, öğrenci kayıtlarını, hedef bölüm ve puanlarını,
 /// üyelik (Premium / Ücretsiz) durumunu Firebase Cloud Firestore'a senkronize eder
 /// ve resmi e-posta doğrulama işlemlerini yürütür.
+/// Hem yerel SDK hem de Web/Çapraz Platform için doğrudan Firestore REST API desteği içerir.
 class AppFirebaseService {
   static final AppFirebaseService _instance = AppFirebaseService._internal();
   factory AppFirebaseService() => _instance;
   AppFirebaseService._internal();
 
   static const String _apiKey = 'AIzaSyB0gbVTJWYKLFQBUQWgbalCqg4qV1azOUE';
+  static const String _projectId = 'sinavkocum-2e212';
+  static const String _restBaseUrl =
+      'https://firestore.googleapis.com/v1/projects/$_projectId/databases/(default)/documents';
 
   bool _isInitialized = false;
   bool get isInitialized => _isInitialized;
@@ -29,169 +33,253 @@ class AppFirebaseService {
         _isInitialized = true;
         debugPrint('AppFirebaseService: Firebase Firestore başarıyla bağlandı ve hazır.');
       } else {
-        debugPrint('AppFirebaseService: Henüz Firebase başlatılmamış.');
+        debugPrint('AppFirebaseService: Henüz Firebase başlatılmamış (REST API devrede).');
       }
     } catch (e) {
-      debugPrint('AppFirebaseService init hatası: $e');
+      debugPrint('AppFirebaseService init hatası (REST API ile devam edilecek): $e');
       _isInitialized = false;
     }
   }
 
   /// Öğrenci profilini Firebase Cloud Firestore'a senkronize eder.
-  /// Bu sayede Firebase Console üzerinden tüm kayıtları, hedef bölümleri ve
-  /// üyelik durumlarını canlı olarak görebilirsiniz.
   Future<bool> syncUserProfile(UserProfileModel profile) async {
-    try {
-      if (!_isInitialized || _firestore == null) {
-        await init();
-        if (!_isInitialized || _firestore == null) {
-          debugPrint('AppFirebaseService: Çevrimdışı moddasınız, profil Firestore\'a yazılamadı.');
-          return false;
-        }
-      }
+    final cleanEmail = profile.email.toLowerCase().trim();
+    final docData = <String, dynamic>{
+      'id': profile.id,
+      'email': cleanEmail,
+      'firstName': profile.firstName,
+      'lastName': profile.lastName,
+      'fullName': profile.fullName,
+      'birthDate': profile.birthDate.toIso8601String(),
+      'targetExam': profile.targetExam,
+      'targetDepartment': profile.targetDepartment,
+      'targetScore': profile.targetScore,
+      'targetNet': profile.targetNet,
+      'dailyTargetHours': profile.dailyTargetHours,
+      'isPremium': profile.isPremium,
+      'membershipPlan': profile.membershipPlan,
+      'isEmailVerified': profile.isEmailVerified,
+      'createdAt': profile.createdAt.toIso8601String(),
+      'platform': kIsWeb ? 'web' : 'mobile',
+    };
 
-      final docData = <String, dynamic>{
-        'id': profile.id,
-        'email': profile.email.toLowerCase().trim(),
-        'firstName': profile.firstName,
-        'lastName': profile.lastName,
-        'fullName': profile.fullName,
-        'birthDate': profile.birthDate.toIso8601String(),
-        'targetExam': profile.targetExam,
-        'targetDepartment': profile.targetDepartment,
-        'targetScore': profile.targetScore,
-        'targetNet': profile.targetNet,
-        'dailyTargetHours': profile.dailyTargetHours,
-        'isPremium': profile.isPremium,
-        'membershipPlan': profile.membershipPlan,
-        'isEmailVerified': profile.isEmailVerified,
-        'createdAt': profile.createdAt.toIso8601String(),
-        'lastActiveAt': FieldValue.serverTimestamp(),
-        'platform': 'android',
-      };
+    // 1. Önce Firestore SDK ile dene
+    if (_isInitialized && _firestore != null) {
+      try {
+        final sdkData = Map<String, dynamic>.from(docData);
+        sdkData['lastActiveAt'] = FieldValue.serverTimestamp();
 
-      // 1. users koleksiyonuna profil ID'si ile kaydet
-      await _firestore!
-          .collection('users')
-          .doc(profile.id)
-          .set(docData, SetOptions(merge: true));
-
-      // 2. Kolay arama için e-posta indeksi oluştur (e-posta doluysa)
-      if (profile.email.isNotEmpty) {
-        final emailDocId = profile.email.toLowerCase().replaceAll('.', '_');
         await _firestore!
-            .collection('user_emails')
-            .doc(emailDocId)
-            .set({
+            .collection('users')
+            .doc(profile.id)
+            .set(sdkData, SetOptions(merge: true));
+
+        if (cleanEmail.isNotEmpty) {
+          final emailDocId = cleanEmail.replaceAll('.', '_');
+          await _firestore!.collection('user_emails').doc(emailDocId).set({
+            'userId': profile.id,
+            'email': cleanEmail,
+            'fullName': profile.fullName,
+            'targetDepartment': profile.targetDepartment,
+            'isPremium': profile.isPremium,
+            'isEmailVerified': profile.isEmailVerified,
+            'updatedAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+        }
+
+        debugPrint('AppFirebaseService: Öğrenci profili SDK ile Firestore\'a yüklendi: $cleanEmail');
+        return true;
+      } catch (e) {
+        debugPrint('AppFirebaseService: SDK senkronizasyon hatası, REST deneniyor: $e');
+      }
+    }
+
+    // 2. SDK yoksa veya başarısız olduysa Firestore REST API ile kaydet
+    try {
+      final userUri = Uri.parse('$_restBaseUrl/users/${profile.id}?key=$_apiKey');
+      final restFields = _toFirestoreRestFields(docData);
+      final resp = await http.patch(
+        userUri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'fields': restFields}),
+      );
+
+      if (cleanEmail.isNotEmpty) {
+        final emailDocId = cleanEmail.replaceAll('.', '_');
+        final emailUri = Uri.parse('$_restBaseUrl/user_emails/$emailDocId?key=$_apiKey');
+        final emailFields = _toFirestoreRestFields({
           'userId': profile.id,
-          'email': profile.email.toLowerCase(),
+          'email': cleanEmail,
           'fullName': profile.fullName,
           'targetDepartment': profile.targetDepartment,
           'isPremium': profile.isPremium,
           'isEmailVerified': profile.isEmailVerified,
-          'updatedAt': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
+        });
+        await http.patch(
+          emailUri,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'fields': emailFields}),
+        );
       }
 
-      debugPrint('AppFirebaseService: Öğrenci profili Firestore\'a başarıyla yüklendi: ${profile.email}');
-      return true;
+      if (resp.statusCode == 200 || resp.statusCode == 201) {
+        debugPrint('AppFirebaseService: Öğrenci profili REST API ile Firestore\'a yüklendi: $cleanEmail');
+        return true;
+      }
     } catch (e) {
-      debugPrint('AppFirebaseService: Firestore senkronizasyon hatası (Çevrimdışı devam ediliyor): $e');
-      return false;
+      debugPrint('AppFirebaseService: REST sync hatası: $e');
     }
+
+    return false;
   }
 
   /// E-posta adresine göre Firestore'dan öğrenci profili sorgular.
   Future<UserProfileModel?> fetchProfileByEmail(String email) async {
+    final cleanEmail = email.toLowerCase().trim();
+
+    // 1. Önce Firestore SDK ile dene
+    if (_isInitialized && _firestore != null) {
+      try {
+        final querySnapshot = await _firestore!
+            .collection('users')
+            .where('email', isEqualTo: cleanEmail)
+            .limit(1)
+            .get();
+
+        if (querySnapshot.docs.isNotEmpty) {
+          final data = querySnapshot.docs.first.data();
+          return UserProfileModel.fromJson(data);
+        }
+      } catch (e) {
+        debugPrint('AppFirebaseService SDK fetch hatası, REST deneniyor: $e');
+      }
+    }
+
+    // 2. REST API ile user_emails indeksinden doğrudan getir
     try {
-      if (!_isInitialized || _firestore == null) await init();
-      if (_firestore == null) return null;
+      final emailDocId = cleanEmail.replaceAll('.', '_');
+      final emailUri = Uri.parse('$_restBaseUrl/user_emails/$emailDocId?key=$_apiKey');
+      final emailResp = await http.get(emailUri);
 
-      final cleanEmail = email.toLowerCase().trim();
-      final querySnapshot = await _firestore!
-          .collection('users')
-          .where('email', isEqualTo: cleanEmail)
-          .limit(1)
-          .get();
+      if (emailResp.statusCode == 200) {
+        final emailData = jsonDecode(emailResp.body) as Map<String, dynamic>;
+        final flatEmail = _flattenFirestoreFields(emailData['fields'] as Map<String, dynamic>? ?? {});
+        final userId = flatEmail['userId'] as String?;
 
-      if (querySnapshot.docs.isNotEmpty) {
-        final data = querySnapshot.docs.first.data();
-        return UserProfileModel.fromJson(data);
+        if (userId != null && userId.isNotEmpty) {
+          final userUri = Uri.parse('$_restBaseUrl/users/$userId?key=$_apiKey');
+          final userResp = await http.get(userUri);
+          if (userResp.statusCode == 200) {
+            final userData = jsonDecode(userResp.body) as Map<String, dynamic>;
+            final flatUser = _flattenFirestoreFields(userData['fields'] as Map<String, dynamic>? ?? {});
+            debugPrint('AppFirebaseService: Profil REST user_emails ile bulundu: $cleanEmail');
+            return UserProfileModel.fromJson(flatUser);
+          }
+        }
+      }
+
+      // 3. user_emails'de bulunamadıysa users koleksiyonunu tara
+      final allUsersUri = Uri.parse('$_restBaseUrl/users?key=$_apiKey');
+      final allUsersResp = await http.get(allUsersUri);
+      if (allUsersResp.statusCode == 200) {
+        final allUsersData = jsonDecode(allUsersResp.body) as Map<String, dynamic>;
+        final docs = allUsersData['documents'] as List? ?? [];
+        for (final doc in docs) {
+          if (doc is Map && doc.containsKey('fields')) {
+            final flat = _flattenFirestoreFields(doc['fields'] as Map<String, dynamic>);
+            final docEmail = (flat['email'] as String? ?? '').toLowerCase().trim();
+            if (docEmail == cleanEmail) {
+              debugPrint('AppFirebaseService: Profil REST users taraması ile bulundu: $cleanEmail');
+              return UserProfileModel.fromJson(flat);
+            }
+          }
+        }
       }
     } catch (e) {
-      debugPrint('AppFirebaseService fetchProfileByEmail hatası: $e');
+      debugPrint('AppFirebaseService REST fetch hatası: $e');
     }
+
     return null;
   }
 
   /// Öğrencinin Premium üyelik durumunu Firebase'den anlık sorgular.
   Future<bool> checkPremiumStatus(String userId) async {
-    try {
-      if (!_isInitialized || _firestore == null) await init();
-      if (_firestore == null) return false;
+    if (_isInitialized && _firestore != null) {
+      try {
+        final doc = await _firestore!.collection('users').doc(userId).get();
+        if (doc.exists && doc.data() != null) {
+          final data = doc.data()!;
+          return data['isPremium'] as bool? ?? false;
+        }
+      } catch (e) {
+        debugPrint('AppFirebaseService checkPremiumStatus SDK hatası: $e');
+      }
+    }
 
-      final doc = await _firestore!.collection('users').doc(userId).get();
-      if (doc.exists && doc.data() != null) {
-        final data = doc.data()!;
-        return data['isPremium'] as bool? ?? false;
+    try {
+      final userUri = Uri.parse('$_restBaseUrl/users/$userId?key=$_apiKey');
+      final resp = await http.get(userUri);
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body) as Map<String, dynamic>;
+        final flat = _flattenFirestoreFields(data['fields'] as Map<String, dynamic>? ?? {});
+        return flat['isPremium'] as bool? ?? false;
       }
     } catch (e) {
-      debugPrint('AppFirebaseService checkPremiumStatus hatası: $e');
+      debugPrint('AppFirebaseService checkPremiumStatus REST hatası: $e');
     }
+
     return false;
   }
 
-  /// Firebase Auth üzerinden öğrencinin e-posta adresine resmi doğrulama linki gönderir
+  /// Firebase Auth üzerinden e-posta doğrulama linki gönderir (Evrensel HTTP)
   Future<bool> sendVerificationEmail({
     required String email,
     required String password,
   }) async {
     try {
-      final client = HttpClient();
       final cleanEmail = email.trim();
       final pwd = password.isNotEmpty ? password : 'S1navKocum2026!';
 
-      // 1. Önce hesap oluştur veya var olan hesaba giriş yap
       String? idToken;
       final signUpUri = Uri.parse('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=$_apiKey');
-      final signUpReq = await client.postUrl(signUpUri);
-      signUpReq.headers.set('Content-Type', 'application/json');
-      signUpReq.write(jsonEncode({
-        'email': cleanEmail,
-        'password': pwd,
-        'returnSecureToken': true,
-      }));
-      final signUpResp = await signUpReq.close();
-      final signUpBody = await signUpResp.transform(utf8.decoder).join();
-      final signUpData = jsonDecode(signUpBody) as Map<String, dynamic>;
-      idToken = signUpData['idToken'] as String?;
-
-      if (idToken == null) {
-        // Zaten kayıtlıysa signIn ile token al
-        final signInUri = Uri.parse('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=$_apiKey');
-        final signInReq = await client.postUrl(signInUri);
-        signInReq.headers.set('Content-Type', 'application/json');
-        signInReq.write(jsonEncode({
+      final signUpResp = await http.post(
+        signUpUri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
           'email': cleanEmail,
           'password': pwd,
           'returnSecureToken': true,
-        }));
-        final signInResp = await signInReq.close();
-        final signInBody = await signInResp.transform(utf8.decoder).join();
-        final signInData = jsonDecode(signInBody) as Map<String, dynamic>;
+        }),
+      );
+
+      final signUpData = jsonDecode(signUpResp.body) as Map<String, dynamic>;
+      idToken = signUpData['idToken'] as String?;
+
+      if (idToken == null) {
+        final signInUri = Uri.parse('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=$_apiKey');
+        final signInResp = await http.post(
+          signInUri,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'email': cleanEmail,
+            'password': pwd,
+            'returnSecureToken': true,
+          }),
+        );
+        final signInData = jsonDecode(signInResp.body) as Map<String, dynamic>;
         idToken = signInData['idToken'] as String?;
       }
 
       if (idToken != null) {
-        // 2. Doğrulama linki gönder (sendOobCode)
         final oobUri = Uri.parse('https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=$_apiKey');
-        final oobReq = await client.postUrl(oobUri);
-        oobReq.headers.set('Content-Type', 'application/json');
-        oobReq.write(jsonEncode({
-          'requestType': 'VERIFY_EMAIL',
-          'idToken': idToken,
-        }));
-        final oobResp = await oobReq.close();
+        final oobResp = await http.post(
+          oobUri,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'requestType': 'VERIFY_EMAIL',
+            'idToken': idToken,
+          }),
+        );
         debugPrint('Firebase sendVerificationEmail yanıtı: ${oobResp.statusCode}');
         return oobResp.statusCode == 200;
       }
@@ -201,48 +289,85 @@ class AppFirebaseService {
     return false;
   }
 
-  /// Öğrencinin e-postayı onaylayıp onaylamadığını Firebase Auth'tan kontrol eder
+  /// Öğrencinin e-postayı onaylayıp onaylamadığını kontrol eder
   Future<bool> checkEmailVerified({
     required String email,
     required String password,
   }) async {
     try {
-      final client = HttpClient();
       final cleanEmail = email.trim();
       final pwd = password.isNotEmpty ? password : 'S1navKocum2026!';
 
       final signInUri = Uri.parse('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=$_apiKey');
-      final signInReq = await client.postUrl(signInUri);
-      signInReq.headers.set('Content-Type', 'application/json');
-      signInReq.write(jsonEncode({
-        'email': cleanEmail,
-        'password': pwd,
-        'returnSecureToken': true,
-      }));
-      final signInResp = await signInReq.close();
-      final signInBody = await signInResp.transform(utf8.decoder).join();
-      final signInData = jsonDecode(signInBody) as Map<String, dynamic>;
+      final signInResp = await http.post(
+        signInUri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': cleanEmail,
+          'password': pwd,
+          'returnSecureToken': true,
+        }),
+      );
+
+      final signInData = jsonDecode(signInResp.body) as Map<String, dynamic>;
       final idToken = signInData['idToken'] as String?;
 
       if (idToken != null) {
         final lookupUri = Uri.parse('https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=$_apiKey');
-        final lookupReq = await client.postUrl(lookupUri);
-        lookupReq.headers.set('Content-Type', 'application/json');
-        lookupReq.write(jsonEncode({
-          'idToken': idToken,
-        }));
-        final lookupResp = await lookupReq.close();
-        final lookupBody = await lookupResp.transform(utf8.decoder).join();
-        final lookupData = jsonDecode(lookupBody) as Map<String, dynamic>;
+        final lookupResp = await http.post(
+          lookupUri,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'idToken': idToken}),
+        );
+        final lookupData = jsonDecode(lookupResp.body) as Map<String, dynamic>;
         final users = lookupData['users'] as List?;
         if (users != null && users.isNotEmpty) {
-          final isVerified = users.first['emailVerified'] as bool? ?? false;
-          return isVerified;
+          return users.first['emailVerified'] as bool? ?? false;
         }
       }
     } catch (e) {
       debugPrint('checkEmailVerified hatası: $e');
     }
     return false;
+  }
+
+  /// Firestore REST API JSON formatını standart Dart Map'e dönüştürür
+  static Map<String, dynamic> _flattenFirestoreFields(Map<String, dynamic> fields) {
+    final result = <String, dynamic>{};
+    fields.forEach((key, val) {
+      if (val is Map) {
+        if (val.containsKey('stringValue')) {
+          result[key] = val['stringValue'];
+        } else if (val.containsKey('booleanValue')) {
+          result[key] = val['booleanValue'];
+        } else if (val.containsKey('integerValue')) {
+          result[key] = int.tryParse(val['integerValue'].toString()) ?? 0;
+        } else if (val.containsKey('doubleValue')) {
+          result[key] = (val['doubleValue'] as num).toDouble();
+        } else if (val.containsKey('timestampValue')) {
+          result[key] = val['timestampValue'];
+        }
+      } else {
+        result[key] = val;
+      }
+    });
+    return result;
+  }
+
+  /// Dart Map'i Firestore REST API formatına dönüştürür
+  static Map<String, dynamic> _toFirestoreRestFields(Map<String, dynamic> data) {
+    final fields = <String, dynamic>{};
+    data.forEach((key, val) {
+      if (val is String) {
+        fields[key] = {'stringValue': val};
+      } else if (val is bool) {
+        fields[key] = {'booleanValue': val};
+      } else if (val is int) {
+        fields[key] = {'integerValue': val.toString()};
+      } else if (val is double) {
+        fields[key] = {'doubleValue': val};
+      }
+    });
+    return fields;
   }
 }
