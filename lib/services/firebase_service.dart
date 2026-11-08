@@ -59,6 +59,8 @@ class AppFirebaseService {
       'isPremium': profile.isPremium,
       'membershipPlan': profile.membershipPlan,
       'isEmailVerified': profile.isEmailVerified,
+      'coachNote': profile.coachNote,
+      'coachNoteUpdatedAt': profile.coachNoteUpdatedAt?.toIso8601String(),
       'createdAt': profile.createdAt.toIso8601String(),
       'platform': kIsWeb ? 'web' : 'mobile',
     };
@@ -231,6 +233,32 @@ class AppFirebaseService {
     return false;
   }
 
+  /// Öğrencinin güncel bulut bilgilerini çeker (isPremium, coachNote vb.)
+  Future<Map<String, dynamic>?> fetchCloudUserData(String userId) async {
+    if (_isInitialized && _firestore != null) {
+      try {
+        final doc = await _firestore!.collection('users').doc(userId).get();
+        if (doc.exists && doc.data() != null) {
+          return doc.data();
+        }
+      } catch (e) {
+        debugPrint('fetchCloudUserData SDK hatası: $e');
+      }
+    }
+
+    try {
+      final userUri = Uri.parse('$_restBaseUrl/users/$userId?key=$_apiKey');
+      final resp = await http.get(userUri);
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body) as Map<String, dynamic>;
+        return _flattenFirestoreFields(data['fields'] as Map<String, dynamic>? ?? {});
+      }
+    } catch (e) {
+      debugPrint('fetchCloudUserData REST hatası: $e');
+    }
+    return null;
+  }
+
   /// Yönetici için tüm kayıtlı öğrencileri Firestore'dan çeker
   Future<List<UserProfileModel>> fetchAllUsers() async {
     final List<UserProfileModel> users = [];
@@ -338,6 +366,77 @@ class AppFirebaseService {
       return resp.statusCode == 200;
     } catch (e) {
       debugPrint('setStudentPremiumStatus REST hatası: $e');
+    }
+    return false;
+  }
+
+  /// Öğrenciye özel koçluk notunu / tavsiyesini kaydeder (Yönetici yetkisi)
+  Future<bool> setStudentCoachNote({
+    required String userId,
+    required String email,
+    required String coachNote,
+  }) async {
+    final nowIso = DateTime.now().toIso8601String();
+
+    // 1. SDK
+    if (_isInitialized && _firestore != null) {
+      try {
+        await _firestore!.collection('users').doc(userId).set({
+          'coachNote': coachNote,
+          'coachNoteUpdatedAt': nowIso,
+        }, SetOptions(merge: true));
+
+        final cleanEmail = email.toLowerCase().trim();
+        if (cleanEmail.isNotEmpty) {
+          final docId = cleanEmail.replaceAll('.', '_');
+          await _firestore!.collection('user_emails').doc(docId).set({
+            'coachNote': coachNote,
+            'coachNoteUpdatedAt': nowIso,
+          }, SetOptions(merge: true));
+        }
+        return true;
+      } catch (e) {
+        debugPrint('setStudentCoachNote SDK hatası: $e');
+      }
+    }
+
+    // 2. REST API
+    try {
+      final userUri = Uri.parse(
+        '$_restBaseUrl/users/$userId?updateMask.fieldPaths=coachNote&updateMask.fieldPaths=coachNoteUpdatedAt&key=$_apiKey',
+      );
+      final resp = await http.patch(
+        userUri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'fields': {
+            'coachNote': {'stringValue': coachNote},
+            'coachNoteUpdatedAt': {'stringValue': nowIso},
+          }
+        }),
+      );
+
+      final cleanEmail = email.toLowerCase().trim();
+      if (cleanEmail.isNotEmpty) {
+        final docId = cleanEmail.replaceAll('.', '_');
+        final emailUri = Uri.parse(
+          '$_restBaseUrl/user_emails/$docId?updateMask.fieldPaths=coachNote&updateMask.fieldPaths=coachNoteUpdatedAt&key=$_apiKey',
+        );
+        await http.patch(
+          emailUri,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'fields': {
+              'coachNote': {'stringValue': coachNote},
+              'coachNoteUpdatedAt': {'stringValue': nowIso},
+            }
+          }),
+        );
+      }
+
+      return resp.statusCode == 200;
+    } catch (e) {
+      debugPrint('setStudentCoachNote REST hatası: $e');
     }
     return false;
   }

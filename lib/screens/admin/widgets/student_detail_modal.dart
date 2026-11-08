@@ -21,11 +21,52 @@ class StudentDetailModal extends StatefulWidget {
 class _StudentDetailModalState extends State<StudentDetailModal> {
   late bool _isPremium;
   bool _isToggling = false;
+  late TextEditingController _coachNoteController;
+  bool _isSavingNote = false;
 
   @override
   void initState() {
     super.initState();
     _isPremium = widget.student.isPremium;
+    _coachNoteController = TextEditingController(text: widget.student.coachNote ?? '');
+  }
+
+  @override
+  void dispose() {
+    _coachNoteController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveCoachNote() async {
+    final note = _coachNoteController.text.trim();
+    setState(() => _isSavingNote = true);
+    final success = await AppFirebaseService().setStudentCoachNote(
+      userId: widget.student.id,
+      email: widget.student.email,
+      coachNote: note,
+    );
+
+    if (mounted) {
+      setState(() => _isSavingNote = false);
+      if (success) {
+        widget.onStudentUpdated();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('👨‍🏫 Koçluk tavsiyesi öğrencinin profiline başarıyla iletildi!'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Color(0xFF10B981),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Not kaydedilirken bir sorun oluştu.'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _togglePremium() async {
@@ -314,7 +355,61 @@ class _StudentDetailModalState extends State<StudentDetailModal> {
             ),
             const SizedBox(height: 16),
 
-            // 4. YÖNETİCİ EYLEMLERİ (PREMİUM TANIMLAMA)
+            // 4. KOÇLUK DEĞERLENDİRMESİ VE ÖZEL NOT ALANI
+            _buildStatCard(
+              title: '👨‍🏫 KOÇUN ÖZEL TAVSİYESİ & DEĞERLENDİRMESİ',
+              content: Column(
+                children: [
+                  TextField(
+                    controller: _coachNoteController,
+                    maxLines: 3,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Örn: Deneme netlerin çok iyi gidiyor. Bu hafta günde 40 soru geometri ve paragraf çözmeyi ihmal etme!',
+                      hintStyle: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                      ),
+                      filled: true,
+                      fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                      contentPadding: const EdgeInsets.all(12),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 40,
+                    child: ElevatedButton.icon(
+                      onPressed: _isSavingNote ? null : _saveCoachNote,
+                      icon: _isSavingNote
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                            )
+                          : const Icon(Icons.send_rounded, size: 16),
+                      label: const Text('Koçluk Notunu Kaydet & Öğrenciye İlet', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF4F46E5),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              isDark: isDark,
+            ),
+            const SizedBox(height: 16),
+
+            // 5. YÖNETİCİ EYLEMLERİ (PREMİUM TANIMLAMA)
             SizedBox(
               width: double.infinity,
               height: 48,

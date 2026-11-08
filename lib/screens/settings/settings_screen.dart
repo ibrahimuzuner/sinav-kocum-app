@@ -7,6 +7,7 @@ import 'edit_profile_dialog.dart';
 import 'manage_courses_screen.dart';
 import '../mock_exams/mock_exam_screen.dart';
 import '../admin/admin_dashboard_screen.dart';
+import '../../widgets/premium_upgrade_modal.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -127,6 +128,118 @@ class SettingsScreen extends StatelessWidget {
                 ],
               ),
             ),
+            const SizedBox(height: 20),
+
+            // BÖLÜM: ÜYELİK VE PRO DURUMU
+            _buildSectionHeader('Üyelik Durumu'),
+            if (userProvider.isPremium) ...[
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF1E1B4B), Color(0xFF0F172A)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFFF59E0B), width: 1.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFF59E0B),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.workspace_premium_rounded, color: Colors.white, size: 24),
+                    ),
+                    const SizedBox(width: 14),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '👑 Sınav Koçum PRO Aktif',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'Renkli PDF raporlar, sınırsız deneme sınavları ve koçluk ayrıcalıklarınız açık.',
+                            style: TextStyle(fontSize: 12, color: Color(0xFFCBD5E1)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ] else if (!userProvider.isAdmin) ...[
+              InkWell(
+                onTap: () {
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (_) => const PremiumUpgradeModal(source: 'general'),
+                  );
+                },
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0xFFF59E0B), width: 1.2),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(colors: [Color(0xFFF59E0B), Color(0xFFD97706)]),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.workspace_premium_rounded, color: Colors.white, size: 22),
+                      ),
+                      const SizedBox(width: 14),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '👑 Sınav Koçum PRO\'ya Yükselt',
+                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              'Özel koç tavsiyesi, renkli PDF karne & sınırsız deneme için dokunun 🚀',
+                              style: TextStyle(fontSize: 11.5, color: Color(0xFFCBD5E1)),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFFF59E0B), size: 14),
+                    ],
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 20),
             if (userProvider.isAdmin) ...[
               _buildSectionHeader('Yönetici Yetkisi'),

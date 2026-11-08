@@ -26,6 +26,8 @@ class UserProvider with ChangeNotifier {
   bool get isPremium => _userProfile?.isPremium ?? false;
   String get membershipPlan => _userProfile?.membershipPlan ?? 'Ücretsiz';
   bool get isEmailVerified => _userProfile?.isEmailVerified ?? false;
+  String? get coachNote => _userProfile?.coachNote;
+  DateTime? get coachNoteUpdatedAt => _userProfile?.coachNoteUpdatedAt;
 
   static const List<String> _adminEmails = [
     'ibrahimuzumer@hotmail.com',
@@ -44,26 +46,38 @@ class UserProvider with ChangeNotifier {
     _userProfile = _storage.loadUserProfile();
     notifyListeners();
 
-    // Arka planda Firebase'den Premium / üyelik durumunu kontrol et
+    // Arka planda Firebase'den Premium / üyelik ve koçluk durumunu kontrol et
     if (_userProfile != null) {
-      _checkCloudPremiumStatus();
+      syncCloudUserData();
     }
   }
 
-  Future<void> _checkCloudPremiumStatus() async {
+  Future<void> syncCloudUserData() async {
     try {
       if (_userProfile == null) return;
-      final cloudPremium = await _firebaseService.checkPremiumStatus(_userProfile!.id);
-      if (_userProfile != null && cloudPremium != _userProfile!.isPremium) {
-        _userProfile = _userProfile!.copyWith(
-          isPremium: cloudPremium,
-          membershipPlan: cloudPremium ? 'Premium' : 'Ücretsiz',
-        );
-        await _storage.saveUserProfile(_userProfile!);
-        notifyListeners();
+      final cloudData = await _firebaseService.fetchCloudUserData(_userProfile!.id);
+      if (cloudData != null && _userProfile != null) {
+        final cloudPremium = cloudData['isPremium'] as bool? ?? false;
+        final cloudPlan = cloudData['membershipPlan'] as String? ?? (cloudPremium ? 'Premium' : 'Ücretsiz');
+        final cloudCoachNote = cloudData['coachNote'] as String?;
+        final cloudNoteUpdatedStr = cloudData['coachNoteUpdatedAt'] as String?;
+        final cloudNoteDate = cloudNoteUpdatedStr != null ? DateTime.tryParse(cloudNoteUpdatedStr) : null;
+
+        if (cloudPremium != _userProfile!.isPremium ||
+            cloudCoachNote != _userProfile!.coachNote ||
+            cloudPlan != _userProfile!.membershipPlan) {
+          _userProfile = _userProfile!.copyWith(
+            isPremium: cloudPremium,
+            membershipPlan: cloudPlan,
+            coachNote: cloudCoachNote,
+            coachNoteUpdatedAt: cloudNoteDate,
+          );
+          await _storage.saveUserProfile(_userProfile!);
+          notifyListeners();
+        }
       }
     } catch (e) {
-      debugPrint('Cloud premium kontrolü hatası: $e');
+      debugPrint('Cloud syncUserData hatası: $e');
     }
   }
 

@@ -13,6 +13,8 @@ class UserProfileModel {
   final bool isPremium; // Ücretli / Premium üyelik durumu
   final String membershipPlan; // Üyelik planı ('Ücretsiz', 'Premium', 'Koçluk')
   final bool isEmailVerified; // E-posta adresi doğrulandı mı?
+  final String? coachNote; // Koçun öğrenciye özel haftalık değerlendirmesi / tavsiyesi
+  final DateTime? coachNoteUpdatedAt;
 
   const UserProfileModel({
     required this.id,
@@ -29,6 +31,8 @@ class UserProfileModel {
     this.isPremium = false,
     this.membershipPlan = 'Ücretsiz',
     this.isEmailVerified = false,
+    this.coachNote,
+    this.coachNoteUpdatedAt,
   });
 
   String get fullName => '$firstName $lastName'.trim();
@@ -59,6 +63,8 @@ class UserProfileModel {
       'isPremium': isPremium,
       'membershipPlan': membershipPlan,
       'isEmailVerified': isEmailVerified,
+      'coachNote': coachNote,
+      'coachNoteUpdatedAt': coachNoteUpdatedAt?.toIso8601String(),
     };
   }
 
@@ -82,6 +88,10 @@ class UserProfileModel {
       isPremium: json['isPremium'] as bool? ?? false,
       membershipPlan: json['membershipPlan'] as String? ?? 'Ücretsiz',
       isEmailVerified: json['isEmailVerified'] as bool? ?? false,
+      coachNote: json['coachNote'] as String?,
+      coachNoteUpdatedAt: json['coachNoteUpdatedAt'] != null
+          ? DateTime.tryParse(json['coachNoteUpdatedAt'] as String)
+          : null,
     );
   }
 
@@ -100,6 +110,8 @@ class UserProfileModel {
     bool? isPremium,
     String? membershipPlan,
     bool? isEmailVerified,
+    String? coachNote,
+    DateTime? coachNoteUpdatedAt,
   }) {
     return UserProfileModel(
       id: id ?? this.id,
@@ -116,6 +128,8 @@ class UserProfileModel {
       isPremium: isPremium ?? this.isPremium,
       membershipPlan: membershipPlan ?? this.membershipPlan,
       isEmailVerified: isEmailVerified ?? this.isEmailVerified,
+      coachNote: coachNote ?? this.coachNote,
+      coachNoteUpdatedAt: coachNoteUpdatedAt ?? this.coachNoteUpdatedAt,
     );
   }
 }

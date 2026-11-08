@@ -5,6 +5,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../models/mock_exam_model.dart';
 import '../../providers/study_provider.dart';
 import '../../providers/user_provider.dart';
+import '../../widgets/premium_upgrade_modal.dart';
 import 'add_mock_exam_dialog.dart';
 
 class MockExamScreen extends StatefulWidget {
@@ -16,6 +17,21 @@ class MockExamScreen extends StatefulWidget {
 
 class _MockExamScreenState extends State<MockExamScreen> {
   void _openAddDialog([MockExamModel? exam]) {
+    final studyProvider = context.read<StudyProvider>();
+    final userProvider = context.read<UserProvider>();
+    final isPro = userProvider.isPremium || userProvider.isAdmin;
+
+    // Ücretsiz kullanıcılarda en fazla 3 deneme sınırı
+    if (exam == null && !isPro && studyProvider.mockExams.length >= 3) {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (ctx) => const PremiumUpgradeModal(source: 'mock_exam'),
+      );
+      return;
+    }
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -60,6 +76,7 @@ class _MockExamScreenState extends State<MockExamScreen> {
     final studyProvider = Provider.of<StudyProvider>(context);
     final userProvider = Provider.of<UserProvider>(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isPro = userProvider.isPremium || userProvider.isAdmin;
 
     final mockExams = studyProvider.mockExams;
     final count = studyProvider.mockExamCount;
@@ -115,6 +132,42 @@ class _MockExamScreenState extends State<MockExamScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // ÜCRETSİZ PLAN KOTA HATIRLATMASI
+              if (!isPro)
+                InkWell(
+                  onTap: () {
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (_) => const PremiumUpgradeModal(source: 'mock_exam'),
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 14),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.35)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.workspace_premium_rounded, color: Color(0xFFF59E0B), size: 22),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Ücretsiz Plan: $count/3 Deneme • Sınırsız net analizi için PRO 🚀',
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFFD97706)),
+                          ),
+                        ),
+                        const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Color(0xFFD97706)),
+                      ],
+                    ),
+                  ),
+                ),
+
               // 1. ÖZET METRİK KARTLARI
               Row(
                 children: [

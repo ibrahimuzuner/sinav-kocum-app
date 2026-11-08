@@ -9,6 +9,7 @@ import '../questions/add_question_dialog.dart';
 import '../schedule/schedule_card.dart';
 import '../mock_exams/mock_exam_screen.dart';
 import '../admin/admin_dashboard_screen.dart';
+import '../../widgets/premium_upgrade_modal.dart';
 import 'widgets/quick_actions.dart';
 import 'widgets/quote_card.dart';
 import 'widgets/streak_card.dart';
@@ -46,6 +47,24 @@ class DashboardScreen extends StatelessWidget {
                   const Tooltip(
                     message: 'Onaylı Öğrenci Hesabı',
                     child: Icon(Icons.verified_rounded, color: Color(0xFF10B981), size: 18),
+                  ),
+                ],
+                if (userProvider.isPremium) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(colors: [Color(0xFFF59E0B), Color(0xFFD97706)]),
+                      borderRadius: BorderRadius.circular(6),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFF59E0B).withValues(alpha: 0.3),
+                          blurRadius: 4,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
+                    ),
+                    child: const Text('👑 PRO', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 10)),
                   ),
                 ],
               ],
@@ -101,6 +120,7 @@ class DashboardScreen extends StatelessWidget {
       body: RefreshIndicator(
         onRefresh: () async {
           studyProvider.loadData();
+          await userProvider.syncCloudUserData();
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -114,6 +134,15 @@ class DashboardScreen extends StatelessWidget {
                 didStudyToday: studyProvider.didStudyToday,
               ),
               const SizedBox(height: 14),
+
+              // 👑 Koçluk Tavsiyesi (PRO) veya PRO Tanıtım Kartı
+              if (userProvider.isPremium || userProvider.isAdmin) ...[
+                _buildCoachFeedbackCard(context, userProvider, isDark),
+                const SizedBox(height: 14),
+              ] else ...[
+                _buildProUpgradeBanner(context, isDark),
+                const SizedBox(height: 14),
+              ],
 
               // 📧 E-posta Onay Hatırlatması (Eğer henüz onaylanmamışsa)
               if (!userProvider.isEmailVerified && userProvider.email.isNotEmpty) ...[
@@ -445,6 +474,178 @@ class DashboardScreen extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildCoachFeedbackCard(BuildContext context, UserProvider userProvider, bool isDark) {
+    final note = userProvider.coachNote;
+    final hasNote = note != null && note.trim().isNotEmpty;
+    final updated = userProvider.coachNoteUpdatedAt;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: isDark
+              ? [const Color(0xFF1E1B4B), const Color(0xFF0F172A)]
+              : [const Color(0xFFFEF3C7), const Color(0xFFFFFBEB)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: const Color(0xFFF59E0B).withValues(alpha: isDark ? 0.4 : 0.6),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.psychology_rounded, color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '👨‍🏫 Koçun İbrahim\'den Sana Özel Tavsiye',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : const Color(0xFF78350F),
+                      ),
+                    ),
+                    Text(
+                      '👑 Birebir Koçluk Desteği',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isDark ? const Color(0xFFFBBF24) : const Color(0xFFB45309),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Text(
+              hasNote
+                  ? note
+                  : 'Koçun İbrahim çalışmalarını ve soru çözümlerini inceliyor. Performansını analiz edip sana özel haftalık stratejini buraya iletecek!',
+              style: TextStyle(
+                fontSize: 13,
+                fontStyle: hasNote ? FontStyle.normal : FontStyle.italic,
+                height: 1.4,
+                color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF1E293B),
+                fontWeight: hasNote ? FontWeight.w500 : FontWeight.normal,
+              ),
+            ),
+          ),
+          if (updated != null) ...[
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                'Son Güncelleme: ${Formatters.formatDateTurkish(updated)}',
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: Color(0xFF94A3B8),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProUpgradeBanner(BuildContext context, bool isDark) {
+    return InkWell(
+      onTap: () {
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (_) => const PremiumUpgradeModal(source: 'coach'),
+        );
+      },
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFF59E0B), width: 1.2),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(colors: [Color(0xFFF59E0B), Color(0xFFD97706)]),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.workspace_premium_rounded, color: Colors.white, size: 22),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '👑 Sınav Koçum PRO\'ya Yükselt',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Özel koç tavsiyesi, renkli PDF karne & sınırsız deneme!',
+                    style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 11.5),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFFF59E0B), size: 14),
+          ],
+        ),
       ),
     );
   }

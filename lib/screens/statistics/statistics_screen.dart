@@ -8,6 +8,7 @@ import '../../providers/user_provider.dart';
 import '../../models/user_profile_model.dart';
 import '../../services/pdf_report_service.dart';
 import '../../utils/formatters.dart';
+import '../../widgets/premium_upgrade_modal.dart';
 import '../mock_exams/mock_exam_screen.dart';
 import 'pdf_preview_screen.dart';
 
@@ -615,6 +616,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     }
 
     final overallAccuracy = totalQ > 0 ? ((totalCorrect / totalQ) * 100).toStringAsFixed(1) : '0';
+    final isPro = userProvider.isPremium || userProvider.isAdmin;
 
     // Rapor metni (Kopyalama için)
     final reportText = '''
@@ -803,20 +805,37 @@ Sınav Koçum ile hedefine emin adımlarla ilerle! 🚀
                 SizedBox(
                   width: double.infinity,
                   height: 48,
-                  child: ElevatedButton.icon(
+                  child: ElevatedButton(
                     onPressed: () {
                       Navigator.pop(ctx);
                       _exportPdf(context, studyProvider, userProvider, isShare: false);
                     },
-                    icon: const Icon(Icons.picture_as_pdf_rounded, color: Colors.white),
-                    label: const Text(
-                      'PDF Raporunu İndir / Yazdır',
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
-                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF4F46E5),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       elevation: 2,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.picture_as_pdf_rounded, color: Colors.white),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'PDF Raporunu İndir / Yazdır',
+                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                        if (!isPro) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF59E0B),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text('👑 PRO', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 10)),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 ),
@@ -828,19 +847,29 @@ Sınav Koçum ile hedefine emin adımlarla ilerle! 🚀
                     Expanded(
                       child: SizedBox(
                         height: 44,
-                        child: OutlinedButton.icon(
+                        child: OutlinedButton(
                           onPressed: () {
                             Navigator.pop(ctx);
                             _exportPdf(context, studyProvider, userProvider, isShare: true);
                           },
-                          icon: const Icon(Icons.share_rounded, size: 18, color: Color(0xFF10B981)),
-                          label: const Text(
-                            'PDF Paylaş',
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF10B981)),
-                          ),
                           style: OutlinedButton.styleFrom(
                             side: const BorderSide(color: Color(0xFF10B981), width: 1.5),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.share_rounded, size: 18, color: Color(0xFF10B981)),
+                              const SizedBox(width: 6),
+                              const Text(
+                                'PDF Paylaş',
+                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF10B981)),
+                              ),
+                              if (!isPro) ...[
+                                const SizedBox(width: 4),
+                                const Text('👑', style: TextStyle(fontSize: 10)),
+                              ],
+                            ],
                           ),
                         ),
                       ),
@@ -914,6 +943,17 @@ Sınav Koçum ile hedefine emin adımlarla ilerle! 🚀
   }
 
   void _exportPdf(BuildContext context, StudyProvider studyProvider, UserProvider userProvider, {required bool isShare}) async {
+    final isPro = userProvider.isPremium || userProvider.isAdmin;
+    if (!isPro) {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (_) => const PremiumUpgradeModal(source: 'pdf'),
+      );
+      return;
+    }
+
     final profile = userProvider.userProfile ?? UserProfileModel(
       id: 'temp',
       firstName: userProvider.displayName,
