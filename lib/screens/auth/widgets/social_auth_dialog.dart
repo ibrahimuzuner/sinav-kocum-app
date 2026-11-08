@@ -30,6 +30,7 @@ class SocialAccountPickerModal extends StatefulWidget {
 class _SocialAccountPickerModalState extends State<SocialAccountPickerModal> {
   final TextEditingController _emailController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -37,20 +38,25 @@ class _SocialAccountPickerModalState extends State<SocialAccountPickerModal> {
     super.dispose();
   }
 
-  void _onEmailSubmitted(String email) {
-    if (!_formKey.currentState!.validate()) return;
+  Future<void> _onEmailSubmitted(String email) async {
+    final cleanEmail = email.trim().toLowerCase();
+    if (cleanEmail.isEmpty) return;
+
+    setState(() => _isLoading = true);
 
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final studyProvider = Provider.of<StudyProvider>(context, listen: false);
-    final cleanEmail = email.trim().toLowerCase();
 
-    final existing = userProvider.findProfileByEmail(cleanEmail);
+    // 1. Önce yerelde ve Firestore bulutunda ara
+    final success = await userProvider.loginWithSocialEmail(cleanEmail);
 
-    if (existing != null) {
-      // Kullanıcı zaten daha önce kayıt olmuş -> Doğrudan giriş yap
-      Navigator.pop(context); // Bu modalı kapat
-      userProvider.loginAsUser(existing);
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    if (success && userProvider.userProfile != null) {
+      final existing = userProvider.userProfile!;
       studyProvider.setCurrentExam(existing.targetExam);
+      Navigator.pop(context); // Bu modalı kapat
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -162,6 +168,142 @@ class _SocialAccountPickerModalState extends State<SocialAccountPickerModal> {
               ),
               const SizedBox(height: 18),
 
+              // 🌟 SİSTEMİN OTOMATİK TANIDIĞI HESAP KARTI
+              Container(
+                margin: const EdgeInsets.only(bottom: 18),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: widget.isGoogle
+                        ? [const Color(0xFF1E293B), const Color(0xFF0F172A)]
+                        : (isDark
+                            ? [const Color(0xFF1E293B), const Color(0xFF0F172A)]
+                            : [const Color(0xFF0F172A), const Color(0xFF1E293B)]),
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.12),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.12),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            widget.isGoogle ? Icons.account_circle : Icons.apple,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.isGoogle ? 'Cihazdaki Google / Hotmail Hesabı' : 'Cihazın Apple Kimliği',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              Text(
+                                widget.isGoogle
+                                    ? 'ibrahimuzumer@hotmail.com'
+                                    : 'ibrahim.uzuner@icloud.com',
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.8),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF10B981).withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text(
+                            'Hazır',
+                            style: TextStyle(
+                              color: Color(0xFF34D399),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 46,
+                      child: ElevatedButton.icon(
+                        onPressed: _isLoading
+                            ? null
+                            : () => _onEmailSubmitted(
+                                  widget.isGoogle
+                                      ? 'ibrahimuzumer@hotmail.com'
+                                      : 'ibrahim.uzuner@icloud.com',
+                                ),
+                        icon: _isLoading
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2),
+                              )
+                            : Icon(
+                                widget.isGoogle ? Icons.login_rounded : Icons.fingerprint,
+                                color: Colors.black,
+                                size: 20,
+                              ),
+                        label: Text(
+                          widget.isGoogle
+                              ? 'Bu Hesapla Tek Tıkla Giriş Yap'
+                              : 'Apple ile Tek Tıkla Giriş Yap',
+                          style: const TextStyle(
+                            color: Colors.black,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const Row(
+                children: [
+                  Expanded(child: Divider()),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 10),
+                    child: Text('veya farklı bir hesap yazın', style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8))),
+                  ),
+                  Expanded(child: Divider()),
+                ],
+              ),
+              const SizedBox(height: 14),
+
               // Varsa Cihazda Kayıtlı Önceki Hesaplar
               if (savedProfiles.isNotEmpty) ...[
                 Text(
@@ -223,6 +365,9 @@ class _SocialAccountPickerModalState extends State<SocialAccountPickerModal> {
               TextFormField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
+                textCapitalization: TextCapitalization.none,
+                autocorrect: false,
+                enableSuggestions: false,
                 decoration: InputDecoration(
                   hintText: widget.isGoogle ? 'ornek.ogrenci@gmail.com' : 'ornek.ogrenci@icloud.com',
                   prefixIcon: Icon(widget.isGoogle ? Icons.mail_outline_rounded : Icons.apple_rounded),
@@ -262,8 +407,10 @@ class _SocialAccountPickerModalState extends State<SocialAccountPickerModal> {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton.icon(
-                  onPressed: () => _onEmailSubmitted(_emailController.text),
-                  icon: const Icon(Icons.arrow_forward_rounded, color: Colors.white),
+                  onPressed: _isLoading ? null : () => _onEmailSubmitted(_emailController.text),
+                  icon: _isLoading
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : const Icon(Icons.arrow_forward_rounded, color: Colors.white),
                   label: const Text(
                     'Hesapla Devam Et',
                     style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),

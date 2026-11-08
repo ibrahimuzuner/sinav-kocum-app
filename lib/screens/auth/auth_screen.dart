@@ -221,6 +221,9 @@ class _AuthScreenState extends State<AuthScreen> {
           TextFormField(
             controller: _loginEmailController,
             keyboardType: TextInputType.emailAddress,
+            textCapitalization: TextCapitalization.none,
+            autocorrect: false,
+            enableSuggestions: false,
             decoration: const InputDecoration(
               hintText: 'ornek@email.com',
               prefixIcon: Icon(Icons.email_outlined),
@@ -369,6 +372,9 @@ class _AuthScreenState extends State<AuthScreen> {
           TextFormField(
             controller: _regEmailController,
             keyboardType: TextInputType.emailAddress,
+            textCapitalization: TextCapitalization.none,
+            autocorrect: false,
+            enableSuggestions: false,
             decoration: const InputDecoration(
               hintText: 'ogrenci@email.com',
               prefixIcon: Icon(Icons.email_outlined),
