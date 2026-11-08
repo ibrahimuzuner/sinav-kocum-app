@@ -358,10 +358,56 @@ class SettingsScreen extends StatelessWidget {
           _buildCard(
             isDark: isDark,
             children: [
+              const ListTile(
+                leading: Icon(Icons.info_outline_rounded, color: Color(0xFF94A3B8)),
+                title: Text('Sınav Çalışma Takip Asistanı', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text('Versiyon 1.0.0 • iOS & Android Uyumlu'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // BÖLÜM 6: OTURUM VE ÇIKIŞ
+          _buildSectionHeader('Oturum'),
+          _buildCard(
+            isDark: isDark,
+            children: [
               ListTile(
-                leading: const Icon(Icons.info_outline_rounded, color: Color(0xFF94A3B8)),
-                title: const Text('Sınav Çalışma Takip Asistanı', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('Versiyon 1.0.0 • iOS & Android Uyumlu'),
+                leading: const Icon(Icons.logout_rounded, color: Colors.redAccent),
+                title: const Text(
+                  'Hesaptan Çıkış Yap',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.redAccent),
+                ),
+                subtitle: const Text('Bu cihazdaki oturumu kapatır ve giriş ekranına döner'),
+                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: Colors.redAccent),
+                onTap: () {
+                  showDialog(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('Çıkış Yap'),
+                      content: const Text(
+                        'Bu cihazdaki oturumunuzu kapatıp giriş ekranına dönmek istediğinize emin misiniz?',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          child: const Text('İptal'),
+                        ),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.redAccent,
+                            foregroundColor: Colors.white,
+                          ),
+                          onPressed: () async {
+                            Navigator.pop(ctx);
+                            await userProvider.logout();
+                          },
+                          child: const Text('Çıkış Yap'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
             ],
           ),
