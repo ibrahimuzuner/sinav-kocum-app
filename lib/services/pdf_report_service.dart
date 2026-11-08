@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
@@ -452,10 +453,19 @@ class PdfReportService {
 
     final fileName = 'SinavKocum_Rapor_${DateFormat('yyyyMMdd_HHmm').format(DateTime.now())}.pdf';
 
-    await Printing.layoutPdf(
-      onLayout: (PdfPageFormat format) async => pdfBytes,
-      name: fileName,
-    );
+    if (kIsWeb) {
+      // Web ve Safari ortamında iframe print kilitlendiği için doğrudan indirme tetiklenir
+      await Printing.sharePdf(
+        bytes: pdfBytes,
+        filename: fileName,
+        subject: '${user.fullName.isNotEmpty ? user.fullName : user.firstName} - Sınav Koçum Analiz Raporu',
+      );
+    } else {
+      await Printing.layoutPdf(
+        onLayout: (PdfPageFormat format) async => pdfBytes,
+        name: fileName,
+      );
+    }
   }
 
   /// PDF Raporunu Doğrudan Paylaş (WhatsApp, Drive, Gmail vb.)

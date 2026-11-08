@@ -1,6 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../providers/study_provider.dart';
 import '../../providers/user_provider.dart';
@@ -8,6 +9,7 @@ import '../../models/user_profile_model.dart';
 import '../../services/pdf_report_service.dart';
 import '../../utils/formatters.dart';
 import '../mock_exams/mock_exam_screen.dart';
+import 'pdf_preview_screen.dart';
 
 class StatisticsScreen extends StatefulWidget {
   const StatisticsScreen({super.key});
@@ -935,27 +937,41 @@ Sınav Koçum ile hedefine emin adımlarla ilerle! 🚀
     );
 
     try {
-      if (isShare) {
-        await PdfReportService.sharePdf(
-          user: profile,
-          period: _selectedPeriod,
-          periodLogs: periodLogs,
-          periodSessions: periodSessions,
-          courses: studyProvider.courses,
-          mockExams: studyProvider.mockExams,
-          streak: studyProvider.streak,
-        );
-      } else {
-        await PdfReportService.printOrSavePdf(
-          user: profile,
-          period: _selectedPeriod,
-          periodLogs: periodLogs,
-          periodSessions: periodSessions,
-          courses: studyProvider.courses,
-          mockExams: studyProvider.mockExams,
-          streak: studyProvider.streak,
-        );
-      }
+      final pdfBytes = await PdfReportService.generateReportPdf(
+        user: profile,
+        period: _selectedPeriod,
+        periodLogs: periodLogs,
+        periodSessions: periodSessions,
+        courses: studyProvider.courses,
+        mockExams: studyProvider.mockExams,
+        streak: studyProvider.streak,
+      );
+
+      final fileName = 'SinavKocum_Rapor_${DateFormat('yyyyMMdd_HHmm').format(DateTime.now())}.pdf';
+
+      if (!context.mounted) return;
+
+      // Hem PDF Önizleme ekranını aç hem de cihaz indirmesini tetikle
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PdfPreviewScreen(
+            pdfBytes: pdfBytes,
+            fileName: fileName,
+          ),
+        ),
+      );
+
+      // Web ve cihaz indirme / paylaşma akışını başlat
+      await PdfReportService.sharePdf(
+        user: profile,
+        period: _selectedPeriod,
+        periodLogs: periodLogs,
+        periodSessions: periodSessions,
+        courses: studyProvider.courses,
+        mockExams: studyProvider.mockExams,
+        streak: studyProvider.streak,
+      );
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
