@@ -1,0 +1,68 @@
+name: Android AAB & APK Derleme
+
+on:
+  workflow_dispatch: # GitHub arayüzünden tek tıkla derleme başlatma
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'lib/**'
+      - 'android/**'
+      - 'pubspec.yaml'
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Depoyu Klonla
+        uses: actions/checkout@v4
+
+      - name: Java 17 Kurulumu
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Flutter Kurulumu
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.29.3'
+          channel: 'stable'
+          cache: true
+
+      - name: Bağımlılıkları İndir
+        run: flutter pub get
+
+      - name: Release Anahtarı ve Ayarları Yapılandır
+        run: |
+          mkdir -p android/app
+          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
+            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/upload-keystore.jks
+            echo "storePassword=${{ secrets.KEYSTORE_PASSWORD || 'sinavtakip2026' }}" > android/key.properties
+            echo "keyPassword=${{ secrets.KEY_PASSWORD || 'sinavtakip2026' }}" >> android/key.properties
+            echo "keyAlias=${{ secrets.KEY_ALIAS || 'upload' }}" >> android/key.properties
+            echo "storeFile=upload-keystore.jks" >> android/key.properties
+          elif [ ! -f android/app/upload-keystore.jks ]; then
+            keytool -genkeypair -v -keystore android/app/upload-keystore.jks -alias upload -keyalg RSA -keysize 2048 -validity 10000 -storepass sinavtakip2026 -keypass sinavtakip2026 -dname "CN=DereceLab, OU=Dev, O=DereceLab, L=Istanbul, ST=Istanbul, C=TR"
+            echo "storePassword=sinavtakip2026" > android/key.properties
+            echo "keyPassword=sinavtakip2026" >> android/key.properties
+            echo "keyAlias=upload" >> android/key.properties
+            echo "storeFile=upload-keystore.jks" >> android/key.properties
+          fi
+
+      - name: Android App Bundle (.aab) Derle (Google Play İçin)
+        run: flutter build appbundle --release
+
+      - name: Android APK (.apk) Derle (Doğrudan Telefona Yüklemek İçin)
+        run: flutter build apk --release
+
+      - name: Google Play .aab Paketini Çıktı Olarak Paylaş (Artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: SinavKocum-GooglePlay-AAB
+          path: build/app/outputs/bundle/release/app-release.aab
+
+      - name: Doğrudan Kurulabilir .apk Dosyasını Çıktı Olarak Paylaş (Artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: SinavKocum-Yuklenebilir-APK
+          path: build/app/outputs/flutter-apk/app-release.apk
