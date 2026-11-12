@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../providers/settings_provider.dart';
 import '../../providers/user_provider.dart';
@@ -28,7 +29,7 @@ class SettingsScreen extends StatelessWidget {
         children: [
           // BÖLÜM 0: KULLANICI PROFİLİ
           if (profile != null) ...[
-            _buildSectionHeader('Öğrenci Profili'),
+            _buildSectionHeader(userProvider.isTeacher ? 'Öğretmen Profili' : 'Öğrenci Profili'),
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -63,11 +64,34 @@ class SettingsScreen extends StatelessWidget {
                           profile.fullName,
                           style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
                         ),
-                        if (profile.email.isNotEmpty)
+                        const SizedBox(height: 3),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: (userProvider.isTeacher
+                                    ? const Color(0xFF10B981)
+                                    : const Color(0xFF4F46E5))
+                                .withValues(alpha: 0.14),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            userProvider.isTeacher ? '👨‍🏫 Öğretmen / Koç' : '🎓 Öğrenci',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: userProvider.isTeacher
+                                  ? const Color(0xFF10B981)
+                                  : const Color(0xFF4F46E5),
+                            ),
+                          ),
+                        ),
+                        if (profile.email.isNotEmpty) ...[
+                          const SizedBox(height: 3),
                           Text(
                             profile.email,
                             style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
                           ),
+                        ],
                         const SizedBox(height: 2),
                         Text(
                           profile.targetExam,
@@ -77,11 +101,13 @@ class SettingsScreen extends StatelessWidget {
                             color: Color(0xFF4F46E5),
                           ),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${profile.age} Yaşında • Hedef: ${profile.dailyTargetHours} Saat/Gün',
-                          style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
-                        ),
+                        if (!userProvider.isTeacher) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            '${profile.age} Yaşında • Hedef: ${profile.dailyTargetHours} Saat/Gün',
+                            style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -185,6 +211,54 @@ class SettingsScreen extends StatelessWidget {
                   ],
                 ),
               ),
+            ] else if (userProvider.isInFreeTrial && !userProvider.isAdmin) ...[
+              InkWell(
+                onTap: () => PremiumUpgradeModal.show(context),
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF065F46), Color(0xFF059669)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Text('🎁', style: TextStyle(fontSize: 22)),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'İlk 3 Ay Ücretsiz Deneme • ${userProvider.remainingTrialDays} Gün Kaldı',
+                              style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold, color: Colors.white),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              userProvider.isTeacher
+                                  ? 'Deneme bitiminde Öğretmen Paketi: ₺299 / Ay. Paketleri görmek için dokunun.'
+                                  : 'Deneme bitiminde Öğrenci Paketi: ₺99 / Ay. Paketleri görmek için dokunun.',
+                              style: const TextStyle(fontSize: 11.5, color: Colors.white70),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white70, size: 14),
+                    ],
+                  ),
+                ),
+              ),
             ] else if (!userProvider.isAdmin) ...[
               InkWell(
                 onTap: () {
@@ -218,25 +292,121 @@ class SettingsScreen extends StatelessWidget {
                         child: const Icon(Icons.workspace_premium_rounded, color: Colors.white, size: 22),
                       ),
                       const SizedBox(width: 14),
-                      const Expanded(
+                      Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              '👑 Sınav Koçum PRO\'ya Yükselt',
-                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+                              userProvider.isTeacher
+                                  ? '👑 Öğretmen PRO\'ya Yükselt (₺299/Ay)'
+                                  : '👑 Öğrenci PRO\'ya Yükselt (₺99/Ay)',
+                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
                             ),
-                            SizedBox(height: 2),
-                            Text(
-                              'Özel koç tavsiyesi, renkli PDF karne & sınırsız deneme için dokunun 🚀',
+                            const SizedBox(height: 2),
+                            const Text(
+                              'Tüm koçluk, ödev, mesajlaşma & PDF karne özelliklerini açın 🚀',
                               style: TextStyle(fontSize: 11.5, color: Color(0xFFCBD5E1)),
                             ),
                           ],
                         ),
                       ),
-                      Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFFF59E0B), size: 14),
+                      const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFFF59E0B), size: 14),
                     ],
                   ),
+                ),
+              ),
+            ],
+            const SizedBox(height: 16),
+
+            // BÖLÜM: ÖĞRETMEN / ÖĞRENCİ BAĞLANTISI
+            if (userProvider.isTeacher && userProvider.teacherCode != null) ...[
+              _buildSectionHeader('Öğretmen Koç Kodum'),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).cardTheme.color,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.4)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.qr_code_2_rounded, color: Color(0xFF10B981), size: 26),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            userProvider.teacherCode!,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.2,
+                              color: Color(0xFF10B981),
+                            ),
+                          ),
+                          const Text(
+                            'Bu kodu öğrencilerinle paylaşarak sınıfına katılmalarını sağlayabilirsin.',
+                            style: TextStyle(fontSize: 11, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Kopyala',
+                      icon: const Icon(Icons.copy_rounded, color: Color(0xFF10B981)),
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: userProvider.teacherCode!));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Koç kodun (${userProvider.teacherCode}) kopyalandı!'),
+                            behavior: SnackBarBehavior.floating,
+                            backgroundColor: const Color(0xFF10B981),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ] else if (userProvider.isStudent) ...[
+              _buildSectionHeader('Öğretmen / Koç Bağlantısı'),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).cardTheme.color,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      userProvider.teacherId != null ? Icons.school_rounded : Icons.qr_code_2_rounded,
+                      color: const Color(0xFF4F46E5),
+                      size: 24,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        userProvider.teacherId != null
+                            ? 'Bağlı Öğretmen: ${userProvider.teacherName ?? "Eğitim Koçu"}'
+                            : 'Henüz bir öğretmene bağlı değilsin.',
+                        style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    if (userProvider.teacherId != null)
+                      TextButton(
+                        onPressed: () => userProvider.disconnectTeacher(),
+                        child: const Text('Ayır', style: TextStyle(color: Colors.redAccent)),
+                      )
+                    else
+                      TextButton(
+                        onPressed: () => _showConnectTeacherDialog(context, userProvider),
+                        child: const Text('Kod Gir'),
+                      ),
+                  ],
                 ),
               ),
             ],
@@ -559,5 +729,74 @@ class SettingsScreen extends StatelessWidget {
         child: Column(children: children),
       ),
     );
+  }
+
+  Future<void> _showConnectTeacherDialog(BuildContext context, UserProvider userProvider) async {
+    final codeCtrl = TextEditingController();
+    bool loading = false;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (modalCtx, setModalState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('Koç Kodu ile Bağlan', style: TextStyle(fontWeight: FontWeight.bold)),
+          content: TextField(
+            controller: codeCtrl,
+            textCapitalization: TextCapitalization.characters,
+            autofocus: true,
+            decoration: const InputDecoration(
+              labelText: 'Öğretmen Koç Kodu',
+              hintText: 'Örn: KOC-4821',
+              prefixIcon: Icon(Icons.qr_code_2_rounded),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: loading ? null : () => Navigator.pop(ctx),
+              child: const Text('Vazgeç'),
+            ),
+            ElevatedButton(
+              onPressed: loading
+                  ? null
+                  : () async {
+                      final code = codeCtrl.text.trim();
+                      if (code.isEmpty) return;
+                      setModalState(() => loading = true);
+                      final err = await userProvider.connectWithTeacherCode(code);
+                      setModalState(() => loading = false);
+                      if (!ctx.mounted) return;
+                      if (err == null) {
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('${userProvider.teacherName ?? "Öğretmenin"} ile bağlandın! 🎓'),
+                            behavior: SnackBarBehavior.floating,
+                            backgroundColor: const Color(0xFF10B981),
+                          ),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(err),
+                            behavior: SnackBarBehavior.floating,
+                            backgroundColor: Colors.redAccent,
+                          ),
+                        );
+                      }
+                    },
+              child: loading
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Bağlan'),
+            ),
+          ],
+        ),
+      ),
+    );
+    codeCtrl.dispose();
   }
 }

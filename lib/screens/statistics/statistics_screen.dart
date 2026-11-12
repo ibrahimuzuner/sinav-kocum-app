@@ -616,7 +616,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     }
 
     final overallAccuracy = totalQ > 0 ? ((totalCorrect / totalQ) * 100).toStringAsFixed(1) : '0';
-    final isPro = userProvider.isPremium || userProvider.isAdmin;
+    final isPro = userProvider.hasProAccess;
 
     // Rapor metni (Kopyalama için)
     final reportText = '''
@@ -943,7 +943,7 @@ Sınav Koçum ile hedefine emin adımlarla ilerle! 🚀
   }
 
   void _exportPdf(BuildContext context, StudyProvider studyProvider, UserProvider userProvider, {required bool isShare}) async {
-    final isPro = userProvider.isPremium || userProvider.isAdmin;
+    final isPro = userProvider.hasProAccess;
     if (!isPro) {
       showModalBottomSheet(
         context: context,

@@ -6,6 +6,8 @@ import '../models/question_log_model.dart';
 import '../models/study_session_model.dart';
 import '../models/schedule_item_model.dart';
 import '../models/mock_exam_model.dart';
+import '../models/student_study_stats_model.dart';
+import '../services/firebase_service.dart';
 import '../services/storage_service.dart';
 import '../services/smart_scheduler_service.dart';
 import '../services/predefined_data.dart';
@@ -120,6 +122,54 @@ class StudyProvider with ChangeNotifier {
     // Check streak decay if more than 1 day skipped
     _validateStreak();
     notifyListeners();
+
+    if (userProfile != null && userProfile.isStudent) {
+      syncStudyStatsToCloud();
+    }
+  }
+
+  /// Öğrencinin çalışma istatistik özetini öğretmen takibi için buluta aktarır
+  Future<void> syncStudyStatsToCloud() async {
+    try {
+      final profile = _storage.loadUserProfile();
+      if (profile == null || profile.isTeacher) return;
+
+      final totalSessionMins = _studySessions.fold(0, (sum, s) => sum + s.durationMinutes);
+      final totalQLogMins = _questionLogs.fold(0, (sum, q) => sum + (q.durationMinutes ?? 0));
+      final totalQuestions = _questionLogs.fold(0, (sum, q) => sum + q.totalQuestions);
+
+      final List<String> recent = [];
+      for (final q in _questionLogs.take(3)) {
+        final topicPart = (q.topicName != null && q.topicName!.isNotEmpty) ? ' (${q.topicName})' : '';
+        recent.add('📝 ${q.courseName}$topicPart: ${q.totalQuestions} soru (${q.correctCount}D ${q.wrongCount}Y)');
+      }
+      for (final s in _studySessions.take(2)) {
+        final cname = s.courseName ?? 'Genel Çalışma';
+        recent.add('⏱️ $cname: ${s.durationMinutes} dk odak');
+      }
+      if (latestMockExam != null) {
+        recent.add('📊 Deneme (${latestMockExam!.title}): ${latestMockExam!.totalNet.toStringAsFixed(1)} Net');
+      }
+
+      final stats = StudentStudyStatsModel(
+        todayStudyMinutes: todayStudyMinutes,
+        todaySolvedQuestions: todayTotalQuestions,
+        todayNetScore: todayNetScore,
+        totalStudyMinutes: totalSessionMins + totalQLogMins,
+        totalSolvedQuestions: totalQuestions,
+        streakDays: _streak,
+        mockExamCount: mockExamCount,
+        latestMockTitle: latestMockExam?.title,
+        latestMockNet: latestMockExam?.totalNet,
+        highestMockNet: highestMockNet,
+        lastStudiedAt: _lastActiveDateStr != null ? DateTime.tryParse(_lastActiveDateStr!) : null,
+        recentActivities: recent,
+      );
+
+      await AppFirebaseService().syncStudentStudyStats(profile.id, stats);
+    } catch (e) {
+      debugPrint('syncStudyStatsToCloud hatası: $e');
+    }
   }
 
   void _validateStreak() {
@@ -163,6 +213,7 @@ class StudyProvider with ChangeNotifier {
     _lastActiveDateStr = todayStr;
     _storage.saveStreak(_streak);
     _storage.saveLastActiveDate(todayStr);
+    syncStudyStatsToCloud();
   }
 
   // --- STATS GETTERS ---

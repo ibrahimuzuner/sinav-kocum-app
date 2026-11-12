@@ -1,6 +1,10 @@
+import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:exam_tracker/models/assignment_model.dart';
+import 'package:exam_tracker/models/coach_message_model.dart';
 import 'package:exam_tracker/models/question_log_model.dart';
 import 'package:exam_tracker/models/mock_exam_model.dart';
+import 'package:exam_tracker/models/student_study_stats_model.dart';
 import 'package:exam_tracker/models/user_profile_model.dart';
 import 'package:exam_tracker/services/predefined_data.dart';
 import 'package:exam_tracker/services/target_departments_data.dart';
@@ -173,5 +177,85 @@ void main() {
     expect(parsed.isPremium, false);
     expect(parsed.membershipPlan, 'Ücretsiz');
     expect(parsed.isEmailVerified, false);
+  });
+
+  test('Teacher/Student roles, 90-day trial, assignments, messages and study stats work correctly', () {
+    final now = DateTime.now();
+    final teacher = UserProfileModel(
+      id: 'teacher-1',
+      firstName: 'Ayşe',
+      lastName: 'Demir',
+      email: 'ayse@koc.com',
+      birthDate: DateTime(1988, 3, 10),
+      targetExam: 'YKS (Sayısal)',
+      createdAt: now,
+      role: 'teacher',
+      teacherCode: 'KOC-4821',
+      trialEndsAt: now.add(const Duration(days: 90)),
+    );
+
+    expect(teacher.isTeacher, true);
+    expect(teacher.isStudent, false);
+    expect(teacher.isInFreeTrial, true);
+    expect(teacher.hasProAccess, true);
+    expect(teacher.remainingTrialDays >= 89, true);
+
+    final assignment = AssignmentModel(
+      id: 'hw-1',
+      teacherId: teacher.id,
+      teacherName: teacher.fullName,
+      studentId: 'student-1',
+      courseName: 'Matematik',
+      title: 'Problemler Test 1-3',
+      targetQuestions: 50,
+      targetMinutes: 60,
+      dueDate: now.add(const Duration(days: 2)),
+      createdAt: now,
+    );
+
+    final msg = CoachMessageModel(
+      id: 'msg-1',
+      senderId: teacher.id,
+      senderName: teacher.fullName,
+      senderRole: 'teacher',
+      message: 'Harika gidiyorsun!',
+      createdAt: now,
+    );
+
+    final stats = StudentStudyStatsModel(
+      todayStudyMinutes: 90,
+      todaySolvedQuestions: 75,
+      streakDays: 5,
+      latestMockNet: 88.5,
+      lastStudiedAt: now,
+      recentActivities: const ['Matematik 40 Soru'],
+    );
+
+    final student = UserProfileModel(
+      id: 'student-1',
+      firstName: 'Mehmet',
+      lastName: 'Kaya',
+      email: 'mehmet@ogr.com',
+      birthDate: DateTime(2007, 8, 12),
+      targetExam: 'YKS (Sayısal)',
+      createdAt: now.subtract(const Duration(days: 95)),
+      role: 'student',
+      teacherId: teacher.id,
+      teacherName: teacher.fullName,
+      studyStatsJson: jsonEncode(stats.toJson()),
+      assignmentsJson: jsonEncode([assignment.toJson()]),
+      messagesJson: jsonEncode([msg.toJson()]),
+    );
+
+    final parsedStudent = UserProfileModel.fromJson(student.toJson());
+    expect(parsedStudent.isStudent, true);
+    expect(parsedStudent.isInFreeTrial, false);
+    expect(parsedStudent.hasProAccess, false);
+    expect(parsedStudent.studyStats.studiedToday, true);
+    expect(parsedStudent.studyStats.todaySolvedQuestions, 75);
+    expect(parsedStudent.pendingAssignmentsCount, 1);
+    expect(parsedStudent.assignments.first.title, 'Problemler Test 1-3');
+    expect(parsedStudent.messages.first.isFromTeacher, true);
+    expect(parsedStudent.messages.first.message, 'Harika gidiyorsun!');
   });
 }

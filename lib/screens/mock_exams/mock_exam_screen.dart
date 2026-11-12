@@ -19,7 +19,7 @@ class _MockExamScreenState extends State<MockExamScreen> {
   void _openAddDialog([MockExamModel? exam]) {
     final studyProvider = context.read<StudyProvider>();
     final userProvider = context.read<UserProvider>();
-    final isPro = userProvider.isPremium || userProvider.isAdmin;
+    final isPro = userProvider.hasProAccess;
 
     // Ücretsiz kullanıcılarda en fazla 3 deneme sınırı
     if (exam == null && !isPro && studyProvider.mockExams.length >= 3) {
@@ -76,7 +76,7 @@ class _MockExamScreenState extends State<MockExamScreen> {
     final studyProvider = Provider.of<StudyProvider>(context);
     final userProvider = Provider.of<UserProvider>(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isPro = userProvider.isPremium || userProvider.isAdmin;
+    final isPro = userProvider.hasProAccess;
 
     final mockExams = studyProvider.mockExams;
     final count = studyProvider.mockExamCount;

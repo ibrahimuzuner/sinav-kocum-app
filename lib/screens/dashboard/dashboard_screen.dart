@@ -66,6 +66,20 @@ class DashboardScreen extends StatelessWidget {
                     ),
                     child: const Text('👑 PRO', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 10)),
                   ),
+                ] else if (userProvider.isInFreeTrial) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withValues(alpha: 0.16),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.45)),
+                    ),
+                    child: Text(
+                      '🎁 ${userProvider.remainingTrialDays}g Ücretsiz',
+                      style: const TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.w900, fontSize: 10),
+                    ),
+                  ),
                 ],
               ],
             ),
@@ -135,8 +149,14 @@ class DashboardScreen extends StatelessWidget {
               ),
               const SizedBox(height: 14),
 
-              // 👑 Koçluk Tavsiyesi (PRO) veya PRO Tanıtım Kartı
-              if (userProvider.isPremium || userProvider.isAdmin) ...[
+              // 🎁 3 Ay Ücretsiz Deneme Kartı
+              if (!userProvider.isPremium && !userProvider.isAdmin && userProvider.isInFreeTrial) ...[
+                _buildTrialBanner(context, userProvider),
+                const SizedBox(height: 14),
+              ],
+
+              // 👑 Koçluk Tavsiyesi (PRO / Ücretsiz Deneme) veya PRO Tanıtım Kartı
+              if (userProvider.hasProAccess) ...[
                 _buildCoachFeedbackCard(context, userProvider, isDark),
                 const SizedBox(height: 14),
               ] else ...[
@@ -148,6 +168,20 @@ class DashboardScreen extends StatelessWidget {
               if (!userProvider.isEmailVerified && userProvider.email.isNotEmpty) ...[
                 _buildEmailVerificationNotice(context, userProvider),
                 const SizedBox(height: 14),
+              ],
+
+              // 👨‍🏫 Öğretmen Bağlantısı, Ödevler ve Mesajlar
+              if (userProvider.isRegistered) ...[
+                _buildTeacherConnectionCard(context, userProvider, isDark),
+                const SizedBox(height: 14),
+                if (userProvider.studentAssignments.isNotEmpty) ...[
+                  _buildStudentAssignmentsCard(context, userProvider, isDark),
+                  const SizedBox(height: 14),
+                ],
+                if (userProvider.teacherId != null || userProvider.studentMessages.isNotEmpty) ...[
+                  _buildTeacherMessagesCard(context, userProvider, isDark),
+                  const SizedBox(height: 14),
+                ],
               ],
 
               // 🎯 Yapay Zeka Hedef & Puan Takip Kartı
@@ -648,5 +682,558 @@ class DashboardScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Widget _buildTrialBanner(BuildContext context, UserProvider userProvider) {
+    return InkWell(
+      onTap: () => PremiumUpgradeModal.show(context),
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF065F46), Color(0xFF059669)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Row(
+          children: [
+            const Text('🎁', style: TextStyle(fontSize: 22)),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'İlk 3 Ay Ücretsiz Denemen Aktif (${userProvider.remainingTrialDays} gün kaldı)',
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                  const Text(
+                    'Tüm PRO özellikler açık! Öğrenci ve öğretmen planlarını gör.',
+                    style: TextStyle(color: Colors.white70, fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: Colors.white70),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTeacherConnectionCard(BuildContext context, UserProvider userProvider, bool isDark) {
+    final hasTeacher = userProvider.teacherId != null && userProvider.teacherId!.isNotEmpty;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: hasTeacher
+              ? const Color(0xFF10B981).withValues(alpha: 0.4)
+              : const Color(0xFF4F46E5).withValues(alpha: 0.35),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: (hasTeacher ? const Color(0xFF10B981) : const Color(0xFF4F46E5))
+                  .withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              hasTeacher ? Icons.school_rounded : Icons.qr_code_2_rounded,
+              color: hasTeacher ? const Color(0xFF10B981) : const Color(0xFF4F46E5),
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  hasTeacher
+                      ? 'Öğretmenim: ${userProvider.teacherName ?? "Eğitim Koçu"}'
+                      : 'Öğretmen / Koç Bağlantısı',
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  hasTeacher
+                      ? 'Çalışma durumun öğretmeninle otomatik paylaşılıyor.'
+                      : 'Öğretmeninin KOC-XXXX kodunu girerek ödev ve mesaj al.',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          if (hasTeacher)
+            TextButton(
+              onPressed: () async {
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Öğretmen Bağlantısını Kes'),
+                    content: Text(
+                      '${userProvider.teacherName ?? "Öğretmen"} ile bağlantını kesmek istiyor musun?',
+                    ),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Vazgeç')),
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        child: const Text('Bağlantıyı Kes', style: TextStyle(color: Colors.redAccent)),
+                      ),
+                    ],
+                  ),
+                );
+                if (confirm == true) {
+                  await userProvider.disconnectTeacher();
+                }
+              },
+              child: const Text('Ayır', style: TextStyle(color: Colors.redAccent, fontSize: 12)),
+            )
+          else
+            ElevatedButton(
+              onPressed: () => _showConnectTeacherDialog(context, userProvider),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF4F46E5),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text('Bağlan', style: TextStyle(fontSize: 12)),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showConnectTeacherDialog(BuildContext context, UserProvider userProvider) async {
+    final codeCtrl = TextEditingController();
+    bool loading = false;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (modalCtx, setModalState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('Koç Kodu ile Bağlan', style: TextStyle(fontWeight: FontWeight.bold)),
+          content: TextField(
+            controller: codeCtrl,
+            textCapitalization: TextCapitalization.characters,
+            autofocus: true,
+            decoration: const InputDecoration(
+              labelText: 'Öğretmen Koç Kodu',
+              hintText: 'Örn: KOC-4821',
+              prefixIcon: Icon(Icons.qr_code_2_rounded),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: loading ? null : () => Navigator.pop(ctx),
+              child: const Text('Vazgeç'),
+            ),
+            ElevatedButton(
+              onPressed: loading
+                  ? null
+                  : () async {
+                      final code = codeCtrl.text.trim();
+                      if (code.isEmpty) return;
+                      setModalState(() => loading = true);
+                      final err = await userProvider.connectWithTeacherCode(code);
+                      setModalState(() => loading = false);
+                      if (!ctx.mounted) return;
+                      if (err == null) {
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('${userProvider.teacherName ?? "Öğretmenin"} ile bağlandın! 🎓'),
+                            behavior: SnackBarBehavior.floating,
+                            backgroundColor: const Color(0xFF10B981),
+                          ),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(err),
+                            behavior: SnackBarBehavior.floating,
+                            backgroundColor: Colors.redAccent,
+                          ),
+                        );
+                      }
+                    },
+              child: loading
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Bağlan'),
+            ),
+          ],
+        ),
+      ),
+    );
+    codeCtrl.dispose();
+  }
+
+  Widget _buildStudentAssignmentsCard(BuildContext context, UserProvider userProvider, bool isDark) {
+    final assignments = userProvider.studentAssignments;
+    final pending = userProvider.pendingAssignmentsCount;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text(
+                '📚 Öğretmenimin Verdiği Ödevler',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: (pending > 0 ? const Color(0xFFF59E0B) : const Color(0xFF10B981))
+                      .withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  pending > 0 ? '$pending bekliyor' : 'Tümü tamam ✓',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: pending > 0 ? const Color(0xFFF59E0B) : const Color(0xFF10B981),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ...assignments.take(5).map((a) {
+            return InkWell(
+              onTap: () => userProvider.toggleMyAssignmentCompleted(a.id),
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: a.isCompleted
+                        ? const Color(0xFF10B981).withValues(alpha: 0.35)
+                        : (a.isOverdue
+                            ? Colors.redAccent.withValues(alpha: 0.4)
+                            : Colors.transparent),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      a.isCompleted ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                      color: a.isCompleted
+                          ? const Color(0xFF10B981)
+                          : (a.isOverdue ? Colors.redAccent : const Color(0xFF4F46E5)),
+                      size: 22,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${a.courseName} • ${a.title}',
+                            style: TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.bold,
+                              decoration: a.isCompleted ? TextDecoration.lineThrough : null,
+                            ),
+                          ),
+                          if (a.description.isNotEmpty)
+                            Text(
+                              a.description,
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          const SizedBox(height: 2),
+                          Text(
+                            [
+                              if (a.targetQuestions > 0) '${a.targetQuestions} soru',
+                              if (a.targetMinutes > 0) '${a.targetMinutes} dk',
+                              'Son: ${Formatters.formatDateTurkish(a.dueDate)}',
+                            ].join(' • '),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: a.isOverdue && !a.isCompleted ? Colors.redAccent : Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTeacherMessagesCard(BuildContext context, UserProvider userProvider, bool isDark) {
+    final unread = userProvider.unreadTeacherMessagesCount;
+    final messages = userProvider.studentMessages;
+    final lastMsg = messages.isNotEmpty ? messages.last : null;
+
+    return InkWell(
+      onTap: () {
+        userProvider.markTeacherMessagesAsRead();
+        _showStudentChatSheet(context);
+      },
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E293B) : Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: unread > 0
+                ? const Color(0xFF4F46E5)
+                : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF4F46E5).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.forum_rounded, color: Color(0xFF4F46E5), size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Text(
+                        '💬 Öğretmenimden Mesajlar',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                      ),
+                      if (unread > 0) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.redAccent,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            '$unread yeni',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    lastMsg != null
+                        ? '${lastMsg.isFromTeacher ? "${lastMsg.senderName}: " : "Sen: "}${lastMsg.message}'
+                        : 'Öğretmenine soru sor veya çalışma durumunu yaz.',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showStudentChatSheet(BuildContext context) {
+    final msgCtrl = TextEditingController();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) {
+        return Consumer<UserProvider>(
+          builder: (ctx, userProvider, _) {
+            final isDark = Theme.of(ctx).brightness == Brightness.dark;
+            final messages = userProvider.studentMessages;
+
+            return Padding(
+              padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+              child: Container(
+                height: MediaQuery.of(ctx).size.height * 0.78,
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF0F172A) : Colors.white,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
+                ),
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(18, 14, 10, 10),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.forum_rounded, color: Color(0xFF4F46E5)),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              userProvider.teacherName ?? 'Öğretmenim',
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            icon: const Icon(Icons.close_rounded),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Divider(height: 1),
+                    Expanded(
+                      child: messages.isEmpty
+                          ? Center(
+                              child: Text(
+                                'Henüz mesaj yok. Öğretmenine mesaj gönderebilirsin!',
+                                style: TextStyle(
+                                  color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                                ),
+                              ),
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.all(16),
+                              itemCount: messages.length,
+                              itemBuilder: (_, index) {
+                                final m = messages[index];
+                                final isMine = !m.isFromTeacher;
+                                return Align(
+                                  alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
+                                  child: Container(
+                                    margin: const EdgeInsets.only(bottom: 10),
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                    constraints: BoxConstraints(
+                                      maxWidth: MediaQuery.of(ctx).size.width * 0.72,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: isMine
+                                          ? const Color(0xFF4F46E5)
+                                          : (isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9)),
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          m.message,
+                                          style: TextStyle(
+                                            color: isMine
+                                                ? Colors.white
+                                                : (isDark ? Colors.white : const Color(0xFF0F172A)),
+                                            fontSize: 13.5,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          '${m.createdAt.hour.toString().padLeft(2, '0')}:${m.createdAt.minute.toString().padLeft(2, '0')} • ${Formatters.formatDateTurkish(m.createdAt)}',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            color: isMine ? Colors.white70 : Colors.grey,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                    SafeArea(
+                      top: false,
+                      child: Container(
+                        padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                          border: Border(
+                            top: BorderSide(
+                              color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                            ),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: msgCtrl,
+                                decoration: const InputDecoration(
+                                  hintText: 'Öğretmenine mesaj yaz...',
+                                  contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton.filled(
+                              onPressed: () async {
+                                final text = msgCtrl.text.trim();
+                                if (text.isEmpty) return;
+                                msgCtrl.clear();
+                                await userProvider.sendMessageToMyTeacher(text);
+                              },
+                              style: IconButton.styleFrom(backgroundColor: const Color(0xFF4F46E5)),
+                              icon: const Icon(Icons.send_rounded, color: Colors.white),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    ).whenComplete(() => msgCtrl.dispose());
   }
 }

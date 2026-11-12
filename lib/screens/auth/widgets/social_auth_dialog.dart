@@ -482,7 +482,10 @@ class SocialIdentityCompletionModal extends StatefulWidget {
 class _SocialIdentityCompletionModalState extends State<SocialIdentityCompletionModal> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _fullNameController = TextEditingController();
+  final TextEditingController _regTeacherCodeController = TextEditingController();
+  final TextEditingController _teacherSpecialtyController = TextEditingController();
 
+  String _selectedRole = 'student';
   DateTime _birthDate = DateTime(2007, 6, 15);
   String _selectedExam = ExamTypes.availableExams.first;
   int _dailyTargetHours = 3;
@@ -526,6 +529,8 @@ class _SocialIdentityCompletionModalState extends State<SocialIdentityCompletion
   void dispose() {
     _fullNameController.dispose();
     _customDepartmentController.dispose();
+    _regTeacherCodeController.dispose();
+    _teacherSpecialtyController.dispose();
     super.dispose();
   }
 
@@ -546,9 +551,14 @@ class _SocialIdentityCompletionModalState extends State<SocialIdentityCompletion
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final studyProvider = Provider.of<StudyProvider>(context, listen: false);
 
-    final departmentToSave = _isCustomDepartment
-        ? _customDepartmentController.text.trim()
-        : _selectedDepartment;
+    final isTeacher = _selectedRole == 'teacher';
+    final departmentToSave = isTeacher
+        ? (_teacherSpecialtyController.text.trim().isNotEmpty
+            ? _teacherSpecialtyController.text.trim()
+            : 'Öğretmen / Eğitim Koçu')
+        : (_isCustomDepartment
+            ? _customDepartmentController.text.trim()
+            : _selectedDepartment);
 
     final fullName = _fullNameController.text.trim();
     final parts = fullName.split(RegExp(r'\s+'));
@@ -561,10 +571,12 @@ class _SocialIdentityCompletionModalState extends State<SocialIdentityCompletion
       email: widget.email,
       birthDate: _birthDate,
       targetExam: _selectedExam,
-      dailyTargetHours: _dailyTargetHours,
+      dailyTargetHours: isTeacher ? 2 : _dailyTargetHours,
       targetDepartment: departmentToSave,
-      targetScore: _targetScore,
-      targetNet: _targetNet,
+      targetScore: isTeacher ? 500.0 : _targetScore,
+      targetNet: isTeacher ? 100.0 : _targetNet,
+      role: _selectedRole,
+      teacherCodeInput: isTeacher ? null : _regTeacherCodeController.text.trim(),
     );
 
     studyProvider.setCurrentExam(_selectedExam);
@@ -574,7 +586,11 @@ class _SocialIdentityCompletionModalState extends State<SocialIdentityCompletion
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Tebrikler $firstName, kaydın başarıyla oluşturuldu! Sınav hazırlığına başla 🎓'),
+          content: Text(
+            isTeacher
+                ? 'Hoş geldin $firstName Hocam! Öğretmen panelin ve 3 aylık ücretsiz denemen hazır 🎓'
+                : 'Tebrikler $firstName, kaydın oluşturuldu ve 3 aylık ücretsiz denemen başladı 🎓',
+          ),
           behavior: SnackBarBehavior.floating,
           backgroundColor: const Color(0xFF10B981),
         ),
@@ -682,7 +698,126 @@ class _SocialIdentityCompletionModalState extends State<SocialIdentityCompletion
                   ],
                 ),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 14),
+
+              // 3 Ay Ücretsiz Deneme Müjdesi
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF4F46E5), Color(0xFF7C3AED)],
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Row(
+                  children: [
+                    Text('🎁', style: TextStyle(fontSize: 20)),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'İlk 3 Ay Tamamen Ücretsiz!',
+                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                          ),
+                          Text(
+                            '90 gün boyunca tüm özellikler ücretsiz; sonrasında öğrenci ve öğretmen paketleri ayrıdır.',
+                            style: TextStyle(color: Colors.white70, fontSize: 11),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // Hesap Türü Seçimi
+              const Text('Hesap Türü', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => setState(() => _selectedRole = 'student'),
+                      borderRadius: BorderRadius.circular(14),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+                        decoration: BoxDecoration(
+                          color: _selectedRole == 'student'
+                              ? const Color(0xFF4F46E5).withValues(alpha: 0.12)
+                              : (isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC)),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: _selectedRole == 'student'
+                                ? const Color(0xFF4F46E5)
+                                : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                            width: _selectedRole == 'student' ? 1.8 : 1,
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            const Text('🎓', style: TextStyle(fontSize: 22)),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Öğrenciyim',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: _selectedRole == 'student'
+                                    ? const Color(0xFF4F46E5)
+                                    : (isDark ? Colors.white : const Color(0xFF1E293B)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => setState(() => _selectedRole = 'teacher'),
+                      borderRadius: BorderRadius.circular(14),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+                        decoration: BoxDecoration(
+                          color: _selectedRole == 'teacher'
+                              ? const Color(0xFF10B981).withValues(alpha: 0.12)
+                              : (isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC)),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: _selectedRole == 'teacher'
+                                ? const Color(0xFF10B981)
+                                : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                            width: _selectedRole == 'teacher' ? 1.8 : 1,
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            const Text('👨‍🏫', style: TextStyle(fontSize: 22)),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Öğretmen / Koçum',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: _selectedRole == 'teacher'
+                                    ? const Color(0xFF10B981)
+                                    : (isDark ? Colors.white : const Color(0xFF1E293B)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
 
               // Ad Soyad Alanı
               const Text('Adınız Soyadınız', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
@@ -759,7 +894,10 @@ class _SocialIdentityCompletionModalState extends State<SocialIdentityCompletion
               const SizedBox(height: 14),
 
               // Hazırlanılan Sınav Türü
-              const Text('Hazırlandığınız Sınav', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+              Text(
+                _selectedRole == 'teacher' ? 'Uzmanlık Sınav Alanınız' : 'Hazırlandığınız Sınav',
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 6),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -803,7 +941,53 @@ class _SocialIdentityCompletionModalState extends State<SocialIdentityCompletion
               ),
               const SizedBox(height: 14),
 
-              // 🎯 HEDEF BÖLÜM / PROGRAM SEÇİMİ
+              if (_selectedRole == 'teacher') ...[
+                const Text('Branş / Uzmanlık (İsteğe Bağlı)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 6),
+                TextFormField(
+                  controller: _teacherSpecialtyController,
+                  decoration: const InputDecoration(
+                    hintText: 'Örn: Matematik Öğretmeni / LGS Koçu',
+                    prefixIcon: Icon(Icons.workspace_premium_outlined),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+                  ),
+                  child: const Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.info_outline_rounded, color: Color(0xFF10B981), size: 20),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Öğretmen hesabınızla size özel bir Koç Kodu (KOC-XXXX) oluşturulur. Öğrencilerinizi ekleyip çalışma durumlarını izleyebilir, ödev verebilir ve mesaj gönderebilirsiniz.',
+                          style: TextStyle(fontSize: 11.5, height: 1.4),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 18),
+              ] else ...[
+                const Text('Öğretmen / Koç Kodu (İsteğe Bağlı)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 6),
+                TextFormField(
+                  controller: _regTeacherCodeController,
+                  textCapitalization: TextCapitalization.characters,
+                  decoration: const InputDecoration(
+                    hintText: 'Örn: KOC-4821 (Varsa girin)',
+                    prefixIcon: Icon(Icons.qr_code_2_rounded),
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // 🎯 HEDEF BÖLÜM / PROGRAM SEÇİMİ
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -1002,6 +1186,7 @@ class _SocialIdentityCompletionModalState extends State<SocialIdentityCompletion
                 },
               ),
               const SizedBox(height: 18),
+              ],
 
               // Kaydı Tamamla & Başla Butonu
               SizedBox(
