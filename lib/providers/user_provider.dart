@@ -7,6 +7,7 @@ import '../models/coach_message_model.dart';
 import '../models/user_profile_model.dart';
 import '../services/firebase_service.dart';
 import '../services/storage_service.dart';
+import '../services/target_departments_data.dart';
 
 class UserProvider with ChangeNotifier {
   final StorageService _storage;
@@ -458,6 +459,60 @@ class UserProvider with ChangeNotifier {
     }
 
     return false;
+  }
+
+  /// Sosyal hesapla (Google / Apple) ilk kez giriş yapan kullanıcıyı form doldurtmadan otomatik kaydeder
+  Future<UserProfileModel> registerSocialUser({
+    required String email,
+    String? displayName,
+    String role = 'student',
+    String? targetExam,
+    String? teacherCodeInput,
+  }) async {
+    final cleanEmail = email.trim().toLowerCase();
+
+    // Ad ve soyadı varsa displayName'den, yoksa e-posta başlığından temiz şekilde türet
+    String firstName = '';
+    String lastName = '';
+    if (displayName != null && displayName.trim().isNotEmpty) {
+      final parts = displayName.trim().split(RegExp(r'\s+'));
+      firstName = parts.first;
+      if (parts.length > 1) {
+        lastName = parts.sublist(1).join(' ');
+      }
+    }
+    if (firstName.isEmpty) {
+      final namePart = cleanEmail.split('@').first;
+      final clean = namePart.replaceAll(RegExp(r'[\._0-9]'), ' ').trim();
+      final words = clean.split(' ').where((w) => w.isNotEmpty).toList();
+      if (words.isNotEmpty) {
+        firstName = words.first[0].toUpperCase() + words.first.substring(1).toLowerCase();
+        if (words.length > 1) {
+          lastName = words.sublist(1).map((w) => w[0].toUpperCase() + w.substring(1).toLowerCase()).join(' ');
+        }
+      } else {
+        firstName = role == 'teacher' ? 'Öğretmen' : 'Öğrenci';
+      }
+    }
+
+    final exam = targetExam ?? ExamTypes.availableExams.first;
+    final defDept = TargetDepartmentsData.getDefaultDepartmentForExam(exam);
+
+    await registerUser(
+      firstName: firstName,
+      lastName: lastName,
+      email: cleanEmail,
+      birthDate: DateTime(2007, 6, 15),
+      targetExam: exam,
+      dailyTargetHours: defDept.recommendedHours > 0 ? defDept.recommendedHours : 3,
+      targetDepartment: defDept.name,
+      targetScore: defDept.baseScore,
+      targetNet: defDept.targetNet,
+      role: role,
+      teacherCodeInput: teacherCodeInput,
+    );
+
+    return _userProfile!;
   }
 
   Future<void> updateProfile(UserProfileModel updated) async {

@@ -258,4 +258,34 @@ void main() {
     expect(parsedStudent.messages.first.isFromTeacher, true);
     expect(parsedStudent.messages.first.message, 'Harika gidiyorsun!');
   });
+
+  test('AGS and HMGS exams, courses and departments are defined correctly', () {
+    expect(ExamTypes.availableExams.contains('AGS (Milli Eğitim Akademisi Giriş Sınavı)'), true);
+    expect(ExamTypes.availableExams.contains('HMGS (Hukuk Mesleklerine Giriş Sınavı)'), true);
+    expect(ExamTypes.availableExams.contains('İYÖS (İdari Yargı Ön Sınavı)'), true);
+
+    // HMGS courses check
+    final hmgsCourses = PredefinedData.getCoursesForExam('HMGS (Hukuk Mesleklerine Giriş Sınavı)');
+    final hmgsCourseNames = hmgsCourses.map((c) => c.name).toList();
+    expect(hmgsCourseNames.contains('Anayasa Hukuku'), true);
+    expect(hmgsCourseNames.contains('İdare Hukuku & İYUK'), true);
+    expect(hmgsCourseNames.contains('Medeni Hukuk'), true);
+    expect(hmgsCourseNames.contains('Ceza & Ceza Muhakemesi'), true);
+
+    // AGS courses check
+    final agsCourses = PredefinedData.getCoursesForExam('AGS (Milli Eğitim Akademisi Giriş Sınavı)');
+    final agsCourseNames = agsCourses.map((c) => c.name).toList();
+    expect(agsCourseNames.contains('Eğitimin Temelleri'), true);
+    expect(agsCourseNames.contains('Milli Eğitim Sistemi & Mevzuat'), true);
+    expect(agsCourseNames.contains('ÖABT (Alan Bilgisi)'), true);
+
+    // Target departments check
+    final hmgsDepts = TargetDepartmentsData.getDepartmentsForExam('HMGS (Hukuk Mesleklerine Giriş Sınavı)');
+    expect(hmgsDepts.isNotEmpty, true);
+    expect(hmgsDepts.any((d) => d.name.contains('HMGS Başarı Barajı')), true);
+
+    final agsDepts = TargetDepartmentsData.getDepartmentsForExam('AGS (Milli Eğitim Akademisi Giriş Sınavı)');
+    expect(agsDepts.isNotEmpty, true);
+    expect(agsDepts.any((d) => d.name.contains('Sınıf Öğretmenliği')), true);
+  });
 }

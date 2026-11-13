@@ -420,6 +420,194 @@ class TargetDepartmentsData {
       description: 'Türkçe sözel mantık ve temel matematik sorularında hız kazanımı.',
     ),
 
+    // --- AGS (MİLLİ EĞİTİM AKADEMİSİ GİRİŞ SINAVI) ---
+    const TargetDepartmentModel(
+      id: 'ags_sinif_ogretmenligi',
+      name: 'Sınıf Öğretmenliği (MEB Akademi)',
+      examType: 'AGS (Milli Eğitim Akademisi Giriş Sınavı)',
+      baseScore: 82.0,
+      targetNet: 75.0,
+      recommendedHours: 5,
+      category: 'Öğretmenlik',
+      description: 'Milli Eğitim Akademisi Giriş Sınavı ve ÖABT dengeli çalışma programı.',
+    ),
+    const TargetDepartmentModel(
+      id: 'ags_ozel_egitim',
+      name: 'Özel Eğitim Öğretmenliği (Akademi)',
+      examType: 'AGS (Milli Eğitim Akademisi Giriş Sınavı)',
+      baseScore: 80.0,
+      targetNet: 72.0,
+      recommendedHours: 4,
+      category: 'Öğretmenlik',
+      description: 'Eğitimin temelleri, mevzuat ve özel eğitim alan bilgisi kampı.',
+    ),
+    const TargetDepartmentModel(
+      id: 'ags_ingilizce_ogretmenligi',
+      name: 'İngilizce Öğretmenliği (Akademi)',
+      examType: 'AGS (Milli Eğitim Akademisi Giriş Sınavı)',
+      baseScore: 84.0,
+      targetNet: 78.0,
+      recommendedHours: 5,
+      category: 'Öğretmenlik',
+      description: 'Sözel yetenek, eğitim bilimleri temelleri ve ileri düzey dil hakimiyeti.',
+    ),
+    const TargetDepartmentModel(
+      id: 'ags_okul_oncesi',
+      name: 'Okul Öncesi Öğretmenliği (Akademi)',
+      examType: 'AGS (Milli Eğitim Akademisi Giriş Sınavı)',
+      baseScore: 83.0,
+      targetNet: 76.0,
+      recommendedHours: 5,
+      category: 'Öğretmenlik',
+      description: 'Geniş kapsamlı konu tekrarı ve branş denemeleri odaklı hazırlık.',
+    ),
+    const TargetDepartmentModel(
+      id: 'ags_matematik_ogretmenligi',
+      name: 'İlköğretim / Lise Matematik Öğretmenliği (Akademi)',
+      examType: 'AGS (Milli Eğitim Akademisi Giriş Sınavı)',
+      baseScore: 86.0,
+      targetNet: 80.0,
+      recommendedHours: 6,
+      category: 'Öğretmenlik',
+      description: 'Sayısal yetenek ve ileri matematik ÖABT sorularında yüksek net hedefi.',
+    ),
+    const TargetDepartmentModel(
+      id: 'ags_turkce_pdr',
+      name: 'Türkçe / PDR / Sosyal Bilgiler (Akademi)',
+      examType: 'AGS (Milli Eğitim Akademisi Giriş Sınavı)',
+      baseScore: 85.0,
+      targetNet: 79.0,
+      recommendedHours: 5,
+      category: 'Öğretmenlik',
+      description: 'Paragraf, tarih, coğrafya ve eğitim mevzuatı fulleme stratejisi.',
+    ),
+
+    // --- HMGS (HUKUK MESLEKLERİNE GİRİŞ SINAVI) ---
+    const TargetDepartmentModel(
+      id: 'hmgs_baraj_70',
+      name: 'HMGS Başarı Barajı (70 Puan / Avukatlık Stajı)',
+      examType: 'HMGS (Hukuk Mesleklerine Giriş Sınavı)',
+      baseScore: 70.0,
+      targetNet: 70.0,
+      recommendedHours: 5,
+      category: 'Hukuk',
+      description: 'Avukatlık stajı ve mesleğe başlangıç için gerekli yasal 70 baraj puanı.',
+    ),
+    const TargetDepartmentModel(
+      id: 'hmgs_hakim_savci_85',
+      name: 'Adli Yargı Hakim & Savcı Yardımcılığı (85+ Puan)',
+      examType: 'HMGS (Hukuk Mesleklerine Giriş Sınavı)',
+      baseScore: 88.0,
+      targetNet: 88.0,
+      recommendedHours: 7,
+      category: 'Hukuk',
+      description: 'Medeni, Ceza, İdare ve Usul kanunlarında derinlemesine mevzuat ve soru analizi.',
+    ),
+    const TargetDepartmentModel(
+      id: 'hmgs_noterlik_staji',
+      name: 'Noterlik Belgesi & Kurum Avukatlığı (80+ Puan)',
+      examType: 'HMGS (Hukuk Mesleklerine Giriş Sınavı)',
+      baseScore: 82.0,
+      targetNet: 80.0,
+      recommendedHours: 6,
+      category: 'Hukuk',
+      description: 'Ticaret, Borçlar, İcra İflas ve İş Hukuku ağırlıklı kapsamlı çalışma.',
+    ),
+
+    // --- İYÖS (İDARİ YARGI ÖN SINAVI) ---
+    const TargetDepartmentModel(
+      id: 'iyos_idari_hakimlik',
+      name: 'İdari Yargı Hakim Yardımcılığı (85+ Puan)',
+      examType: 'İYÖS (İdari Yargı Ön Sınavı)',
+      baseScore: 86.0,
+      targetNet: 85.0,
+      recommendedHours: 6,
+      category: 'Hukuk & İktisat',
+      description: 'Anayasa, İdare, İYUK, Vergi ve İktisat-Maliye konularında yüksek başarı hedefi.',
+    ),
+
+    // --- KPSS EĞİTİM BİLİMLERİ ---
+    const TargetDepartmentModel(
+      id: 'kpss_egitim_atama',
+      name: 'MEB Öğretmen Atama (85+ Puan)',
+      examType: 'KPSS (Eğitim Bilimleri)',
+      baseScore: 85.0,
+      targetNet: 68.0,
+      recommendedHours: 5,
+      category: 'Eğitim',
+      description: 'ÖYT, Gelişim-Öğrenme ve Ölçme-Değerlendirme testlerinde maksimum net.',
+    ),
+
+    // --- KPSS ÖN LİSANS & ORTAÖĞRETİM ---
+    const TargetDepartmentModel(
+      id: 'kpss_onlisans_memur',
+      name: 'KPSS Ön Lisans 85+ (VHKİ & Memurluk)',
+      examType: 'KPSS (Ön Lisans)',
+      baseScore: 86.0,
+      targetNet: 82.0,
+      recommendedHours: 4,
+      category: 'Kamu',
+      description: 'Genel Yetenek ve Genel Kültür testlerinde istikrarlı soru çözümü.',
+    ),
+    const TargetDepartmentModel(
+      id: 'kpss_ortaogretim_zabit',
+      name: 'KPSS Ortaöğretim 85+ (Zabıt Katibi / İKM / Memur)',
+      examType: 'KPSS (Ortaöğretim)',
+      baseScore: 85.0,
+      targetNet: 80.0,
+      recommendedHours: 4,
+      category: 'Kamu',
+      description: 'Lise mezunları için merkezi atama ve kadrolu memurluk hazırlık programı.',
+    ),
+
+    // --- MSÜ ---
+    const TargetDepartmentModel(
+      id: 'msu_harp_okullari',
+      name: 'Harp Okulları (Kara / Hava / Deniz)',
+      examType: 'MSÜ (Milli Savunma Üniversitesi)',
+      baseScore: 410.0,
+      targetNet: 85.0,
+      recommendedHours: 5,
+      category: 'Askeri Öğrenci',
+      description: 'TYT paralelinde yüksek matematik ve fen performansı.',
+    ),
+
+    // --- YDS / YÖKDİL ---
+    const TargetDepartmentModel(
+      id: 'yds_akademik_80',
+      name: 'YDS / YÖKDİL 80+ (Akademik Kadro & Yüksek Lisans)',
+      examType: 'YDS / YÖKDİL',
+      baseScore: 82.5,
+      targetNet: 66.0,
+      recommendedHours: 4,
+      category: 'Yabancı Dil',
+      description: 'Kelime, okuma-anlama, edat ve cümle tamamlama stratejileri.',
+    ),
+
+    // --- DUS ---
+    const TargetDepartmentModel(
+      id: 'dus_ortodonti_cerrahi',
+      name: 'DUS Derece (Ortodonti / Çene Cerrahisi)',
+      examType: 'DUS (Diş Hekimliğinde Uzmanlık)',
+      baseScore: 68.0,
+      targetNet: 105.0,
+      recommendedHours: 7,
+      category: 'Uzmanlık',
+      description: 'Temel ve Klinik Diş Hekimliği Bilimlerinde derin vaka ve çıkmış soru kampı.',
+    ),
+
+    // --- EKPSS ---
+    const TargetDepartmentModel(
+      id: 'ekpss_lisans_onlisans',
+      name: 'EKPSS 85+ (Merkezi Memur Ataması)',
+      examType: 'EKPSS',
+      baseScore: 88.0,
+      targetNet: 52.0,
+      recommendedHours: 3,
+      category: 'Engelli Memurluk',
+      description: 'Engelli Kamu Personeli Seçme Sınavı için odaklı çalışma planı.',
+    ),
+
     // --- TUS ---
     const TargetDepartmentModel(
       id: 'tus_klinik_derece',
@@ -464,6 +652,8 @@ class TargetDepartmentsData {
     final lowerExam = examType.toLowerCase();
     final partial = allDepartments.where((d) {
       final dExam = d.examType.toLowerCase();
+      if (lowerExam.contains('ags') && dExam.contains('ags')) return true;
+      if (lowerExam.contains('hmgs') && dExam.contains('hmgs')) return true;
       if (lowerExam.contains('kpss') && dExam.contains('kpss')) return true;
       if (lowerExam.contains('yks') && dExam.contains('yks')) return true;
       if (lowerExam.contains('lgs') && dExam.contains('lgs')) return true;

@@ -179,6 +179,160 @@ class PredefinedData {
     targetDailyQuestions: 30,
   );
 
+  // --- HMGS & Hukuk Dersleri ---
+  static const CourseModel courseAnayasaHukuku = CourseModel(
+    id: 'hmgs_anayasa',
+    name: 'Anayasa Hukuku',
+    colorValue: 0xFF1E3A8A,
+    iconName: 'gavel',
+    targetDailyQuestions: 30,
+  );
+
+  static const CourseModel courseIdareHukuku = CourseModel(
+    id: 'hmgs_idare',
+    name: 'İdare Hukuku & İYUK',
+    colorValue: 0xFF0369A1,
+    iconName: 'account_balance',
+    targetDailyQuestions: 30,
+  );
+
+  static const CourseModel courseMedeniHukuk = CourseModel(
+    id: 'hmgs_medeni',
+    name: 'Medeni Hukuk',
+    colorValue: 0xFF4338CA,
+    iconName: 'groups',
+    targetDailyQuestions: 35,
+  );
+
+  static const CourseModel courseBorclarHukuku = CourseModel(
+    id: 'hmgs_borclar',
+    name: 'Borçlar Hukuku',
+    colorValue: 0xFF6D28D9,
+    iconName: 'handshake',
+    targetDailyQuestions: 30,
+  );
+
+  static const CourseModel courseCezaHukuku = CourseModel(
+    id: 'hmgs_ceza',
+    name: 'Ceza & Ceza Muhakemesi',
+    colorValue: 0xFFBE123C,
+    iconName: 'shield',
+    targetDailyQuestions: 35,
+  );
+
+  static const CourseModel courseHMK = CourseModel(
+    id: 'hmgs_hmk',
+    name: 'Hukuk Muhakemeleri (HMK)',
+    colorValue: 0xFFB45309,
+    iconName: 'balance',
+    targetDailyQuestions: 30,
+  );
+
+  static const CourseModel courseTicaretHukuku = CourseModel(
+    id: 'hmgs_ticaret',
+    name: 'Ticaret Hukuku',
+    colorValue: 0xFF047857,
+    iconName: 'store',
+    targetDailyQuestions: 30,
+  );
+
+  static const CourseModel courseIcraIflas = CourseModel(
+    id: 'hmgs_icra',
+    name: 'İcra ve İflas Hukuku',
+    colorValue: 0xFF0F766E,
+    iconName: 'gavel',
+    targetDailyQuestions: 30,
+  );
+
+  static const CourseModel courseIsHukuku = CourseModel(
+    id: 'hmgs_is_sosyal',
+    name: 'İş & Sosyal Güvenlik Hukuku',
+    colorValue: 0xFF7C2D12,
+    iconName: 'badge',
+    targetDailyQuestions: 25,
+  );
+
+  static const CourseModel courseVergiHukuku = CourseModel(
+    id: 'hmgs_vergi',
+    name: 'Vergi Hukuku',
+    colorValue: 0xFF475569,
+    iconName: 'receipt_long',
+    targetDailyQuestions: 25,
+  );
+
+  static const CourseModel courseAvukatlikHukuku = CourseModel(
+    id: 'hmgs_avukatlik',
+    name: 'Avukatlık Hukuku & Felsefesi',
+    colorValue: 0xFF581C87,
+    iconName: 'menu_book',
+    targetDailyQuestions: 20,
+  );
+
+  // --- AGS (Milli Eğitim Akademisi Giriş Sınavı) & Eğitim Bilimleri Dersleri ---
+  static const CourseModel courseEgitiminTemelleri = CourseModel(
+    id: 'ags_egitim_temelleri',
+    name: 'Eğitimin Temelleri',
+    colorValue: 0xFF4F46E5,
+    iconName: 'school',
+    targetDailyQuestions: 35,
+  );
+
+  static const CourseModel courseMebMevzuat = CourseModel(
+    id: 'ags_mevzuat',
+    name: 'Milli Eğitim Sistemi & Mevzuat',
+    colorValue: 0xFF059669,
+    iconName: 'policy',
+    targetDailyQuestions: 25,
+  );
+
+  static const CourseModel courseOabt = CourseModel(
+    id: 'ags_oabt',
+    name: 'ÖABT (Alan Bilgisi)',
+    colorValue: 0xFFD97706,
+    iconName: 'workspace_premium',
+    targetDailyQuestions: 40,
+  );
+
+  static const CourseModel courseGelisimOgrenme = CourseModel(
+    id: 'kpss_psikoloji',
+    name: 'Gelişim & Öğrenme Psikolojisi',
+    colorValue: 0xFF9333EA,
+    iconName: 'psychology',
+    targetDailyQuestions: 30,
+  );
+
+  static const CourseModel courseOyt = CourseModel(
+    id: 'kpss_oyt',
+    name: 'Öğretim İlke ve Yöntemleri (ÖYT)',
+    colorValue: 0xFF2563EB,
+    iconName: 'auto_stories',
+    targetDailyQuestions: 30,
+  );
+
+  static const CourseModel courseOlcme = CourseModel(
+    id: 'kpss_olcme',
+    name: 'Ölçme ve Değerlendirme',
+    colorValue: 0xFF0D9488,
+    iconName: 'analytics',
+    targetDailyQuestions: 25,
+  );
+
+  static const CourseModel courseProgramGelistirme = CourseModel(
+    id: 'kpss_program',
+    name: 'Program Geliştirme & Sınıf Yönetimi',
+    colorValue: 0xFFE11D48,
+    iconName: 'menu_book',
+    targetDailyQuestions: 25,
+  );
+
+  static const CourseModel courseRehberlik = CourseModel(
+    id: 'kpss_rehberlik',
+    name: 'Rehberlik ve Özel Eğitim',
+    colorValue: 0xFFEA580C,
+    iconName: 'support_agent',
+    targetDailyQuestions: 25,
+  );
+
   /// Tüm tanımlı derslerin eksiksiz listesi
   static List<CourseModel> getAllAvailableCourses() {
     return [
@@ -204,6 +358,25 @@ class PredefinedData {
       courseMaliye,
       courseMuhasebe,
       courseKamuYonetimi,
+      courseAnayasaHukuku,
+      courseIdareHukuku,
+      courseMedeniHukuk,
+      courseBorclarHukuku,
+      courseCezaHukuku,
+      courseHMK,
+      courseTicaretHukuku,
+      courseIcraIflas,
+      courseIsHukuku,
+      courseVergiHukuku,
+      courseAvukatlikHukuku,
+      courseEgitiminTemelleri,
+      courseMebMevzuat,
+      courseOabt,
+      courseGelisimOgrenme,
+      courseOyt,
+      courseOlcme,
+      courseProgramGelistirme,
+      courseRehberlik,
     ];
   }
 
@@ -214,6 +387,59 @@ class PredefinedData {
 
   /// Seçilen sınava göre dersleri kısıtlayıp döndürür
   static List<CourseModel> getCoursesForExam(String examName) {
+    if (examName.contains('HMGS')) {
+      return [
+        courseAnayasaHukuku,
+        courseIdareHukuku,
+        courseMedeniHukuk,
+        courseBorclarHukuku,
+        courseCezaHukuku,
+        courseHMK,
+        courseTicaretHukuku,
+        courseIcraIflas,
+        courseIsHukuku,
+        courseVergiHukuku,
+        courseAvukatlikHukuku,
+      ];
+    }
+
+    if (examName.contains('AGS')) {
+      return [
+        courseTurkce,
+        courseMatematik,
+        courseTarih,
+        courseCografya,
+        courseEgitiminTemelleri,
+        courseMebMevzuat,
+        courseOabt,
+      ];
+    }
+
+    if (examName.contains('İYÖS')) {
+      return [
+        courseAnayasaHukuku,
+        courseIdareHukuku,
+        courseMedeniHukuk,
+        courseBorclarHukuku,
+        courseHMK,
+        courseCezaHukuku,
+        courseVergiHukuku,
+        courseIktisat,
+        courseMaliye,
+      ];
+    }
+
+    if (examName.contains('Eğitim Bilimleri')) {
+      return [
+        courseGelisimOgrenme,
+        courseOyt,
+        courseOlcme,
+        courseProgramGelistirme,
+        courseRehberlik,
+        courseOabt,
+      ];
+    }
+
     if (examName.contains('KPSS')) {
       if (examName.contains('Alan')) {
         return [
@@ -229,11 +455,42 @@ class PredefinedData {
           courseKamuYonetimi,
         ];
       }
-      // KPSS Genel Yetenek - Genel Kültür (Kimya, Fizik, Biyoloji ASLA YOK!)
+      // KPSS Genel Yetenek - Genel Kültür, Ön Lisans, Ortaöğretim (Kimya, Fizik, Biyoloji ASLA YOK!)
       return [
         courseTurkce,
         courseMatematik,
         courseGeometri,
+        courseTarih,
+        courseCografya,
+        courseVatandaslik,
+      ];
+    }
+
+    if (examName.contains('MSÜ')) {
+      return [
+        courseTurkce,
+        courseMatematik,
+        courseGeometri,
+        courseFizik,
+        courseKimya,
+        courseBiyoloji,
+        courseTarih,
+        courseCografya,
+        courseFelsefe,
+        courseDinKulturu,
+      ];
+    }
+
+    if (examName.contains('YDS') || examName.contains('YÖKDİL')) {
+      return [
+        courseIngilizce,
+      ];
+    }
+
+    if (examName.contains('EKPSS')) {
+      return [
+        courseTurkce,
+        courseMatematik,
         courseTarih,
         courseCografya,
         courseVatandaslik,
