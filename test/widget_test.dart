@@ -142,6 +142,30 @@ void main() {
     expect(schedule.first.practiceMinutes > 0, true);
   });
 
+  test('SmartSchedulerService strictly excludes courses selected by the student', () {
+    final courses = PredefinedData.getCoursesForExam('YKS (Sayısal)');
+    // Exclude Fizik and Biyoloji
+    final excluded = {'fizik', 'biyoloji'};
+
+    final schedule = SmartSchedulerService.generateSchedule(
+      courses: courses,
+      questionLogs: [],
+      dailyMinutes: 180,
+      strategy: ScheduleStrategy.balanced,
+      includeSunday: false,
+      excludedCourseIds: excluded,
+    );
+
+    expect(schedule.isNotEmpty, true);
+    // Neither fizik nor biyoloji should ever appear in the generated schedule
+    final hasExcludedCourse = schedule.any((item) => excluded.contains(item.courseId));
+    expect(hasExcludedCourse, false);
+
+    // Other non-excluded courses like matematik or kimya should be present
+    final hasNonExcludedCourse = schedule.any((item) => item.courseId == 'matematik' || item.courseId == 'kimya');
+    expect(hasNonExcludedCourse, true);
+  });
+
   test('UserProfileModel serializes and deserializes targetDepartment, targetScore and membership correctly', () {
     final profile = UserProfileModel(
       id: 'test-user-123',

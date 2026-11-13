@@ -556,6 +556,7 @@ class StudyProvider with ChangeNotifier {
     double? targetNet,
     StudyContentMode contentMode = StudyContentMode.hybrid,
     bool replaceExisting = true,
+    Set<String> excludedCourseIds = const {},
   }) async {
     final userProfile = _storage.loadUserProfile();
     final dep = targetDepartment ?? userProfile?.targetDepartment ?? 'Genel Başarı Hedefi';
@@ -573,6 +574,7 @@ class StudyProvider with ChangeNotifier {
       targetScore: score,
       targetNet: net,
       contentMode: contentMode,
+      excludedCourseIds: excludedCourseIds,
     );
 
     if (replaceExisting) {

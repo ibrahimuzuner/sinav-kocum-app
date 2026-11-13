@@ -17,6 +17,7 @@ class _SmartScheduleDialogState extends State<SmartScheduleDialog> {
   StudyContentMode _contentMode = StudyContentMode.hybrid;
   bool _includeSunday = false;
   final bool _replaceExisting = true;
+  final Set<String> _excludedCourseIds = {};
 
   @override
   void initState() {
@@ -30,6 +31,7 @@ class _SmartScheduleDialogState extends State<SmartScheduleDialog> {
     final studyProvider = Provider.of<StudyProvider>(context);
     final userProvider = Provider.of<UserProvider>(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final availableCourses = studyProvider.getCoursesForExam(userProvider.targetExam);
 
     // Tespit edilen zayıf dersler
     final List<String> weakCourses = [];
@@ -267,9 +269,180 @@ class _SmartScheduleDialogState extends State<SmartScheduleDialog> {
               value: ScheduleStrategy.intensive,
               isDark: isDark,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 18),
 
-            // ADIM 4: Dinlenme Günü
+            // ADIM 4: Ders Eleme (Çalışmak İstemediğim Dersler)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEF4444).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.do_not_disturb_on_rounded,
+                        color: Color(0xFFEF4444),
+                        size: 16,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Ders Eleme (Hariç Tut)',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+                if (_excludedCourseIds.isNotEmpty)
+                  InkWell(
+                    onTap: () => setState(() => _excludedCourseIds.clear()),
+                    borderRadius: BorderRadius.circular(8),
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      child: Text(
+                        'Tümünü Dahil Et',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: Color(0xFF4F46E5),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Çalışmak istemediğin veya bitirdiğin derslere dokunarak eleyebilirsin. Seçilen dersler programa eklenmez.',
+              style: TextStyle(
+                fontSize: 11,
+                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            if (availableCourses.isEmpty)
+              const Text('Bu sınav için ders bulunamadı.', style: TextStyle(fontSize: 12))
+            else
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: availableCourses.map((course) {
+                  final isExcluded = _excludedCourseIds.contains(course.id);
+                  return InkWell(
+                    onTap: () {
+                      setState(() {
+                        if (isExcluded) {
+                          _excludedCourseIds.remove(course.id);
+                        } else {
+                          if (_excludedCourseIds.length >= availableCourses.length - 1) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('En az 1 ders programda aktif kalmalıdır!'),
+                                duration: Duration(seconds: 2),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                            return;
+                          }
+                          _excludedCourseIds.add(course.id);
+                        }
+                      });
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                      decoration: BoxDecoration(
+                        color: isExcluded
+                            ? (isDark ? const Color(0xFF450A0A) : const Color(0xFFFEE2E2))
+                            : (isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC)),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isExcluded
+                              ? const Color(0xFFEF4444)
+                              : (isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1)),
+                          width: isExcluded ? 1.5 : 1.0,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            isExcluded ? Icons.cancel_rounded : Icons.check_circle_rounded,
+                            size: 16,
+                            color: isExcluded ? const Color(0xFFEF4444) : const Color(0xFF10B981),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            course.name,
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              decoration: isExcluded ? TextDecoration.lineThrough : null,
+                              color: isExcluded
+                                  ? const Color(0xFFEF4444)
+                                  : (isDark ? Colors.white : const Color(0xFF0F172A)),
+                            ),
+                          ),
+                          if (isExcluded) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEF4444),
+                                borderRadius: BorderRadius.circular(5),
+                              ),
+                              child: const Text(
+                                'Elendi',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+
+            if (_excludedCourseIds.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEF4444).withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.25)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline_rounded, color: Color(0xFFEF4444), size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '${_excludedCourseIds.length} ders elendi: ${availableCourses.where((c) => _excludedCourseIds.contains(c.id)).map((c) => c.name).join(', ')} programa eklenmeyecek.',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFFEF4444),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: 18),
+
+            // ADIM 5: Dinlenme Günü
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: const Text('Pazar Günü Dinlenme Günü Olsun', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
@@ -298,13 +471,17 @@ class _SmartScheduleDialogState extends State<SmartScheduleDialog> {
                     targetNet: userProvider.targetNet,
                     contentMode: _contentMode,
                     replaceExisting: _replaceExisting,
+                    excludedCourseIds: _excludedCourseIds,
                   );
 
                   if (context.mounted) {
                     Navigator.pop(context);
+                    final message = _excludedCourseIds.isNotEmpty
+                        ? '✨ ${_excludedCourseIds.length} ders elenerek ${userProvider.targetDepartment} için $count adet çalışma bloğu hazırlandı!'
+                        : '✨ ${userProvider.targetDepartment} (${userProvider.targetScore.toInt()} Puan) için $count adet yapay zeka hedefi hazırlandı!';
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('✨ ${userProvider.targetDepartment} (${userProvider.targetScore.toInt()} Puan) için $count adet yapay zeka hedefi hazırlandı!'),
+                        content: Text(message),
                         behavior: SnackBarBehavior.floating,
                         backgroundColor: const Color(0xFF10B981),
                       ),

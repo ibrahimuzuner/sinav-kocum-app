@@ -21,8 +21,8 @@ enum StudyContentMode {
 class SmartSchedulerService {
   static final Uuid _uuid = const Uuid();
 
-  /// Öğrencinin seçtiği hedef bölüm, hedef puan, sınav türü, başarı durumu ve
-  /// konu hazırlık moduna (30 dk video/tekrar + soru veya sadece soru) göre
+  /// Öğrencinin seçtiği hedef bölüm, hedef puan, sınav türü, başarı durumu,
+  /// konu hazırlık modu ve elenen derslere (çalışmak istenmeyen dersler) göre
   /// yapay zeka destekli akıllı çalışma programı üretir.
   static List<ScheduleItemModel> generateSchedule({
     required List<CourseModel> courses,
@@ -35,8 +35,11 @@ class SmartSchedulerService {
     double targetScore = 450.0, // Hedef taban puan
     double targetNet = 85.0, // Hedeflenen toplam net
     StudyContentMode contentMode = StudyContentMode.hybrid, // Konu/Video + Soru mu, yoksa Sadece Soru mu?
+    Set<String> excludedCourseIds = const {}, // Öğrencinin elediği / çalışmak istemediği dersler
   }) {
-    if (courses.isEmpty) return [];
+    // Elenen / çalışılmak istenmeyen dersleri filtrele
+    final activeCourses = courses.where((c) => !excludedCourseIds.contains(c.id)).toList();
+    if (activeCourses.isEmpty) return [];
 
     final activeDays = includeSunday ? [1, 2, 3, 4, 5, 6, 7] : [1, 2, 3, 4, 5, 6]; // 1=Pzt..7=Paz
 
@@ -44,7 +47,7 @@ class SmartSchedulerService {
     final Map<String, double> examMultiplier = {};
     final depLower = targetDepartment.toLowerCase();
 
-    for (final course in courses) {
+    for (final course in activeCourses) {
       final cName = course.name.toLowerCase();
       double mult = 1.0;
 
@@ -119,7 +122,7 @@ class SmartSchedulerService {
     // 2. Başarı Oranlarını ve Öğrenci Eksiklerini Hesapla
     final Map<String, double> courseWeights = {};
 
-    for (final course in courses) {
+    for (final course in activeCourses) {
       final logs = questionLogs.where((l) => l.courseId == course.id).toList();
       final totalQuestions = logs.fold(0, (sum, l) => sum + l.totalQuestions);
       final correctCount = logs.fold(0, (sum, l) => sum + l.correctCount);
@@ -172,7 +175,7 @@ class SmartSchedulerService {
     // 4. Havuz oluşturma
     final List<CourseModel> coursePool = [];
     courseWeights.forEach((courseId, weight) {
-      final course = courses.firstWhere((c) => c.id == courseId);
+      final course = activeCourses.firstWhere((c) => c.id == courseId);
       final repeatCount = weight.ceil().clamp(1, 6);
       for (int i = 0; i < repeatCount; i++) {
         coursePool.add(course);
