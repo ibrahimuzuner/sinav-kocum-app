@@ -315,19 +315,54 @@ class PdfReportService {
 
   static pw.Widget _buildStudentInfoCard(UserProfileModel user, String periodLabel, int streak) {
     return pw.Container(
-      padding: const pw.EdgeInsets.all(12),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: pw.BoxDecoration(
         color: const PdfColor.fromInt(0xFFF1F5F9),
         borderRadius: pw.BorderRadius.circular(8),
         border: pw.Border.all(color: const PdfColor.fromInt(0xFFCBD5E1), width: 0.5),
       ),
-      child: pw.Row(
-        mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          _buildInfoItem('ÖĞRENCİ', user.fullName.isNotEmpty ? user.fullName : user.firstName),
-          _buildInfoItem('HEDEF BÖLÜM & PUAN', '${user.targetDepartment} (${user.targetScore.toInt()} Puan)'),
-          _buildInfoItem('HEDEF SINAV', user.targetExam),
-          _buildInfoItem('ÇALIŞMA SERİSİ', '$streak Gün (Aktif Seri)'),
+          pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Expanded(
+                flex: 4,
+                child: _buildInfoItem('ÖĞRENCİ', user.fullName.isNotEmpty ? user.fullName : user.firstName),
+              ),
+              pw.SizedBox(width: 12),
+              pw.Expanded(
+                flex: 5,
+                child: _buildInfoItem('HEDEF SINAV', user.targetExam),
+              ),
+              pw.SizedBox(width: 12),
+              pw.Expanded(
+                flex: 3,
+                child: _buildInfoItem('RAPOR DÖNEMİ', periodLabel),
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 7),
+          pw.Container(height: 0.5, color: const PdfColor.fromInt(0xFFE2E8F0)),
+          pw.SizedBox(height: 7),
+          pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Expanded(
+                flex: 9,
+                child: _buildInfoItem(
+                  'HEDEF BÖLÜM & PUAN',
+                  '${user.targetDepartment} (${user.targetScore.toInt()} Puan)',
+                ),
+              ),
+              pw.SizedBox(width: 12),
+              pw.Expanded(
+                flex: 4,
+                child: _buildInfoItem('ÇALIŞMA SERİSİ', '$streak Gün (Aktif Seri)'),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -337,9 +372,16 @@ class PdfReportService {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        pw.Text(label, style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
+        pw.Text(label, style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.grey600)),
         pw.SizedBox(height: 2),
-        pw.Text(value, style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColors.grey900)),
+        pw.Text(
+          value,
+          style: pw.TextStyle(
+            fontSize: 9.5,
+            fontWeight: pw.FontWeight.bold,
+            color: PdfColors.grey900,
+          ),
+        ),
       ],
     );
   }
