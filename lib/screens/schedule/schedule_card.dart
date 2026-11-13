@@ -7,6 +7,7 @@ class ScheduleCard extends StatelessWidget {
   final CourseModel? course;
   final VoidCallback onToggle;
   final VoidCallback onDelete;
+  final String? customTag;
 
   const ScheduleCard({
     super.key,
@@ -14,6 +15,7 @@ class ScheduleCard extends StatelessWidget {
     this.course,
     required this.onToggle,
     required this.onDelete,
+    this.customTag,
   });
 
   @override
@@ -55,12 +57,14 @@ class ScheduleCard extends StatelessWidget {
                   padding: const EdgeInsets.all(16),
                   child: Row(
                     children: [
-                      // Checkbox
+                      // Checkbox (Tamamlandığında geri alınamaz - Kullanıcı Talebi 2)
                       Transform.scale(
                         scale: 1.2,
                         child: Checkbox(
                           value: item.isCompleted,
-                          onChanged: (_) => onToggle(),
+                          onChanged: item.isCompleted
+                              ? null
+                              : (_) => _confirmComplete(context),
                           activeColor: const Color(0xFF10B981),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                         ),
@@ -81,21 +85,48 @@ class ScheduleCard extends StatelessWidget {
                                     color: courseColor,
                                   ),
                                 ),
+                                if (customTag != null) ...[
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.4)),
+                                    ),
+                                    child: Text(
+                                      customTag!,
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFFD97706),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                                 const Spacer(),
                                 if (item.isCompleted)
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
                                     decoration: BoxDecoration(
                                       color: const Color(0xFF10B981).withValues(alpha: 0.15),
                                       borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
                                     ),
-                                    child: const Text(
-                                      'Tamamlandı',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF10B981),
-                                      ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.check_circle_rounded, size: 12, color: Color(0xFF10B981)),
+                                        SizedBox(width: 4),
+                                        Text(
+                                          'Sisteme Kaydedildi',
+                                          style: TextStyle(
+                                            fontSize: 10.5,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFF10B981),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                               ],
@@ -203,6 +234,59 @@ class ScheduleCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _confirmComplete(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.check_circle_outline_rounded, color: Color(0xFF10B981)),
+            SizedBox(width: 8),
+            Text('Görevi Tamamla', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${item.courseName} - ${item.topicName}',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Bu görevi onayladığınızda:\n'
+              '• ${item.targetQuestions} soru çözümü\n'
+              '• ${item.targetMinutes} dakika çalışma süresi\n'
+              'istatistiklerinize ve PDF raporunuza kalıcı olarak eklenecektir.\n\n'
+              '⚠️ Not: Tamamlanan görevler sistem kaydı yapıldığı için geri alınamaz.',
+              style: const TextStyle(fontSize: 12.5, height: 1.4),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Vazgeç'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              onToggle();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF10B981),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Evet, Tamamlandı'),
+          ),
+        ],
       ),
     );
   }

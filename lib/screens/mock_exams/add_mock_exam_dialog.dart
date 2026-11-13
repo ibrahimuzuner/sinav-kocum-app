@@ -161,6 +161,41 @@ class _AddMockExamDialogState extends State<AddMockExamDialog> {
     return double.parse(sum.toStringAsFixed(2));
   }
 
+  double get _totalLiveEstimatedScore {
+    final userProvider = context.read<UserProvider>();
+    final courseScores = _courseInputs.map((c) {
+      return MockExamCourseScore(
+        courseId: c.courseId,
+        courseName: c.courseName,
+        correctCount: c.correct,
+        wrongCount: c.wrong,
+        emptyCount: c.empty,
+        netScore: c.calculateNet(_isLgs),
+      );
+    }).toList();
+    return MockExamModel.calculateEstimatedScore(userProvider.targetExam, courseScores);
+  }
+
+  String get _liveCoachAdvice {
+    final userProvider = context.read<UserProvider>();
+    final courseScores = _courseInputs.map((c) {
+      return MockExamCourseScore(
+        courseId: c.courseId,
+        courseName: c.courseName,
+        correctCount: c.correct,
+        wrongCount: c.wrong,
+        emptyCount: c.empty,
+        netScore: c.calculateNet(_isLgs),
+      );
+    }).toList();
+    return MockExamModel.generateCoachAdvice(
+      targetExam: userProvider.targetExam,
+      scores: courseScores,
+      targetScore: userProvider.targetScore,
+      targetNet: userProvider.targetNet,
+    );
+  }
+
   int get _totalLiveCorrect => _courseInputs.fold(0, (sum, c) => sum + c.correct);
   int get _totalLiveWrong => _courseInputs.fold(0, (sum, c) => sum + c.wrong);
   int get _totalLiveEmpty => _courseInputs.fold(0, (sum, c) => sum + c.empty);
@@ -208,6 +243,13 @@ class _AddMockExamDialogState extends State<AddMockExamDialog> {
 
     final duration = int.tryParse(_durationController.text);
     final notes = _notesController.text.trim().isEmpty ? null : _notesController.text.trim();
+    final estScore = MockExamModel.calculateEstimatedScore(userProvider.targetExam, courseScores);
+    final advice = MockExamModel.generateCoachAdvice(
+      targetExam: userProvider.targetExam,
+      scores: courseScores,
+      targetScore: userProvider.targetScore,
+      targetNet: userProvider.targetNet,
+    );
 
     if (widget.initialExam != null) {
       final updated = widget.initialExam!.copyWith(
@@ -218,6 +260,8 @@ class _AddMockExamDialogState extends State<AddMockExamDialog> {
         durationMinutes: duration,
         notes: notes,
         courseScores: courseScores,
+        estimatedScore: estScore,
+        coachAdvice: advice,
       );
       studyProvider.updateMockExam(updated);
       Navigator.pop(context);
@@ -238,12 +282,14 @@ class _AddMockExamDialogState extends State<AddMockExamDialog> {
         durationMinutes: duration,
         notes: notes,
         courseScores: courseScores,
+        estimatedScore: estScore,
+        coachAdvice: advice,
       );
       studyProvider.addMockExam(newExam);
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Deneme kaydedildi! Toplam Net: ${_totalLiveNet.toStringAsFixed(2)} 🚀'),
+          content: Text('Deneme kaydedildi! Toplam Net: ${_totalLiveNet.toStringAsFixed(2)} (~$estScore Puan) 🚀'),
           backgroundColor: const Color(0xFF10B981),
           behavior: SnackBarBehavior.floating,
         ),
@@ -348,13 +394,36 @@ class _AddMockExamDialogState extends State<AddMockExamDialog> {
                           style: TextStyle(color: Colors.white70, fontSize: 12),
                         ),
                         const SizedBox(height: 2),
-                        Text(
-                          '${_totalLiveNet.toStringAsFixed(2)} Net',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        Row(
+                          children: [
+                            Text(
+                              '${_totalLiveNet.toStringAsFixed(2)} Net',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            if (_totalLiveEstimatedScore > 0) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: Colors.amber.withValues(alpha: 0.25),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.amberAccent.withValues(alpha: 0.6)),
+                                ),
+                                child: Text(
+                                  '~$_totalLiveEstimatedScore Puan',
+                                  style: const TextStyle(
+                                    color: Colors.amberAccent,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 11.5,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       ],
                     ),
@@ -574,6 +643,50 @@ class _AddMockExamDialogState extends State<AddMockExamDialog> {
                       );
                     }),
                     const SizedBox(height: 10),
+
+                    // CANLI KOÇ TAVSİYESİ & ÖNERİ KUTUSU
+                    if (_totalLiveQuestions > 0 && _liveCoachAdvice.isNotEmpty) ...[
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 14),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF4F46E5).withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFF4F46E5).withValues(alpha: 0.25)),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.psychology_rounded, color: Color(0xFF4F46E5), size: 22),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Koçun Canlı Analizi & Ağırlık Tavsiyesi',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF4F46E5),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _liveCoachAdvice,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      height: 1.35,
+                                      color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF334155),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
 
                     // 4. NOTLAR ALANI
                     TextFormField(

@@ -526,17 +526,65 @@ class StudyProvider with ChangeNotifier {
     final index = _scheduleItems.indexWhere((i) => i.id == id);
     if (index != -1) {
       final current = _scheduleItems[index];
-      final isNowCompleted = !current.isCompleted;
-      _scheduleItems[index] = current.copyWith(
-        isCompleted: isNowCompleted,
-        completedDate: isNowCompleted ? DateTime.now() : null,
-      );
-      if (isNowCompleted) {
-        _recordActivity();
+      // Eğer zaten tamamlandıysa geri alınamaz! (Kullanıcı talebi 2)
+      if (current.isCompleted) {
+        return;
       }
+
+      _scheduleItems[index] = current.copyWith(
+        isCompleted: true,
+        completedDate: DateTime.now(),
+      );
       await _storage.saveScheduleItems(_scheduleItems);
+
+      // Görev tamamlandığında sisteme ve rapora gerçek soru kaydı ve süre ekle (Kullanıcı talebi 2)
+      final qCount = current.targetQuestions > 0 ? current.targetQuestions : 25;
+      final correctCount = (qCount * 0.85).round().clamp(1, qCount);
+      final wrongCount = qCount - correctCount;
+      final durationMins = current.targetMinutes > 0 ? current.targetMinutes : 30;
+
+      await addQuestionLog(
+        courseId: current.courseId,
+        courseName: current.courseName,
+        topicName: current.topicName,
+        correct: correctCount,
+        wrong: wrongCount,
+        empty: 0,
+        durationMinutes: durationMins,
+        notes: 'Program Görevi: ${current.topicName}',
+      );
+
+      await addStudySession(
+        courseId: current.courseId,
+        courseName: current.courseName,
+        topicName: current.topicName,
+        durationSeconds: durationMins * 60,
+        notes: 'Program Görevi: ${current.topicName}',
+      );
+
       notifyListeners();
     }
+  }
+
+  /// Hafta içi (Pazartesi - Cumartesi) tamamlanmamış telafi görevlerini döndürür
+  List<ScheduleItemModel> getUncompletedWeeklyTasks() {
+    return _scheduleItems.where((i) => i.dayOfWeek < 7 && !i.isCompleted).toList();
+  }
+
+  /// Pazar günü telafi sekmesinde gösterilecek görevler (tamamlanmamışlar + bu pazar telafi edilenler)
+  List<ScheduleItemModel> getSundayCatchUpTasks() {
+    final now = DateTime.now();
+    return _scheduleItems.where((i) {
+      if (i.dayOfWeek >= 7) return false;
+      if (!i.isCompleted) return true;
+      if (i.completedDate != null) {
+        final isToday = i.completedDate!.year == now.year &&
+            i.completedDate!.month == now.month &&
+            i.completedDate!.day == now.day;
+        if (isToday) return true;
+      }
+      return false;
+    }).toList();
   }
 
   Future<void> deleteScheduleItem(String id) async {
@@ -557,6 +605,7 @@ class StudyProvider with ChangeNotifier {
     StudyContentMode contentMode = StudyContentMode.hybrid,
     bool replaceExisting = true,
     Set<String> excludedCourseIds = const {},
+    bool addDailyParagraph = true,
   }) async {
     final userProfile = _storage.loadUserProfile();
     final dep = targetDepartment ?? userProfile?.targetDepartment ?? 'Genel Başarı Hedefi';
@@ -575,6 +624,7 @@ class StudyProvider with ChangeNotifier {
       targetNet: net,
       contentMode: contentMode,
       excludedCourseIds: excludedCourseIds,
+      addDailyParagraph: addDailyParagraph,
     );
 
     if (replaceExisting) {

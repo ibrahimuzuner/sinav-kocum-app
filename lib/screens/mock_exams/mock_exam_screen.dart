@@ -628,24 +628,47 @@ class _MockExamScreenState extends State<MockExamScreen> {
                 ),
               ),
               const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF10B981), Color(0xFF059669)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF10B981), Color(0xFF059669)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${exam.totalNet.toStringAsFixed(2)} Net',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '${exam.totalNet.toStringAsFixed(2)} Net',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
+                  if ((exam.estimatedScore ?? 0) > 0) ...[
+                    const SizedBox(height: 3),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        '~${exam.estimatedScore} Puan',
+                        style: const TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFFD97706),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ],
           ),
@@ -668,6 +691,49 @@ class _MockExamScreenState extends State<MockExamScreen> {
           ),
           children: [
             const Divider(),
+            if (exam.coachAdvice != null && exam.coachAdvice!.isNotEmpty) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(bottom: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF4F46E5).withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFF4F46E5).withValues(alpha: 0.2)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.psychology_rounded, color: Color(0xFF4F46E5), size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Koçun Değerlendirmesi & Ağırlık Tavsiyesi:',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF4F46E5),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            exam.coachAdvice!,
+                            style: TextStyle(
+                              fontSize: 12,
+                              height: 1.35,
+                              color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             if (exam.notes != null && exam.notes!.isNotEmpty) ...[
               Container(
                 width: double.infinity,

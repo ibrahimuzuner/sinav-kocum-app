@@ -749,6 +749,264 @@ class PredefinedData {
     ];
   }
 
+  /// Sınav türüne ve dersine özel resmi müfredat konularını sıralı olarak getirir.
+  /// KPSS çalışan öğrenciye Trigonometri/İntegral gibi sınavında olmayan konular KESİNLİKLE gösterilmez.
+  static List<TopicModel> getTopicsForExam(String examName, {String? courseId}) {
+    final all = getDefaultTopics();
+
+    // 1. KPSS (Genel Yetenek - Genel Kültür) ÖZEL MÜFREDATI
+    if (examName.contains('KPSS') && !examName.contains('ÖABT')) {
+      if (courseId == 'matematik') {
+        return const [
+          TopicModel(id: 'kpss_mat_1', courseId: 'matematik', name: 'Temel Kavramlar & Sayı Kümeleri (10 Soru Grubu)'),
+          TopicModel(id: 'kpss_mat_2', courseId: 'matematik', name: 'Sayı Basamakları & Bölme-Bölünebilme'),
+          TopicModel(id: 'kpss_mat_3', courseId: 'matematik', name: 'Rasyonel & Ondalık Sayılar'),
+          TopicModel(id: 'kpss_mat_4', courseId: 'matematik', name: 'Basit Eşitsizlik & Mutlak Değer'),
+          TopicModel(id: 'kpss_mat_5', courseId: 'matematik', name: 'Üslü & Köklü Sayılar'),
+          TopicModel(id: 'kpss_mat_6', courseId: 'matematik', name: 'Çarpanlara Ayırma'),
+          TopicModel(id: 'kpss_mat_7', courseId: 'matematik', name: 'Oran-Orantı Temeli'),
+          TopicModel(id: 'kpss_mat_8', courseId: 'matematik', name: 'Sayı ve Kesir Problemleri (12 Soru Grubu - Belirleyici)'),
+          TopicModel(id: 'kpss_mat_9', courseId: 'matematik', name: 'Yaş, Yüzde, Kâr-Zarar ve Karışım Problemleri'),
+          TopicModel(id: 'kpss_mat_10', courseId: 'matematik', name: 'Hareket (Hız) ve Tablo-Grafik Problemleri'),
+          TopicModel(id: 'kpss_mat_11', courseId: 'matematik', name: 'Kümeler, İşlem ve Modüler Aritmetik'),
+          TopicModel(id: 'kpss_mat_12', courseId: 'matematik', name: 'Fonksiyonlar ve Olasılık'),
+          TopicModel(id: 'kpss_mat_13', courseId: 'matematik', name: 'Permütasyon & Kombinasyon'),
+          TopicModel(id: 'kpss_mat_14', courseId: 'matematik', name: 'Sayısal Mantık, Tablo ve Muhakeme'),
+        ];
+      }
+
+      if (courseId == 'geometri') {
+        // KPSS'de Geometri sadece 3 sorudur
+        return const [
+          TopicModel(id: 'kpss_geo_1', courseId: 'geometri', name: 'Doğruda ve Üçgende Açılar'),
+          TopicModel(id: 'kpss_geo_2', courseId: 'geometri', name: 'Özel Üçgenler (Dik, İkizkenar) & Üçgende Alan'),
+          TopicModel(id: 'kpss_geo_3', courseId: 'geometri', name: 'Çokgenler, Dörtgenler ve Çember'),
+          TopicModel(id: 'kpss_geo_4', courseId: 'geometri', name: 'Katı Cisimler ve Analitik Geometri'),
+        ];
+      }
+
+      if (courseId == 'turkce') {
+        return const [
+          TopicModel(id: 'kpss_tur_1', courseId: 'turkce', name: 'Paragrafta Anlam ve Yapı (18 Soru Grubu - Okuma Hızı)'),
+          TopicModel(id: 'kpss_tur_2', courseId: 'turkce', name: 'Sözcükte ve Cümlede Anlam'),
+          TopicModel(id: 'kpss_tur_3', courseId: 'turkce', name: 'Ses Bilgisi & Yazım Kuralları (2 Soru)'),
+          TopicModel(id: 'kpss_tur_4', courseId: 'turkce', name: 'Noktalama İşaretleri (2 Soru)'),
+          TopicModel(id: 'kpss_tur_5', courseId: 'turkce', name: 'Sözcük Türleri (İsim, Sıfat, Zamir, Zarf)'),
+          TopicModel(id: 'kpss_tur_6', courseId: 'turkce', name: 'Cümlenin Ögeleri ve Cümle Türleri'),
+          TopicModel(id: 'kpss_tur_7', courseId: 'turkce', name: 'Sözel Mantık ve Muhakeme (4 Soru - Tablo Kurma)'),
+        ];
+      }
+
+      if (courseId == 'tarih') {
+        return const [
+          TopicModel(id: 'kpss_tar_1', courseId: 'tarih', name: 'İslamiyet Öncesi Türk Tarihi & Medeniyeti (3 Soru)'),
+          TopicModel(id: 'kpss_tar_2', courseId: 'tarih', name: 'İlk Türk-İslam Devletleri ve Kültürü'),
+          TopicModel(id: 'kpss_tar_3', courseId: 'tarih', name: 'Osmanlı Devleti Kuruluş ve Yükselme Dönemi'),
+          TopicModel(id: 'kpss_tar_4', courseId: 'tarih', name: 'Osmanlı Kültür ve Medeniyeti (6 Soru Grubu - Devlet, Hukuk, Sanat)'),
+          TopicModel(id: 'kpss_tar_5', courseId: 'tarih', name: 'Osmanlı Dağılma Dönemi ve Islahatlar'),
+          TopicModel(id: 'kpss_tar_6', courseId: 'tarih', name: 'Kurtuluş Savaşı Hazırlık Dönemi (Genelgeler & Kongreler - 12 Soru Grubu)'),
+          TopicModel(id: 'kpss_tar_7', courseId: 'tarih', name: 'Kurtuluş Savaşı Muharebeler ve Antlaşmalar'),
+          TopicModel(id: 'kpss_tar_8', courseId: 'tarih', name: 'Atatürk İlkeleri ve İnkılap Tarihi'),
+          TopicModel(id: 'kpss_tar_9', courseId: 'tarih', name: 'Çağdaş Türk ve Dünya Tarihi (3 Soru)'),
+        ];
+      }
+
+      if (courseId == 'cografya') {
+        return const [
+          TopicModel(id: 'kpss_cog_1', courseId: 'cografya', name: 'Türkiye’nin Coğrafi Konumu ve Fiziki Özellikleri (7 Soru)'),
+          TopicModel(id: 'kpss_cog_2', courseId: 'cografya', name: 'Türkiye’nin Yerşekilleri, Dağları, Ovaları ve Akarsuları'),
+          TopicModel(id: 'kpss_cog_3', courseId: 'cografya', name: 'Türkiye’nin İklimi ve Bitki Örtüsü'),
+          TopicModel(id: 'kpss_cog_4', courseId: 'cografya', name: 'Türkiye’nin Nüfusu, Yerleşme ve Göç Özellikleri'),
+          TopicModel(id: 'kpss_cog_5', courseId: 'cografya', name: 'Türkiye’de Tarım ve Hayvancılık (11 Soru Grubu - TÜİK)'),
+          TopicModel(id: 'kpss_cog_6', courseId: 'cografya', name: 'Türkiye’nin Madenleri, Enerji Kaynakları ve Sanayisi'),
+          TopicModel(id: 'kpss_cog_7', courseId: 'cografya', name: 'Türkiye’de Ulaşım, Ticaret ve Turizm Coğrafyası'),
+        ];
+      }
+
+      if (courseId == 'vatandaslik') {
+        return const [
+          TopicModel(id: 'kpss_vat_1', courseId: 'vatandaslik', name: 'Temel Hukuk Bilgisi ve Hukukun Dalları'),
+          TopicModel(id: 'kpss_vat_2', courseId: 'vatandaslik', name: 'Devlet Biçimleri, Hükümet Sistemleri ve Demokrasi'),
+          TopicModel(id: 'kpss_vat_3', courseId: 'vatandaslik', name: 'Türk Anayasa Tarihi ve 1982 Anayasası Esasları'),
+          TopicModel(id: 'kpss_vat_4', courseId: 'vatandaslik', name: 'Yasama Organı: TBMM Görev ve Yetkileri (9 Soru Grubu)'),
+          TopicModel(id: 'kpss_vat_5', courseId: 'vatandaslik', name: 'Yürütme Organı: Cumhurbaşkanı ve İdari Yapı'),
+          TopicModel(id: 'kpss_vat_6', courseId: 'vatandaslik', name: 'Yargı Organı ve Yüksek Mahkemeler'),
+          TopicModel(id: 'kpss_vat_7', courseId: 'vatandaslik', name: 'İdare Hukuku ve Türkiye İdari Teşkilatı'),
+          TopicModel(id: 'kpss_vat_8', courseId: 'vatandaslik', name: 'Güncel Olaylar, Türkiye ve Dünya Gündemi (6 Soru)'),
+        ];
+      }
+    }
+
+    // 2. LGS (Liselere Geçiş Sistemi) MÜFREDATI
+    if (examName.contains('LGS')) {
+      if (courseId == 'matematik') {
+        return const [
+          TopicModel(id: 'lgs_mat_1', courseId: 'matematik', name: 'Çarpanlar ve Katlar (EBOB-EKOK)'),
+          TopicModel(id: 'lgs_mat_2', courseId: 'matematik', name: 'Üslü İfadeler'),
+          TopicModel(id: 'lgs_mat_3', courseId: 'matematik', name: 'Kareköklü İfadeler'),
+          TopicModel(id: 'lgs_mat_4', courseId: 'matematik', name: 'Veri Analizi (Grafik Yorumlama)'),
+          TopicModel(id: 'lgs_mat_5', courseId: 'matematik', name: 'Basit Olayların Olma Olasılığı'),
+          TopicModel(id: 'lgs_mat_6', courseId: 'matematik', name: 'Cebirsel İfadeler ve Özdeşlikler'),
+          TopicModel(id: 'lgs_mat_7', courseId: 'matematik', name: 'Doğrusal Denklemler ve Eğim'),
+          TopicModel(id: 'lgs_mat_8', courseId: 'matematik', name: 'Eşitsizlikler'),
+          TopicModel(id: 'lgs_mat_9', courseId: 'matematik', name: 'Üçgenler (Açı-Kenar, Eşlik ve Benzerlik)'),
+          TopicModel(id: 'lgs_mat_10', courseId: 'matematik', name: 'Dönüşüm Geometrisi ve Geometrik Cisimler'),
+        ];
+      }
+
+      if (courseId == 'fen_bilimleri') {
+        return const [
+          TopicModel(id: 'lgs_fen_1', courseId: 'fen_bilimleri', name: 'Mevsimler ve İklim'),
+          TopicModel(id: 'lgs_fen_2', courseId: 'fen_bilimleri', name: 'DNA ve Genetik Kod (Mutasyon, Modifikasyon)'),
+          TopicModel(id: 'lgs_fen_3', courseId: 'fen_bilimleri', name: 'Basınç (Katı, Sıvı, Gaz)'),
+          TopicModel(id: 'lgs_fen_4', courseId: 'fen_bilimleri', name: 'Madde ve Endüstri (Periyodik Sistem, Asit-Baz)'),
+          TopicModel(id: 'lgs_fen_5', courseId: 'fen_bilimleri', name: 'Basit Makineler (Makaralar, Kaldıraç, Eğik Düzlem)'),
+          TopicModel(id: 'lgs_fen_6', courseId: 'fen_bilimleri', name: 'Enerji Dönüşümleri ve Çevre Bilimi'),
+          TopicModel(id: 'lgs_fen_7', courseId: 'fen_bilimleri', name: 'Elektrik Yükleri ve Elektrik Enerjisi'),
+        ];
+      }
+
+      if (courseId == 'inkilap') {
+        return const [
+          TopicModel(id: 'lgs_ink_1', courseId: 'inkilap', name: 'Bir Kahraman Doğuyor (Atatürk’ün Hayatı)'),
+          TopicModel(id: 'lgs_ink_2', courseId: 'inkilap', name: 'Milli Uyanış: Bağımsızlık Yolunda Atılan Adımlar'),
+          TopicModel(id: 'lgs_ink_3', courseId: 'inkilap', name: 'Milli Bir Destan: Ya İstiklal Ya Ölüm (Cepheler)'),
+          TopicModel(id: 'lgs_ink_4', courseId: 'inkilap', name: 'Atatürkçülük ve Çağdaşlaşan Türkiye (İnkılaplar)'),
+          TopicModel(id: 'lgs_ink_5', courseId: 'inkilap', name: 'Demokratikleşme Çabaları & Atatürk Dönemi Dış Politika'),
+        ];
+      }
+    }
+
+    // 3. DGS & ALES MÜFREDATI
+    if (examName.contains('DGS') || examName.contains('ALES')) {
+      if (courseId == 'sayisal_mantik' || courseId == 'matematik') {
+        return const [
+          TopicModel(id: 'dgs_mat_1', courseId: 'sayisal_mantik', name: 'Temel Kavramlar & Sayılar (12 Soru Grubu)'),
+          TopicModel(id: 'dgs_mat_2', courseId: 'sayisal_mantik', name: 'Bölme-Bölünebilme & EBOB-EKOK'),
+          TopicModel(id: 'dgs_mat_3', courseId: 'sayisal_mantik', name: 'Rasyonel Sayılar, Eşitsizlik & Mutlak Değer'),
+          TopicModel(id: 'dgs_mat_4', courseId: 'sayisal_mantik', name: 'Üslü ve Köklü Sayılar (8 Soru Grubu)'),
+          TopicModel(id: 'dgs_mat_5', courseId: 'sayisal_mantik', name: 'Çarpanlara Ayırma & Özdeşlikler'),
+          TopicModel(id: 'dgs_mat_6', courseId: 'sayisal_mantik', name: 'Sayı ve Kesir Problemleri (15 Soru Grubu)'),
+          TopicModel(id: 'dgs_mat_7', courseId: 'sayisal_mantik', name: 'Yaş, Yüzde, Kâr-Zarar ve Karışım Problemleri'),
+          TopicModel(id: 'dgs_mat_8', courseId: 'sayisal_mantik', name: 'Hız-Hareket ve Grafik-Tablo Problemleri'),
+          TopicModel(id: 'dgs_mat_9', courseId: 'sayisal_mantik', name: 'Kümeler, Fonksiyonlar ve İşlem'),
+          TopicModel(id: 'dgs_mat_10', courseId: 'sayisal_mantik', name: 'Permütasyon, Kombinasyon ve Olasılık'),
+          TopicModel(id: 'dgs_mat_11', courseId: 'sayisal_mantik', name: 'Sayısal Mantık, Şekil Yeteneği & Örüntüler (8 Soru)'),
+        ];
+      }
+
+      if (courseId == 'sozel_mantik' || courseId == 'turkce') {
+        return const [
+          TopicModel(id: 'dgs_tur_1', courseId: 'sozel_mantik', name: 'Sözcükte ve Cümlede Anlam, Kesin Yargı (12 Soru)'),
+          TopicModel(id: 'dgs_tur_2', courseId: 'sozel_mantik', name: 'Paragrafta Anlam ve Ana Düşünce (30 Soru Grubu)'),
+          TopicModel(id: 'dgs_tur_3', courseId: 'sozel_mantik', name: 'Paragrafta Yapı, Akışı Bozan Cümle & Çoklu Metinler'),
+          TopicModel(id: 'dgs_tur_4', courseId: 'sozel_mantik', name: 'Sözel Mantık, Sıralama ve Akıl Yürütme (8 Soru - 2 Kurgu)'),
+        ];
+      }
+
+      if (courseId == 'geometri') {
+        return const [
+          TopicModel(id: 'dgs_geo_1', courseId: 'geometri', name: 'Doğruda ve Üçgende Açılar (7-8 Soru Grubu)'),
+          TopicModel(id: 'dgs_geo_2', courseId: 'geometri', name: 'Özel Üçgenler, Benzerlik ve Alan'),
+          TopicModel(id: 'dgs_geo_3', courseId: 'geometri', name: 'Çokgenler, Dörtgenler ve Çember'),
+          TopicModel(id: 'dgs_geo_4', courseId: 'geometri', name: 'Katı Cisimler ve Doğrunun Analitiği'),
+        ];
+      }
+    }
+
+    // Belirli bir ders için filtrele veya tüm ders konularını döndür
+    if (courseId != null) {
+      final list = all.where((t) => t.courseId == courseId).toList();
+      return list.isNotEmpty ? list : [TopicModel(id: '${courseId}_genel', courseId: courseId, name: 'Genel Konu Tekrarı ve Soru Çözümü')];
+    }
+    return all;
+  }
+
+  /// Sınavdaki dersin ortalama soru ağırlığını (önem derecesini) döndürür
+  static int getCourseQuestionWeight(String examName, String courseId) {
+    // KPSS Soru Dağılımları (Toplam 120 Soru)
+    if (examName.contains('KPSS') && !examName.contains('ÖABT')) {
+      switch (courseId) {
+        case 'turkce':
+          return 30; // %25
+        case 'matematik':
+          return 27; // %22.5
+        case 'tarih':
+          return 27; // %22.5
+        case 'cografya':
+          return 18; // %15
+        case 'vatandaslik':
+          return 15; // %12.5 (Vatandaşlık 9 + Güncel 6)
+        case 'geometri':
+          return 3;  // SADECE 3 SORU! (%2.5) -> Haftada en fazla 1 blok olmalı!
+        default:
+          return 10;
+      }
+    }
+
+    // YKS TYT Soru Dağılımları (120 Soru)
+    if (examName.contains('TYT')) {
+      switch (courseId) {
+        case 'turkce':
+          return 40;
+        case 'matematik':
+          return 30;
+        case 'geometri':
+          return 10;
+        case 'fizik':
+          return 7;
+        case 'kimya':
+          return 7;
+        case 'biyoloji':
+          return 6;
+        case 'tarih':
+          return 5;
+        case 'cografya':
+          return 5;
+        case 'felsefe':
+          return 5;
+        case 'din_kulturu':
+          return 5;
+        default:
+          return 10;
+      }
+    }
+
+    // LGS Soru Dağılımları (90 Soru)
+    if (examName.contains('LGS')) {
+      switch (courseId) {
+        case 'turkce':
+        case 'matematik':
+        case 'fen_bilimleri':
+          return 20;
+        case 'inkilap':
+        case 'din_kulturu':
+        case 'ingilizce':
+          return 10;
+        default:
+          return 10;
+      }
+    }
+
+    // DGS / ALES Soru Dağılımları (100 Soru)
+    if (examName.contains('DGS') || examName.contains('ALES')) {
+      switch (courseId) {
+        case 'sozel_mantik':
+        case 'turkce':
+          return 50;
+        case 'sayisal_mantik':
+        case 'matematik':
+          return 43;
+        case 'geometri':
+          return 7;
+        default:
+          return 20;
+      }
+    }
+
+    return 20; // Varsayılan ağırlık
+  }
+
   static const List<String> motivationQuotes = [
     "Bugün döktüğün her damla alın teri, yarın başarı olarak karşına çıkacak.",
     "Zorluklar, başarının değerini artıran süslerdir. Asla pes etme!",

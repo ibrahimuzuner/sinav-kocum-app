@@ -45,6 +45,14 @@ class PdfReportService {
     final regularFont = await _loadRegularFont();
     final boldFont = await _loadBoldFont();
 
+    pw.MemoryImage? logoImage;
+    try {
+      final logoBytes = await rootBundle.load('assets/icon/app_icon.png');
+      logoImage = pw.MemoryImage(logoBytes.buffer.asUint8List());
+    } catch (e) {
+      debugPrint('PDF Logo yükleme hatası: $e');
+    }
+
     final pdf = pw.Document(
       title: 'Sınav Koçum - Analiz Raporu',
       author: 'Sınav Koçum',
@@ -117,7 +125,7 @@ class PdfReportService {
           base: regularFont,
           bold: boldFont,
         ),
-        header: (context) => _buildPdfHeader(context, periodLabel),
+        header: (context) => _buildPdfHeader(context, periodLabel, logoImage),
         footer: (context) => _buildPdfFooter(context),
         build: (context) => [
           // 1. ÖĞRENCİ BİLGİ KARTI
@@ -215,7 +223,7 @@ class PdfReportService {
 
   // --- PDF WIDGETS ---
 
-  static pw.Widget _buildPdfHeader(pw.Context context, String periodLabel) {
+  static pw.Widget _buildPdfHeader(pw.Context context, String periodLabel, pw.MemoryImage? logoImage) {
     return pw.Container(
       margin: const pw.EdgeInsets.only(bottom: 16),
       padding: const pw.EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -227,21 +235,38 @@ class PdfReportService {
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         crossAxisAlignment: pw.CrossAxisAlignment.center,
         children: [
-          pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
+          pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.center,
             children: [
-              pw.Text(
-                '🎓 SINAV KOÇUM',
-                style: pw.TextStyle(
-                  fontSize: 18,
-                  fontWeight: pw.FontWeight.bold,
-                  color: PdfColors.white,
+              if (logoImage != null)
+                pw.Container(
+                  width: 38,
+                  height: 38,
+                  margin: const pw.EdgeInsets.only(right: 12),
+                  padding: const pw.EdgeInsets.all(3),
+                  decoration: pw.BoxDecoration(
+                    color: PdfColors.white,
+                    borderRadius: pw.BorderRadius.circular(8),
+                  ),
+                  child: pw.Image(logoImage),
                 ),
-              ),
-              pw.SizedBox(height: 2),
-              pw.Text(
-                'Öğrenci Performans & Başarı Analiz Raporu',
-                style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey200),
+              pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    'SINAV KOCUM',
+                    style: pw.TextStyle(
+                      fontSize: 18,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColors.white,
+                    ),
+                  ),
+                  pw.SizedBox(height: 2),
+                  pw.Text(
+                    'Ogrenci Performans ve Basari Analiz Raporu',
+                    style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey200),
+                  ),
+                ],
               ),
             ],
           ),
@@ -276,7 +301,7 @@ class PdfReportService {
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
           pw.Text(
-            '💡 Sınav Koçum ile hedefine emin adımlarla ilerle!',
+            'Sinav Kocum • Hedefine Emin Adimlarla Ilerle',
             style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600),
           ),
           pw.Text(
@@ -302,7 +327,7 @@ class PdfReportService {
           _buildInfoItem('ÖĞRENCİ', user.fullName.isNotEmpty ? user.fullName : user.firstName),
           _buildInfoItem('HEDEF BÖLÜM & PUAN', '${user.targetDepartment} (${user.targetScore.toInt()} Puan)'),
           _buildInfoItem('HEDEF SINAV', user.targetExam),
-          _buildInfoItem('ÇALIŞMA SERİSİ', '$streak Gün 🔥'),
+          _buildInfoItem('ÇALIŞMA SERİSİ', '$streak Gün (Aktif Seri)'),
         ],
       ),
     );
@@ -400,7 +425,7 @@ class PdfReportService {
           pw.Expanded(
             child: pw.Row(
               children: [
-                pw.Text('🏆 En Başarılı Ders: ', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
+                pw.Text('En Başarılı Ders: ', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: const PdfColor.fromInt(0xFF0F172A))),
                 pw.Expanded(
                   child: pw.Text(
                     bestCourse,
@@ -415,7 +440,7 @@ class PdfReportService {
           pw.Expanded(
             child: pw.Row(
               children: [
-                pw.Text('💡 Geliştirilmesi Gereken: ', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
+                pw.Text('Geliştirilmesi Gereken: ', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: const PdfColor.fromInt(0xFF0F172A))),
                 pw.Expanded(
                   child: pw.Text(
                     weakCourse,

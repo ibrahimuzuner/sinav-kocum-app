@@ -1,5 +1,5 @@
-import 'dart:math';
 import '../models/course_model.dart';
+import '../models/topic_model.dart';
 import '../models/question_log_model.dart';
 import '../models/schedule_item_model.dart';
 import 'package:uuid/uuid.dart';
@@ -22,8 +22,8 @@ class SmartSchedulerService {
   static final Uuid _uuid = const Uuid();
 
   /// Öğrencinin seçtiği hedef bölüm, hedef puan, sınav türü, başarı durumu,
-  /// konu hazırlık modu ve elenen derslere (çalışmak istenmeyen dersler) göre
-  /// yapay zeka destekli akıllı çalışma programı üretir.
+  /// konu hazırlık modu, elenen dersler ve günlük paragraf rutinine göre
+  /// soru dağılımı ve müfredat sırasına odaklı akıllı çalışma programı üretir.
   static List<ScheduleItemModel> generateSchedule({
     required List<CourseModel> courses,
     required List<QuestionLogModel> questionLogs,
@@ -36,6 +36,7 @@ class SmartSchedulerService {
     double targetNet = 85.0, // Hedeflenen toplam net
     StudyContentMode contentMode = StudyContentMode.hybrid, // Konu/Video + Soru mu, yoksa Sadece Soru mu?
     Set<String> excludedCourseIds = const {}, // Öğrencinin elediği / çalışmak istemediği dersler
+    bool addDailyParagraph = true, // Günlük 20 Paragraf Rutini (Zihin gelişimi ve net artışı)
   }) {
     // Elenen / çalışılmak istenmeyen dersleri filtrele
     final activeCourses = courses.where((c) => !excludedCourseIds.contains(c.id)).toList();
@@ -49,70 +50,33 @@ class SmartSchedulerService {
 
     for (final course in activeCourses) {
       final cName = course.name.toLowerCase();
-      double mult = 1.0;
+      // Resmi sınav soru dağılımı ağırlığını al (Örn: KPSS Türkçe 30 soru, Geometri sadece 3 soru)
+      final int qWeight = PredefinedData.getCourseQuestionWeight(targetExam, course.id);
+      double mult = (qWeight / 15.0).clamp(0.4, 2.5);
 
-      // Temel Sınav Türü Öncelikleri
-      if (targetExam.contains('Sayısal')) {
-        if (cName.contains('mat') || cName.contains('fizik') || cName.contains('kimya') || cName.contains('biyo') || cName.contains('geo')) {
-          mult = 1.6;
-        } else if (cName.contains('türk')) {
-          mult = 1.2;
-        } else {
-          mult = 0.7;
-        }
-      } else if (targetExam.contains('Eşit Ağırlık')) {
-        if (cName.contains('mat') || cName.contains('türk') || cName.contains('edeb') || cName.contains('tarih') || cName.contains('coğ')) {
-          mult = 1.6;
-        } else {
-          mult = 0.7;
-        }
-      } else if (targetExam.contains('Sözel')) {
-        if (cName.contains('türk') || cName.contains('edeb') || cName.contains('tarih') || cName.contains('coğ') || cName.contains('fel')) {
-          mult = 1.7;
-        } else {
-          mult = 0.6;
-        }
-      } else if (targetExam.contains('KPSS')) {
-        if (cName.contains('tarih') || cName.contains('coğ') || cName.contains('türk') || cName.contains('mat') || cName.contains('vatan') || cName.contains('hukuk') || cName.contains('iktisat') || cName.contains('maliye')) {
-          mult = 1.5;
-        }
-      } else if (targetExam.contains('LGS')) {
-        if (cName.contains('mat') || cName.contains('fen') || cName.contains('türk') || cName.contains('ink') || cName.contains('ing')) {
-          mult = 1.5;
-        }
+      // KPSS'de Geometri sadece 3 soru çıktığı için ağırlığı sınırlanır (her güne eklenmesini engeller)
+      if (targetExam.contains('KPSS') && course.id == 'geometri') {
+        mult = 0.35; // Haftada en fazla 1 blok
       }
 
-      // 🎯 YAPAY ZEKA BÖLÜM ODAKLI DERİNLEŞTİRME:
-      // Tıp, Diş, Eczacılık hedefi -> Biyoloji ve Kimya katsayısını ekstra artır
+      // Bölüm odaklı derinleştirme
       if (depLower.contains('tıp') || depLower.contains('diş') || depLower.contains('eczacılık') || depLower.contains('sağlık')) {
         if (cName.contains('biyo') || cName.contains('kimya')) {
           mult *= 1.35;
         } else if (cName.contains('mat')) {
           mult *= 1.25;
         }
-      }
-      // Bilgisayar, Yazılım, Elektrik-Elektronik, Makine -> Matematik, Geometri, Fizik
-      else if (depLower.contains('bilgisayar') || depLower.contains('yazılım') || depLower.contains('mühendislik') || depLower.contains('elektrik') || depLower.contains('makine')) {
+      } else if (depLower.contains('bilgisayar') || depLower.contains('yazılım') || depLower.contains('mühendislik') || depLower.contains('elektrik') || depLower.contains('makine')) {
         if (cName.contains('mat') || cName.contains('geo') || cName.contains('fizik')) {
           mult *= 1.35;
         }
-      }
-      // Hukuk, Psikoloji, PDR, YBS -> Türkçe, Edebiyat, Matematik
-      else if (depLower.contains('hukuk') || depLower.contains('adalet') || depLower.contains('hakim')) {
+      } else if (depLower.contains('hukuk') || depLower.contains('adalet') || depLower.contains('hakim')) {
         if (cName.contains('türk') || cName.contains('edeb') || cName.contains('tarih') || cName.contains('mat')) {
           mult *= 1.3;
         }
-      }
-      // KPSS Yüksek Puan / Atama -> Tarih, Vatandaşlık, Matematik
-      else if (depLower.contains('kpss') || depLower.contains('merkezi') || depLower.contains('müfettiş') || depLower.contains('memurluk')) {
+      } else if (depLower.contains('kpss') || depLower.contains('merkezi') || depLower.contains('müfettiş') || depLower.contains('memurluk')) {
         if (cName.contains('tarih') || cName.contains('vatan') || cName.contains('türk')) {
           mult *= 1.35;
-        }
-      }
-      // LGS Fen Lisesi / Galatasaray -> Matematik ve Fen
-      else if (depLower.contains('fen lise') || depLower.contains('galatasaray') || depLower.contains('kabataş')) {
-        if (cName.contains('mat') || cName.contains('fen')) {
-          mult *= 1.4;
         }
       }
 
@@ -132,13 +96,12 @@ class SmartSchedulerService {
       double weight = 1.0;
       switch (strategy) {
         case ScheduleStrategy.focusWeak:
-          // Başarısı düşük olan derse daha çok ağırlık ver
           if (accuracy < 50) {
-            weight = 3.2; // Çok zayıf -> En yüksek öncelik
+            weight = 2.8;
           } else if (accuracy < 70) {
-            weight = 2.2; // Orta seviye
+            weight = 2.0;
           } else {
-            weight = 1.2; // Başarılı ders -> Pekiştirme
+            weight = 1.2;
           }
           break;
 
@@ -148,72 +111,99 @@ class SmartSchedulerService {
 
         case ScheduleStrategy.intensive:
           if (accuracy < 65) {
-            weight = 2.8;
+            weight = 2.6;
           } else {
-            weight = 2.0;
+            weight = 1.9;
           }
           break;
       }
 
-      // Hedef Puan Seviyesi Etkisi (Yüksek puan hedefinde soru yoğunluğu ve katsayı artışı)
-      double scoreFactor = 1.0;
-      if (targetScore >= 480 || (targetExam.contains('KPSS') && targetScore >= 88) || (targetExam.contains('LGS') && targetScore >= 470)) {
-        scoreFactor = 1.2; // Yüksek derece hedefi
-      } else if (targetScore >= 430 || (targetExam.contains('KPSS') && targetScore >= 80)) {
-        scoreFactor = 1.1;
-      }
-
       // Sınav katsayısıyla birleştir
       final examMult = examMultiplier[course.id] ?? 1.0;
-      courseWeights[course.id] = weight * examMult * scoreFactor;
+      courseWeights[course.id] = weight * examMult;
     }
 
-    // 3. Günlük ders blokları sayısı
-    int blocksPerDay = (dailyMinutes / 60).round().clamp(2, 4);
-    int targetMinutesPerBlock = (dailyMinutes / blocksPerDay).round();
+    // 3. Günlük ders blokları sayısı ve süre hesabı
+    int effectiveDailyMinutes = dailyMinutes;
+    if (addDailyParagraph && !excludedCourseIds.contains('turkce')) {
+      // 25 dk paragraf için ayrılır, kalan süre ders bloklarına paylaştırılır
+      effectiveDailyMinutes = (dailyMinutes - 25).clamp(60, 480);
+    }
 
-    // 4. Havuz oluşturma
+    int blocksPerDay = (effectiveDailyMinutes / 60).round().clamp(2, 4);
+    int targetMinutesPerBlock = (effectiveDailyMinutes / blocksPerDay).round();
+
+    // 4. Havuz oluşturma (Soru yoğunluğu ve katsayıya göre düzenlenir)
     final List<CourseModel> coursePool = [];
     courseWeights.forEach((courseId, weight) {
       final course = activeCourses.firstWhere((c) => c.id == courseId);
-      final repeatCount = weight.ceil().clamp(1, 6);
+      int repeatCount = weight.ceil().clamp(1, 5);
+
+      // KPSS'de Geometri sadece 3 soru olduğu için haftada 1 kez havuza girer
+      if (targetExam.contains('KPSS') && courseId == 'geometri') {
+        repeatCount = 1;
+      }
+
       for (int i = 0; i < repeatCount; i++) {
         coursePool.add(course);
       }
     });
 
-    coursePool.shuffle(Random(42));
-
     final List<ScheduleItemModel> generatedItems = [];
     int poolIndex = 0;
-    int topicCounter = 0;
 
-    // Tüm varsayılan müfredat konularını al
-    final defaultTopics = PredefinedData.getDefaultTopics();
+    // Her dersin müfredattaki sırasını ve haftalık yerleşim sayısını takip eden sayaçlar
+    final Map<String, int> courseTopicSequence = {};
+    final Map<String, int> weeklyCourseCounts = {};
 
     for (final day in activeDays) {
       final Set<String> coursesUsedToday = {};
 
+      // 🎯 1. GÜNLÜK 20 PARAGRAF RUTİNİ (İsteğe bağlı)
+      if (addDailyParagraph && !excludedCourseIds.contains('turkce')) {
+        generatedItems.add(
+          ScheduleItemModel(
+            id: _uuid.v4(),
+            dayOfWeek: day,
+            courseId: 'turkce',
+            courseName: 'Türkçe / Paragraf',
+            topicName: '🎯 Günlük 20 Paragraf: Zihin Gelişimi & Hızlı Okuma Rutini (20 Soru)',
+            targetMinutes: 25,
+            targetQuestions: 20,
+            activityType: 'practice',
+            lectureMinutes: 0,
+            practiceMinutes: 25,
+          ),
+        );
+      }
+
+      // 🎯 2. MÜFREDAT SIRASINA VE SORU YOĞUNLUĞUNA GÖRE DERS BLOKLARI
       for (int b = 0; b < blocksPerDay; b++) {
         CourseModel selectedCourse = coursePool[poolIndex % coursePool.length];
         int attempts = 0;
-        while (coursesUsedToday.contains(selectedCourse.id) && attempts < coursePool.length) {
+        while (attempts < coursePool.length &&
+            (coursesUsedToday.contains(selectedCourse.id) ||
+             (targetExam.contains('KPSS') && selectedCourse.id == 'geometri' && (weeklyCourseCounts['geometri'] ?? 0) >= 1))) {
           poolIndex++;
           selectedCourse = coursePool[poolIndex % coursePool.length];
           attempts++;
         }
 
         coursesUsedToday.add(selectedCourse.id);
+        weeklyCourseCounts[selectedCourse.id] = (weeklyCourseCounts[selectedCourse.id] ?? 0) + 1;
         poolIndex++;
-        topicCounter++;
 
-        // Derse ait gerçek müfredat konularını filtrele
-        final courseTopics = defaultTopics.where((t) => t.courseId == selectedCourse.id).toList();
-        final topicName = courseTopics.isNotEmpty
-            ? courseTopics[topicCounter % courseTopics.length].name
-            : selectedCourse.name;
+        // Derse ve sınava ait GERÇEK müfredat konularını sıralı olarak al
+        final courseTopics = PredefinedData.getTopicsForExam(targetExam, courseId: selectedCourse.id);
+        final topicSeq = courseTopicSequence[selectedCourse.id] ?? 0;
+        final currentTopic = courseTopics.isNotEmpty
+            ? courseTopics[topicSeq % courseTopics.length]
+            : TopicModel(id: '${selectedCourse.id}_genel', courseId: selectedCourse.id, name: selectedCourse.name);
 
-        // 🎯 ÇALIŞMA ŞEKLİ VE DAKİKA / SORU HESAPLAMASI
+        courseTopicSequence[selectedCourse.id] = topicSeq + 1;
+        final topicName = currentTopic.name;
+
+        // ÇALIŞMA ŞEKLİ VE DAKİKA / SORU HESAPLAMASI
         int lectureMinutes;
         int practiceMinutes;
         int targetQuestions;
@@ -243,7 +233,7 @@ class SmartSchedulerService {
             break;
 
           case StudyContentMode.conceptFocus:
-            // Sıfırdan Başlıyorum / Konu Eksiğim Çok -> 40 dk Video/Konu + 15 Soru
+            // Sıfırdan Başlıyorum -> 40 dk Video/Konu + Pekiştirme
             lectureMinutes = (targetMinutesPerBlock * 0.65).round().clamp(30, 50);
             practiceMinutes = targetMinutesPerBlock - lectureMinutes;
             targetQuestions = (practiceMinutes * 0.65).round().clamp(10, 20);

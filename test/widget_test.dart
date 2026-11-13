@@ -120,9 +120,14 @@ void main() {
         s.courseId == 'kimya' ||
         s.courseId == 'fizik');
     expect(hasMathOrScience, true);
-    // Varsayılan hybrid modda 30 dk video/tekrar içermeli
-    expect(schedule.first.activityType, 'hybrid');
-    expect(schedule.first.lectureMinutes, 30);
+    // Günlük paragraf bloğu eklendiğinde ilk madde 20 soruluk paragraf rutini olmalı
+    expect(schedule.first.topicName.contains('Paragraf'), true);
+    expect(schedule.first.targetQuestions, 20);
+
+    // Ders bloğu (hybrid mod) video/tekrar içermeli
+    final subjectBlock = schedule.firstWhere((s) => s.courseId != 'turkce' || !s.topicName.contains('Paragraf'));
+    expect(subjectBlock.activityType, 'hybrid');
+    expect(subjectBlock.lectureMinutes >= 20, true);
   });
 
   test('SmartSchedulerService generates practiceOnly mode when user says topics are completed', () {
@@ -311,5 +316,78 @@ void main() {
     final agsDepts = TargetDepartmentsData.getDepartmentsForExam('AGS (Milli Eğitim Akademisi Giriş Sınavı)');
     expect(agsDepts.isNotEmpty, true);
     expect(agsDepts.any((d) => d.name.contains('Sınıf Öğretmenliği')), true);
+  });
+
+  test('KPSS curriculum topics do NOT contain Trigonometri, Limit, Türev, İntegral or Logaritma', () {
+    final kpssTopics = PredefinedData.getTopicsForExam('KPSS (Genel Yetenek - Kültür)', courseId: 'matematik');
+    final topicNames = kpssTopics.map((t) => t.name.toLowerCase()).toList();
+
+    expect(topicNames.any((name) => name.contains('trigonometri')), false);
+    expect(topicNames.any((name) => name.contains('türev')), false);
+    expect(topicNames.any((name) => name.contains('integral')), false);
+    expect(topicNames.any((name) => name.contains('limit')), false);
+    expect(topicNames.any((name) => name.contains('logaritma')), false);
+
+    // Temel sayılar ve problemler bulunmalı
+    expect(topicNames.any((name) => name.contains('temel kavramlar')), true);
+    expect(topicNames.any((name) => name.contains('problemler')), true);
+  });
+
+  test('KPSS Geometri is limited to at most 1 day/week due to 3 question weight', () {
+    final kpssCourses = PredefinedData.getCoursesForExam('KPSS (Genel Yetenek - Kültür)');
+    final schedule = SmartSchedulerService.generateSchedule(
+      courses: kpssCourses,
+      questionLogs: [],
+      dailyMinutes: 180,
+      strategy: ScheduleStrategy.balanced,
+      includeSunday: false,
+      targetExam: 'KPSS (Genel Yetenek - Kültür)',
+    );
+
+    final geoItems = schedule.where((s) => s.courseId == 'geometri').toList();
+    // 3 soru çıktığı için haftada en fazla 1 gün olmalı
+    expect(geoItems.length <= 1, true);
+
+    // Ağırlık kontrolü
+    expect(PredefinedData.getCourseQuestionWeight('KPSS', 'geometri'), 3);
+    expect(PredefinedData.getCourseQuestionWeight('KPSS', 'tarih'), 27);
+    expect(PredefinedData.getCourseQuestionWeight('KPSS', 'turkce'), 30);
+  });
+
+  test('MockExamModel estimated score and AI coach advice generate accurately', () {
+    final scores = [
+      const MockExamCourseScore(
+        courseId: 'turkce',
+        courseName: 'Türkçe',
+        correctCount: 26,
+        wrongCount: 4,
+        netScore: 25.0,
+      ),
+      const MockExamCourseScore(
+        courseId: 'matematik',
+        courseName: 'Matematik',
+        correctCount: 20,
+        wrongCount: 4,
+        netScore: 19.0,
+      ),
+      const MockExamCourseScore(
+        courseId: 'tarih',
+        courseName: 'Tarih',
+        correctCount: 22,
+        wrongCount: 4,
+        netScore: 21.0,
+      ),
+    ];
+
+    final estScore = MockExamModel.calculateEstimatedScore('KPSS (Genel Yetenek - Kültür)', scores);
+    expect(estScore > 60.0 && estScore < 100.0, true);
+
+    final advice = MockExamModel.generateCoachAdvice(
+      targetExam: 'KPSS (Genel Yetenek - Kültür)',
+      scores: scores,
+      targetScore: 85.0,
+    );
+    expect(advice.isNotEmpty, true);
+    expect(advice.contains('KPSS Koç Analizi'), true);
   });
 }

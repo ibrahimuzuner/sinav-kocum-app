@@ -18,6 +18,7 @@ class _SmartScheduleDialogState extends State<SmartScheduleDialog> {
   bool _includeSunday = false;
   final bool _replaceExisting = true;
   final Set<String> _excludedCourseIds = {};
+  bool _addDailyParagraph = true;
 
   @override
   void initState() {
@@ -178,6 +179,50 @@ class _SmartScheduleDialogState extends State<SmartScheduleDialog> {
                   ],
                 ),
               ),
+
+            // GÜNLÜK 20 PARAGRAF RUTİNİ SEÇİMİ (Kullanıcı Talebi 1)
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: _addDailyParagraph
+                    ? const Color(0xFF10B981).withValues(alpha: 0.12)
+                    : (isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9)),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: _addDailyParagraph
+                      ? const Color(0xFF10B981).withValues(alpha: 0.4)
+                      : (isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1)),
+                ),
+              ),
+              child: SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                value: _addDailyParagraph,
+                activeColor: const Color(0xFF10B981),
+                onChanged: (val) => setState(() => _addDailyParagraph = val),
+                title: const Row(
+                  children: [
+                    Icon(Icons.auto_stories_rounded, color: Color(0xFF10B981), size: 20),
+                    SizedBox(width: 8),
+                    Text(
+                      'Günlük 20 Paragraf Rutini Ekle',
+                      style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+                subtitle: Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    'Günde en az 20 paragraf sorusu çözmek okuma hızınızı ve zihninizi geliştirerek tüm sınavlarda netlerinizi zirveye taşır.',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      height: 1.35,
+                      color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+                    ),
+                  ),
+                ),
+              ),
+            ),
 
             // ADIM 1: Günlük Çalışma Süresi
             Row(
@@ -472,6 +517,7 @@ class _SmartScheduleDialogState extends State<SmartScheduleDialog> {
                     contentMode: _contentMode,
                     replaceExisting: _replaceExisting,
                     excludedCourseIds: _excludedCourseIds,
+                    addDailyParagraph: _addDailyParagraph,
                   );
 
                   if (context.mounted) {
