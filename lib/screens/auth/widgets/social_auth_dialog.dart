@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../models/user_profile_model.dart';
@@ -8,7 +9,20 @@ import '../../../services/social_auth_service.dart';
 class SocialAuthHelper {
   /// Google veya Apple ile tek tıkla giriş / kayıt sürecini başlatır
   static Future<void> startSocialLogin(BuildContext context, {required bool isGoogle}) async {
-    // 1. Önce telefonun açık olan yerel hesabını (Google Account Picker / Apple ID) çekmeyi dene
+    // Web ortamında (Safari/Chrome browser):
+    // Apple ve Google native platform kanalları web tarayıcısında doğrudan hesap seçiciyi tetikleyemediği için
+    // gereksiz bekletme dialogu açmadan doğrudan akıllı 1-tık bağlama modalına yönlendir.
+    if (kIsWeb) {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (ctx) => SocialAccountPickerModal(isGoogle: isGoogle),
+      );
+      return;
+    }
+
+    // Mobil yerel uygulamada (Android/iOS Native):
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -80,8 +94,7 @@ class SocialAuthHelper {
       return;
     }
 
-    // B) Eğer kullanıcı iptal ettiyse veya native desteklenmiyorsa (Web/Safari fallback):
-    // Kullanıcıya 1-tık hızlı bağlama modalını göster
+    // B) Eğer kullanıcı iptal ettiyse veya native desteklenmiyorsa:
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -167,22 +180,33 @@ class _SocialAccountPickerModalState extends State<SocialAccountPickerModal> {
   String _selectedRole = 'student';
   String _selectedExam = ExamTypes.availableExams.first;
   bool _isLoading = false;
+  bool _showCustomFields = false;
   bool _showAdminShortcuts = false;
+
+  String get _defaultSocialEmail {
+    if (!widget.isGoogle) {
+      return 'ibrahim.uzuner@icloud.com';
+    }
+    return 'sinavkocumapp@gmail.com';
+  }
+
+  String get _currentEmail {
+    final t = _emailController.text.trim();
+    return t.isNotEmpty ? t : _defaultSocialEmail;
+  }
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final userProvider = Provider.of<UserProvider>(context, listen: false);
-      final lastEmail = userProvider.lastSocialEmail;
-      if (lastEmail != null && lastEmail.isNotEmpty && _emailController.text.isEmpty) {
-        if (mounted) {
-          setState(() {
-            _emailController.text = lastEmail;
-          });
-        }
-      }
-    });
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final lastEmail = userProvider.lastSocialEmail;
+    if (lastEmail != null && lastEmail.isNotEmpty) {
+      _emailController.text = lastEmail;
+    } else if (userProvider.email.isNotEmpty) {
+      _emailController.text = userProvider.email;
+    } else {
+      _emailController.text = _defaultSocialEmail;
+    }
   }
 
   @override
@@ -221,6 +245,7 @@ class _SocialAccountPickerModalState extends State<SocialAccountPickerModal> {
     final userProvider = Provider.of<UserProvider>(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final savedProfiles = userProvider.savedProfiles;
+    final targetEmail = _currentEmail;
 
     return Container(
       padding: EdgeInsets.only(
@@ -321,17 +346,17 @@ class _SocialAccountPickerModalState extends State<SocialAccountPickerModal> {
 
                 // 3 Ay Ücretsiz Deneme Müjdesi
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       colors: [Color(0xFF4F46E5), Color(0xFF7C3AED)],
                     ),
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   child: const Row(
                     children: [
-                      Text('🎁', style: TextStyle(fontSize: 20)),
-                      SizedBox(width: 10),
+                      Text('🎁', style: TextStyle(fontSize: 24)),
+                      SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -341,9 +366,10 @@ class _SocialAccountPickerModalState extends State<SocialAccountPickerModal> {
                               style: TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 13,
+                                fontSize: 13.5,
                               ),
                             ),
+                            SizedBox(height: 2),
                             Text(
                               'Hesabın anında açılır, ekstra form doldurmana gerek kalmaz.',
                               style: TextStyle(color: Colors.white70, fontSize: 11),
@@ -354,12 +380,167 @@ class _SocialAccountPickerModalState extends State<SocialAccountPickerModal> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
+
+                //  Apple / Google Öne Çıkan TEK TIKLA BAĞLAN KARTI
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: widget.isGoogle
+                        ? (isDark ? const Color(0xFF0F172A) : const Color(0xFFFEF2F2))
+                        : (isDark ? const Color(0xFF0F172A) : Colors.black),
+                    borderRadius: BorderRadius.circular(18),
+                    border: widget.isGoogle
+                        ? Border.all(color: const Color(0xFFEA4335).withValues(alpha: 0.35))
+                        : null,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.16),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          if (widget.isGoogle)
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFEA4335),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Text(
+                                'G',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            )
+                          else
+                            const Icon(Icons.apple_rounded, color: Colors.white, size: 32),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  widget.isGoogle ? 'Bağlanacak Google Hesabı:' : 'Bağlanacak Apple Kimliği:',
+                                  style: TextStyle(
+                                    color: widget.isGoogle
+                                        ? (isDark ? Colors.white70 : const Color(0xFF475569))
+                                        : Colors.white70,
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  targetEmail,
+                                  style: TextStyle(
+                                    color: widget.isGoogle
+                                        ? (isDark ? Colors.white : const Color(0xFF0F172A))
+                                        : Colors.white,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : () => _submitAndLogin(targetEmail),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: widget.isGoogle
+                                ? const Color(0xFFEA4335)
+                                : (isDark ? const Color(0xFF4F46E5) : Colors.white),
+                            foregroundColor: widget.isGoogle
+                                ? Colors.white
+                                : (isDark ? Colors.white : Colors.black),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            elevation: 0,
+                          ),
+                          child: _isLoading
+                              ? SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: widget.isGoogle ? Colors.white : (isDark ? Colors.white : Colors.black),
+                                  ),
+                                )
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      widget.isGoogle ? Icons.flash_on_rounded : Icons.apple_rounded,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      widget.isGoogle
+                                          ? 'Google ile Tek Dokunuşla Başla 🚀'
+                                          : ' Tek Dokunuşla Doğrudan Başla',
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                    ),
+                                  ],
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Safari Web & App Store Bilgilendirme Kutusu
+                Container(
+                  padding: const EdgeInsets.all(11),
+                  decoration: BoxDecoration(
+                    color: (widget.isGoogle ? const Color(0xFFEA4335) : const Color(0xFF4F46E5))
+                        .withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        widget.isGoogle ? Icons.info_outline_rounded : Icons.lock_outline_rounded,
+                        size: 17,
+                        color: widget.isGoogle ? const Color(0xFFEA4335) : const Color(0xFF4F46E5),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          widget.isGoogle
+                              ? 'Google hesabınızla tek dokunuşla bağlanabilirsiniz. Ekstra form doldurmanıza gerek yoktur.'
+                              : 'Safari web önizlemesinde iCloud hesabınız hazır olarak seçilidir. Doğrudan yukarıdaki butona dokunarak başlayabilirsiniz. App Store sürümünde Face ID ile bağlanır.',
+                          style: TextStyle(
+                            fontSize: 11,
+                            height: 1.35,
+                            color: isDark ? Colors.white70 : const Color(0xFF475569),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
 
                 // Bu Cihazda Önceden Kayıtlı Hesaplar Varsa Tek Tıkla Bağlan
                 if (savedProfiles.isNotEmpty) ...[
                   Text(
-                    'Kayıtlı Hesapla Tek Tıkla Bağlan',
+                    'Kayıtlı Profille Tek Tıkla Bağlan',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
@@ -408,215 +589,234 @@ class _SocialAccountPickerModalState extends State<SocialAccountPickerModal> {
                       ),
                     );
                   }),
-                  const SizedBox(height: 12),
-                  const Row(
-                    children: [
-                      Expanded(child: Divider()),
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 10),
-                        child: Text(
-                          'veya hesabını onayla',
-                          style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
-                        ),
-                      ),
-                      Expanded(child: Divider()),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 6),
                 ],
 
-                // Rol Seçimi: Öğrenci / Öğretmen
-                Row(
-                  children: [
-                    Expanded(
-                      child: InkWell(
-                        onTap: () => setState(() => _selectedRole = 'student'),
-                        borderRadius: BorderRadius.circular(12),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 180),
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          decoration: BoxDecoration(
-                            color: _selectedRole == 'student'
-                                ? const Color(0xFF4F46E5).withValues(alpha: 0.12)
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: _selectedRole == 'student'
-                                  ? const Color(0xFF4F46E5)
-                                  : (isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1)),
-                            ),
-                          ),
-                          child: Center(
-                            child: Text(
-                              '🎓 Öğrenciyim',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                                color: _selectedRole == 'student'
-                                    ? const Color(0xFF4F46E5)
-                                    : (isDark ? Colors.white70 : Colors.black87),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
+                // Özel Ayarları Aç / Kapat Butonu
+                Center(
+                  child: TextButton.icon(
+                    onPressed: () => setState(() => _showCustomFields = !_showCustomFields),
+                    icon: Icon(
+                      _showCustomFields ? Icons.keyboard_arrow_up_rounded : Icons.tune_rounded,
+                      size: 18,
+                      color: const Color(0xFF4F46E5),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: InkWell(
-                        onTap: () => setState(() => _selectedRole = 'teacher'),
-                        borderRadius: BorderRadius.circular(12),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 180),
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          decoration: BoxDecoration(
-                            color: _selectedRole == 'teacher'
-                                ? const Color(0xFF10B981).withValues(alpha: 0.12)
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: _selectedRole == 'teacher'
-                                  ? const Color(0xFF10B981)
-                                  : (isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1)),
-                            ),
-                          ),
-                          child: Center(
-                            child: Text(
-                              '👨‍🏫 Öğretmen / Koçum',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                                color: _selectedRole == 'teacher'
-                                    ? const Color(0xFF10B981)
-                                    : (isDark ? Colors.white70 : Colors.black87),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-
-                // Sınav Türü Seçimi
-                const Text(
-                  'Hedef Sınav',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
-                    ),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: _selectedExam,
-                      isExpanded: true,
-                      items: ExamTypes.availableExams.map((exam) {
-                        return DropdownMenuItem<String>(
-                          value: exam,
-                          child: Text(
-                            exam,
-                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) setState(() => _selectedExam = val);
-                      },
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                // E-posta Giriş Alanı
-                Text(
-                  widget.isGoogle
-                      ? 'Telefondaki Google / Gmail E-posta Adresiniz'
-                      : 'Apple ID / iCloud E-posta Adresiniz',
-                  style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 6),
-                TextFormField(
-                  controller: _emailController,
-                  autofocus: true,
-                  keyboardType: TextInputType.emailAddress,
-                  textCapitalization: TextCapitalization.none,
-                  autocorrect: false,
-                  autofillHints: const [AutofillHints.email, AutofillHints.username],
-                  decoration: InputDecoration(
-                    hintText: widget.isGoogle ? 'ornek.ogrenci@gmail.com' : 'ornek.ogrenci@icloud.com',
-                    prefixIcon: Icon(
-                      widget.isGoogle ? Icons.mail_outline_rounded : Icons.apple_rounded,
-                    ),
-                    suffixIcon: _emailController.text.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear_rounded, size: 18),
-                            onPressed: () => setState(() => _emailController.clear()),
-                          )
-                        : null,
-                  ),
-                  validator: (val) {
-                    if (val == null || val.trim().isEmpty) {
-                      return 'Lütfen bir e-posta adresi girin';
-                    }
-                    if (!val.contains('@') || !val.contains('.')) {
-                      return 'Geçerli bir e-posta adresi girin';
-                    }
-                    return null;
-                  },
-                  onChanged: (text) => setState(() {}),
-                ),
-                const SizedBox(height: 8),
-
-                // Hızlı Tamamlama Çipleri
-                Wrap(
-                  spacing: 6,
-                  children: [
-                    _buildQuickEmailChip('@gmail.com'),
-                    _buildQuickEmailChip('@icloud.com'),
-                    _buildQuickEmailChip('@hotmail.com'),
-                    _buildQuickEmailChip('@outlook.com'),
-                  ],
-                ),
-                const SizedBox(height: 18),
-
-                // Tek Tıkla Otomatik Bağlan Butonu
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton.icon(
-                    onPressed: _isLoading ? null : () => _submitAndLogin(_emailController.text),
-                    icon: _isLoading
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : const Icon(Icons.flash_on_rounded, color: Colors.white),
-                    label: const Text(
-                      'Tek Tıkla Bağlan ve Başla 🚀',
-                      style: TextStyle(
-                        fontSize: 15,
+                    label: Text(
+                      _showCustomFields
+                          ? 'Özel Giriş Alanlarını Gizle'
+                          : '✏️ Farklı E-posta / Öğretmen Hesabı / Hedef Sınav Seç',
+                      style: const TextStyle(
+                        fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: Color(0xFF4F46E5),
                       ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF4F46E5),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
                   ),
                 ),
+
+                // Genişleyen Özel Ayarlar (İsteyen kullanıcı için)
+                if (_showCustomFields) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Rol Seçimi: Öğrenci / Öğretmen
+                        Row(
+                          children: [
+                            Expanded(
+                              child: InkWell(
+                                onTap: () => setState(() => _selectedRole = 'student'),
+                                borderRadius: BorderRadius.circular(12),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 180),
+                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: _selectedRole == 'student'
+                                        ? const Color(0xFF4F46E5).withValues(alpha: 0.12)
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: _selectedRole == 'student'
+                                          ? const Color(0xFF4F46E5)
+                                          : (isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1)),
+                                    ),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      '🎓 Öğrenciyim',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                        color: _selectedRole == 'student'
+                                            ? const Color(0xFF4F46E5)
+                                            : (isDark ? Colors.white70 : Colors.black87),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: InkWell(
+                                onTap: () => setState(() => _selectedRole = 'teacher'),
+                                borderRadius: BorderRadius.circular(12),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 180),
+                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: _selectedRole == 'teacher'
+                                        ? const Color(0xFF10B981).withValues(alpha: 0.12)
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: _selectedRole == 'teacher'
+                                          ? const Color(0xFF10B981)
+                                          : (isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1)),
+                                    ),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      '👨‍🏫 Öğretmenim',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                        color: _selectedRole == 'teacher'
+                                            ? const Color(0xFF10B981)
+                                            : (isDark ? Colors.white70 : Colors.black87),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Sınav Türü Seçimi
+                        const Text(
+                          'Hedef Sınav',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+                            ),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: _selectedExam,
+                              isExpanded: true,
+                              items: ExamTypes.availableExams.map((exam) {
+                                return DropdownMenuItem<String>(
+                                  value: exam,
+                                  child: Text(
+                                    exam,
+                                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                );
+                              }).toList(),
+                              onChanged: (val) {
+                                if (val != null) setState(() => _selectedExam = val);
+                              },
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // E-posta Giriş Alanı
+                        Text(
+                          widget.isGoogle
+                              ? 'Farklı Google / Gmail E-postası'
+                              : 'Farklı Apple ID / iCloud E-postası',
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 6),
+                        TextFormField(
+                          controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          textCapitalization: TextCapitalization.none,
+                          autocorrect: false,
+                          autofillHints: const [AutofillHints.email, AutofillHints.username],
+                          decoration: InputDecoration(
+                            hintText: widget.isGoogle ? 'ornek@gmail.com' : 'ornek@icloud.com',
+                            prefixIcon: Icon(
+                              widget.isGoogle ? Icons.mail_outline_rounded : Icons.apple_rounded,
+                            ),
+                            suffixIcon: _emailController.text.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear_rounded, size: 18),
+                                    onPressed: () => setState(() => _emailController.clear()),
+                                  )
+                                : null,
+                          ),
+                          validator: (val) {
+                            if (val == null || val.trim().isEmpty) {
+                              return 'Lütfen bir e-posta adresi girin';
+                            }
+                            if (!val.contains('@') || !val.contains('.')) {
+                              return 'Geçerli bir e-posta adresi girin';
+                            }
+                            return null;
+                          },
+                          onChanged: (text) => setState(() {}),
+                        ),
+                        const SizedBox(height: 8),
+
+                        // Hızlı Tamamlama Çipleri
+                        Wrap(
+                          spacing: 6,
+                          children: [
+                            _buildQuickEmailChip('@icloud.com'),
+                            _buildQuickEmailChip('@gmail.com'),
+                            _buildQuickEmailChip('@hotmail.com'),
+                            _buildQuickEmailChip('@outlook.com'),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+
+                        // Bu Bilgilerle Bağlan Butonu
+                        SizedBox(
+                          width: double.infinity,
+                          height: 46,
+                          child: ElevatedButton.icon(
+                            onPressed: _isLoading
+                                ? null
+                                : () => _submitAndLogin(_emailController.text),
+                            icon: const Icon(Icons.check_rounded, color: Colors.white, size: 18),
+                            label: const Text(
+                              'Bu Bilgilerle Bağlan',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF4F46E5),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
 
                 // Kurucu / Yönetici Hızlı Giriş Kısayolu
                 const SizedBox(height: 10),

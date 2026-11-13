@@ -435,8 +435,11 @@ class UserProvider with ChangeNotifier {
 
   /// Apple veya Google ile doğrudan giriş yapma (Eğer kayıtlıysa)
   Future<bool> loginWithSocialEmail(String email) async {
+    final cleanEmail = email.trim().toLowerCase();
+    await _storage.setLastSocialEmail(cleanEmail);
+
     // 1. Yerelde ara
-    final existing = _storage.findProfileByEmail(email);
+    final existing = _storage.findProfileByEmail(cleanEmail);
     if (existing != null) {
       _userProfile = existing;
       await _storage.saveUserProfile(existing);
@@ -447,7 +450,7 @@ class UserProvider with ChangeNotifier {
 
     // 2. Cloud Firestore'dan ara
     try {
-      final cloudProfile = await _firebaseService.fetchProfileByEmail(email);
+      final cloudProfile = await _firebaseService.fetchProfileByEmail(cleanEmail);
       if (cloudProfile != null) {
         _userProfile = cloudProfile;
         await _storage.saveUserProfile(cloudProfile);
@@ -470,6 +473,7 @@ class UserProvider with ChangeNotifier {
     String? teacherCodeInput,
   }) async {
     final cleanEmail = email.trim().toLowerCase();
+    await _storage.setLastSocialEmail(cleanEmail);
 
     // Ad ve soyadı varsa displayName'den, yoksa e-posta başlığından temiz şekilde türet
     String firstName = '';
