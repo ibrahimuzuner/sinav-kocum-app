@@ -382,6 +382,54 @@ void main() {
     final estScore = MockExamModel.calculateEstimatedScore('KPSS (Genel Yetenek - Kültür)', scores);
     expect(estScore > 60.0 && estScore < 100.0, true);
 
+    // Kullanıcının belirttiği resmi ÖSYM KPSS 99 Net (53 GY + 46 GK) testi:
+    final exactScores = [
+      const MockExamCourseScore(
+        courseId: 'turkce',
+        courseName: 'Türkçe',
+        correctCount: 28,
+        wrongCount: 4,
+        netScore: 27.0, // GY parçası
+      ),
+      const MockExamCourseScore(
+        courseId: 'matematik',
+        courseName: 'Matematik',
+        correctCount: 27,
+        wrongCount: 4,
+        netScore: 26.0, // GY parçası (27 + 26 = 53 GY Net)
+      ),
+      const MockExamCourseScore(
+        courseId: 'tarih',
+        courseName: 'Tarih',
+        correctCount: 23,
+        wrongCount: 4,
+        netScore: 22.0, // GK parçası
+      ),
+      const MockExamCourseScore(
+        courseId: 'cografya',
+        courseName: 'Coğrafya',
+        correctCount: 16,
+        wrongCount: 4,
+        netScore: 15.0, // GK parçası
+      ),
+      const MockExamCourseScore(
+        courseId: 'vatandaslik',
+        courseName: 'Vatandaşlık',
+        correctCount: 10,
+        wrongCount: 4,
+        netScore: 9.0, // GK parçası (22 + 15 + 9 = 46 GK Net)
+      ),
+    ];
+
+    final exactKpssScore = MockExamModel.calculateEstimatedScore('KPSS (Genel Yetenek - Kültür)', exactScores);
+    // 53 GY + 46 GK = 99 Net -> 2024 ÖSYM KPSSP94: 93.48
+    expect((exactKpssScore - 93.48).abs() < 0.1, true);
+
+    final yearly = MockExamModel.calculateKpssYearlyBreakdown(exactScores);
+    expect((yearly['2024']! - 93.48).abs() < 0.1, true);
+    expect((yearly['2022']! - 94.12).abs() < 0.1, true);
+    expect((yearly['2020']! - 93.23).abs() < 0.1, true);
+
     final advice = MockExamModel.generateCoachAdvice(
       targetExam: 'KPSS (Genel Yetenek - Kültür)',
       scores: scores,
