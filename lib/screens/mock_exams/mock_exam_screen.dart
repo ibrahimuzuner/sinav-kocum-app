@@ -5,6 +5,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../models/mock_exam_model.dart';
 import '../../providers/study_provider.dart';
 import '../../providers/user_provider.dart';
+import '../../services/predefined_data.dart';
 import '../../widgets/premium_upgrade_modal.dart';
 import 'add_mock_exam_dialog.dart';
 
@@ -770,6 +771,7 @@ class _MockExamScreenState extends State<MockExamScreen> {
             ),
             const SizedBox(height: 6),
             ...exam.courseScores.map((score) {
+              final maxQ = PredefinedData.getMaxQuestionsForCourse(exam.targetExam, score.courseId);
               return Container(
                 margin: const EdgeInsets.only(bottom: 6),
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -780,11 +782,24 @@ class _MockExamScreenState extends State<MockExamScreen> {
                 child: Row(
                   children: [
                     Expanded(
-                      child: Text(
-                        score.courseName,
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      child: Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              score.courseName,
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (maxQ > 0) ...[
+                            const SizedBox(width: 4),
+                            Text(
+                              '($maxQ Soru)',
+                              style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8), fontWeight: FontWeight.w500),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
                     Text(

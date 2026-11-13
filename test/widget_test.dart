@@ -438,4 +438,34 @@ void main() {
     expect(advice.isNotEmpty, true);
     expect(advice.contains('KPSS Koç Analizi'), true);
   });
+
+  test('PredefinedData restricts question counts strictly according to exam curriculum', () {
+    // KPSS Soru Sınırları
+    expect(PredefinedData.getMaxQuestionsForCourse('KPSS (Genel Yetenek - Kültür)', 'turkce'), 30);
+    expect(PredefinedData.getMaxQuestionsForCourse('KPSS (Genel Yetenek - Kültür)', 'matematik'), 27);
+    expect(PredefinedData.getMaxQuestionsForCourse('KPSS (Genel Yetenek - Kültür)', 'geometri'), 4);
+    expect(PredefinedData.getMaxQuestionsForCourse('KPSS (Genel Yetenek - Kültür)', 'tarih'), 27);
+    expect(PredefinedData.getMaxQuestionsForCourse('KPSS (Genel Yetenek - Kültür)', 'cografya'), 18);
+    expect(PredefinedData.getMaxQuestionsForCourse('KPSS (Genel Yetenek - Kültür)', 'vatandaslik'), 15);
+    expect(PredefinedData.getTotalQuestionsForExam('KPSS (Genel Yetenek - Kültür)'), 120);
+
+    // LGS Soru Sınırları
+    expect(PredefinedData.getMaxQuestionsForCourse('LGS', 'turkce'), 20);
+    expect(PredefinedData.getMaxQuestionsForCourse('LGS', 'matematik'), 20);
+    expect(PredefinedData.getMaxQuestionsForCourse('LGS', 'fen_bilimleri'), 20);
+    expect(PredefinedData.getMaxQuestionsForCourse('LGS', 'inkilap'), 10);
+    expect(PredefinedData.getTotalQuestionsForExam('LGS'), 90);
+
+    // DGS Soru Sınırları
+    expect(PredefinedData.getMaxQuestionsForCourse('DGS', 'turkce'), 50);
+    expect(PredefinedData.getMaxQuestionsForCourse('DGS', 'matematik'), 43);
+    expect(PredefinedData.getMaxQuestionsForCourse('DGS', 'geometri'), 7);
+    expect(PredefinedData.getTotalQuestionsForExam('DGS'), 100);
+
+    // YKS TYT Soru Sınırları
+    expect(PredefinedData.getMaxQuestionsForCourse('YKS (TYT)', 'turkce'), 40);
+    expect(PredefinedData.getMaxQuestionsForCourse('YKS (TYT)', 'matematik'), 30);
+    expect(PredefinedData.getMaxQuestionsForCourse('YKS (TYT)', 'geometri'), 10);
+    expect(PredefinedData.getTotalQuestionsForExam('YKS (TYT)'), 120);
+  });
 }

@@ -1007,6 +1007,138 @@ class PredefinedData {
     return 20; // Varsayılan ağırlık
   }
 
+  /// Sınav türüne ve derse göre resmi maksimum soru sınırını döndürür
+  static int getMaxQuestionsForCourse(String examName, String courseId) {
+    final lowerExam = examName.toLowerCase();
+    final lowerCourse = courseId.toLowerCase();
+
+    // 1. KPSS (GY-GK: 120 Soru)
+    if (lowerExam.contains('kpss')) {
+      if (lowerCourse.contains('turk')) return 30;
+      if (lowerCourse.contains('mat')) return 27; // 26-27 Soru
+      if (lowerCourse.contains('geo')) return 4;  // 3-4 Soru
+      if (lowerCourse.contains('tar')) return 27;
+      if (lowerCourse.contains('cog')) return 18;
+      if (lowerCourse.contains('vat') || lowerCourse.contains('gunc')) return 15;
+      if (lowerCourse.contains('egitim')) return 80;
+      if (lowerCourse.contains('oabt')) return 75;
+      return 30;
+    }
+
+    // 2. YKS - TYT (120 Soru)
+    if (lowerExam.contains('tyt') || lowerExam.contains('msü') || (lowerExam.contains('yks') && !lowerExam.contains('ayt'))) {
+      if (lowerCourse.contains('turk')) return 40;
+      if (lowerCourse.contains('mat')) return 30;
+      if (lowerCourse.contains('geo')) return 10;
+      if (lowerCourse.contains('fiz')) return 7;
+      if (lowerCourse.contains('kim')) return 7;
+      if (lowerCourse.contains('biyo')) return 6;
+      if (lowerCourse.contains('tar')) return 5;
+      if (lowerCourse.contains('cog')) return 5;
+      if (lowerCourse.contains('fel')) return 5;
+      if (lowerCourse.contains('din')) return 5;
+      return 40;
+    }
+
+    // 3. YKS - AYT (80 Soru)
+    if (lowerExam.contains('ayt')) {
+      if (lowerCourse.contains('mat')) return 30;
+      if (lowerCourse.contains('geo')) return 10;
+      if (lowerCourse.contains('edebiyat')) return 24;
+      if (lowerCourse.contains('fiz')) return 14;
+      if (lowerCourse.contains('kim')) return 13;
+      if (lowerCourse.contains('biyo')) return 13;
+      if (lowerCourse.contains('tar')) return 11;
+      if (lowerCourse.contains('cog')) return 11;
+      if (lowerCourse.contains('fel')) return 12;
+      if (lowerCourse.contains('din')) return 6;
+      return 40;
+    }
+
+    // 4. LGS (90 Soru)
+    if (lowerExam.contains('lgs')) {
+      if (lowerCourse.contains('turk')) return 20;
+      if (lowerCourse.contains('mat')) return 20;
+      if (lowerCourse.contains('fen')) return 20;
+      if (lowerCourse.contains('ink') || lowerCourse.contains('tar')) return 10;
+      if (lowerCourse.contains('din')) return 10;
+      if (lowerCourse.contains('ing') || lowerCourse.contains('dil')) return 10;
+      return 20;
+    }
+
+    // 5. DGS & ALES (100 Soru)
+    if (lowerExam.contains('dgs') || lowerExam.contains('ales')) {
+      if (lowerCourse.contains('turk') || lowerCourse.contains('sozel')) return 50;
+      if (lowerCourse.contains('mat') || lowerCourse.contains('sayisal')) return 43; // 43 mat + 7 geo
+      if (lowerCourse.contains('geo')) return 7;
+      return 50;
+    }
+
+    // 6. AGS (80 Soru)
+    if (lowerExam.contains('ags')) {
+      if (lowerCourse.contains('sozel')) return 15;
+      if (lowerCourse.contains('sayisal')) return 15;
+      if (lowerCourse.contains('tar')) return 10;
+      if (lowerCourse.contains('cog')) return 8;
+      if (lowerCourse.contains('egitim') || lowerCourse.contains('mevzuat')) return 32;
+      return 30;
+    }
+
+    // 7. HMGS (120 Soru)
+    if (lowerExam.contains('hmgs')) {
+      return 120;
+    }
+
+    // 8. EKPSS (60 Soru)
+    if (lowerExam.contains('ekpss')) {
+      if (lowerCourse.contains('turk')) return 15;
+      if (lowerCourse.contains('mat')) return 15;
+      if (lowerCourse.contains('tar')) return 10;
+      if (lowerCourse.contains('cog')) return 5;
+      if (lowerCourse.contains('vat')) return 5;
+      if (lowerCourse.contains('gunc')) return 10;
+      return 15;
+    }
+
+    // 9. Ehliyet (50 Soru)
+    if (lowerExam.contains('ehliyet')) {
+      if (lowerCourse.contains('trafik')) return 23;
+      if (lowerCourse.contains('yardim')) return 12;
+      if (lowerCourse.contains('motor') || lowerCourse.contains('arac')) return 9;
+      if (lowerCourse.contains('adab')) return 6;
+      return 25;
+    }
+
+    // 10. YDS / YÖKDİL / YDT (80 Soru)
+    if (lowerExam.contains('yds') || lowerExam.contains('yökdil') || lowerExam.contains('ydt')) {
+      return 80;
+    }
+
+    return 40; // Varsayılan sınır
+  }
+
+  /// Sınav türüne göre toplam resmi soru sayısını döndürür
+  static int getTotalQuestionsForExam(String examName) {
+    final lower = examName.toLowerCase();
+    if (lower.contains('kpss')) {
+      if (lower.contains('eğitim') || lower.contains('egitim')) return 80;
+      if (lower.contains('öabt') || lower.contains('oabt')) return 75;
+      return 120; // GY-GK
+    }
+    if (lower.contains('tyt') || lower.contains('msü') || (lower.contains('yks') && !lower.contains('ayt'))) return 120;
+    if (lower.contains('ayt')) return 80; // Sayısal, Sözel, EA
+    if (lower.contains('lgs')) return 90;
+    if (lower.contains('dgs') || lower.contains('ales')) return 100;
+    if (lower.contains('ags')) return 80;
+    if (lower.contains('hmgs')) return 120;
+    if (lower.contains('ekpss')) return 60;
+    if (lower.contains('ehliyet')) return 50;
+    if (lower.contains('yds') || lower.contains('yökdil') || lower.contains('ydt')) return 80;
+    if (lower.contains('tus')) return 200;
+    if (lower.contains('dus')) return 120;
+    return 100;
+  }
+
   static const List<String> motivationQuotes = [
     "Bugün döktüğün her damla alın teri, yarın başarı olarak karşına çıkacak.",
     "Zorluklar, başarının değerini artıran süslerdir. Asla pes etme!",

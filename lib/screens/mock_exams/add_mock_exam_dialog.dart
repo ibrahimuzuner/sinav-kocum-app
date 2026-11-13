@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../../models/mock_exam_model.dart';
 import '../../providers/study_provider.dart';
 import '../../providers/user_provider.dart';
+import '../../services/predefined_data.dart';
 
 class AddMockExamDialog extends StatefulWidget {
   final MockExamModel? initialExam;
@@ -19,6 +20,7 @@ class _CourseInputData {
   final String courseId;
   final String courseName;
   final int colorValue;
+  final int maxQuestions;
   final TextEditingController correctCtrl;
   final TextEditingController wrongCtrl;
   final TextEditingController emptyCtrl;
@@ -27,6 +29,7 @@ class _CourseInputData {
     required this.courseId,
     required this.courseName,
     required this.colorValue,
+    required this.maxQuestions,
     required this.correctCtrl,
     required this.wrongCtrl,
     required this.emptyCtrl,
@@ -35,6 +38,8 @@ class _CourseInputData {
   int get correct => int.tryParse(correctCtrl.text) ?? 0;
   int get wrong => int.tryParse(wrongCtrl.text) ?? 0;
   int get empty => int.tryParse(emptyCtrl.text) ?? 0;
+  int get totalEntered => correct + wrong + empty;
+  bool get isOverLimit => maxQuestions > 0 && totalEntered > maxQuestions;
 
   double calculateNet(bool isLgs) {
     return MockExamCourseScore.calculateNet(correct, wrong, isLgs: isLgs);
@@ -90,10 +95,12 @@ class _AddMockExamDialogState extends State<AddMockExamDialog> {
           (c) => c.id == score.courseId,
           orElse: () => studyProvider.courses.first,
         );
+        final maxQ = PredefinedData.getMaxQuestionsForCourse(targetExam, score.courseId);
         final input = _CourseInputData(
           courseId: score.courseId,
           courseName: score.courseName,
           colorValue: courseMatch.colorValue,
+          maxQuestions: maxQ,
           correctCtrl: TextEditingController(text: score.correctCount > 0 ? score.correctCount.toString() : ''),
           wrongCtrl: TextEditingController(text: score.wrongCount > 0 ? score.wrongCount.toString() : ''),
           emptyCtrl: TextEditingController(text: score.emptyCount > 0 ? score.emptyCount.toString() : ''),
@@ -109,10 +116,12 @@ class _AddMockExamDialogState extends State<AddMockExamDialog> {
 
       // Populate courses from active exam's courses
       for (final course in studyProvider.courses) {
+        final maxQ = PredefinedData.getMaxQuestionsForCourse(targetExam, course.id);
         final input = _CourseInputData(
           courseId: course.id,
           courseName: course.name,
           colorValue: course.colorValue,
+          maxQuestions: maxQ,
           correctCtrl: TextEditingController(),
           wrongCtrl: TextEditingController(),
           emptyCtrl: TextEditingController(),
@@ -229,6 +238,31 @@ class _AddMockExamDialogState extends State<AddMockExamDialog> {
 
     final userProvider = context.read<UserProvider>();
     final studyProvider = context.read<StudyProvider>();
+
+    final totalExamLimit = PredefinedData.getTotalQuestionsForExam(userProvider.targetExam);
+    if (_totalLiveQuestions > totalExamLimit) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Toplam soru sayısı ($_totalLiveQuestions), ${userProvider.targetExam} sınavının resmi soru sınırını ($totalExamLimit) aşamaz!'),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    for (final c in _courseInputs) {
+      if (c.isOverLimit) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${c.courseName} için girilen toplam soru (${c.totalEntered}), sınavdaki resmi soru sınırını (${c.maxQuestions}) aşıyor! Lütfen düzeltin.'),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+    }
 
     final courseScores = _courseInputs.map((c) {
       return MockExamCourseScore(
@@ -567,9 +601,25 @@ class _AddMockExamDialogState extends State<AddMockExamDialog> {
                     const SizedBox(height: 18),
 
                     // 3. DERS BAZLI GİRİŞ BÖLÜMÜ
-                    const Text(
-                      'Ders Bazlı Sonuçlar (Doğru / Yanlış / Boş)',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Ders Bazlı Sonuçlar (Doğru / Yanlış / Boş)',
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF4F46E5).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            'Sınav Sınırı: ${PredefinedData.getTotalQuestionsForExam(context.read<UserProvider>().targetExam)} Soru',
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5)),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 8),
 
@@ -582,7 +632,10 @@ class _AddMockExamDialogState extends State<AddMockExamDialog> {
                           color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(
-                            color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                            color: c.isOverLimit
+                                ? const Color(0xFFEF4444)
+                                : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                            width: c.isOverLimit ? 1.5 : 1.0,
                           ),
                         ),
                         child: Row(
@@ -598,11 +651,29 @@ class _AddMockExamDialogState extends State<AddMockExamDialog> {
                             const SizedBox(width: 8),
                             Expanded(
                               flex: 3,
-                              child: Text(
-                                c.courseName,
-                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    c.courseName,
+                                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  if (c.maxQuestions > 0)
+                                    Text(
+                                      c.isOverLimit
+                                          ? '⚠️ ${c.totalEntered}/${c.maxQuestions} Soru (Sınır Aşıldı!)'
+                                          : 'Maks: ${c.maxQuestions} Soru (${c.totalEntered}/${c.maxQuestions})',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: c.isOverLimit
+                                            ? const Color(0xFFEF4444)
+                                            : const Color(0xFF94A3B8),
+                                        fontWeight: c.isOverLimit ? FontWeight.bold : FontWeight.normal,
+                                      ),
+                                    ),
+                                ],
                               ),
                             ),
                             const SizedBox(width: 6),
