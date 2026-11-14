@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
+import '../utils/formatters.dart';
 
 /// Kullanıcıya 3 Ay Ücretsiz Deneme durumunu ve Öğrenci / Öğretmen ayrı PRO paketlerini sunan modern modal.
 class PremiumUpgradeModal extends StatefulWidget {
@@ -88,18 +89,27 @@ class _PremiumUpgradeModalState extends State<PremiumUpgradeModal> {
             ),
             const SizedBox(height: 16),
 
-            // 🎁 3 AY ÜCRETSİZ DENEME BANNERI
+            // 🎁 PRO & DENEME DURUM BANNERI (90 GÜNLÜK SÜRE TAKİBİ)
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF059669), Color(0xFF10B981)],
+                gradient: LinearGradient(
+                  colors: userProvider.isPremium
+                      ? const [Color(0xFFD97706), Color(0xFFF59E0B)]
+                      : (userProvider.isPremiumExpired
+                          ? const [Color(0xFFDC2626), Color(0xFFEF4444)]
+                          : const [Color(0xFF059669), Color(0xFF10B981)]),
                 ),
                 borderRadius: BorderRadius.circular(14),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF10B981).withValues(alpha: 0.25),
+                    color: (userProvider.isPremium
+                            ? const Color(0xFFF59E0B)
+                            : (userProvider.isPremiumExpired
+                                ? const Color(0xFFEF4444)
+                                : const Color(0xFF10B981)))
+                        .withValues(alpha: 0.25),
                     blurRadius: 8,
                     offset: const Offset(0, 3),
                   ),
@@ -107,16 +117,21 @@ class _PremiumUpgradeModalState extends State<PremiumUpgradeModal> {
               ),
               child: Row(
                 children: [
-                  const Text('🎁', style: TextStyle(fontSize: 20)),
+                  Text(
+                    userProvider.isPremium ? '👑' : (userProvider.isPremiumExpired ? '⏳' : '🎁'),
+                    style: const TextStyle(fontSize: 20),
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          inTrial
-                              ? 'İlk 3 Ay Ücretsiz Denemen Aktif!'
-                              : 'Yeni Üyelere İlk 3 Ay Ücretsiz!',
+                          userProvider.isPremium
+                              ? 'PRO Üyeliğin Aktif (${userProvider.remainingPremiumDays} Gün Kaldı)'
+                              : (userProvider.isPremiumExpired
+                                  ? 'PRO Üyelik Süreniz Sona Erdi!'
+                                  : (inTrial ? 'İlk 3 Ay Ücretsiz Denemen Aktif!' : 'Yeni Üyelere İlk 3 Ay Ücretsiz!')),
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
@@ -124,9 +139,13 @@ class _PremiumUpgradeModalState extends State<PremiumUpgradeModal> {
                           ),
                         ),
                         Text(
-                          inTrial
-                              ? 'Kalan ücretsiz kullanım süren: $remainingDays gün • Tüm PRO özellikler açık'
-                              : '3 ayın sonunda rolüne göre öğrenci veya öğretmen paketine geçebilirsin.',
+                          userProvider.isPremium
+                              ? 'Bitiş Tarihi: ${userProvider.premiumExpiresAt != null ? Formatters.formatDateTurkish(userProvider.premiumExpiresAt!) : "90 gün sonra"} • Süre bitiminde yenileme gerekir'
+                              : (userProvider.isPremiumExpired
+                                  ? 'Renkli PDF karne ve koçluk için paketinizi yenileyin.'
+                                  : (inTrial
+                                      ? 'Kalan ücretsiz kullanım süren: $remainingDays gün • Tüm PRO özellikler açık'
+                                      : '90 günün sonunda rolünüze göre paketinizi yenileyebilirsiniz.')),
                           style: const TextStyle(color: Colors.white70, fontSize: 11),
                         ),
                       ],

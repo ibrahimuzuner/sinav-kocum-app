@@ -29,7 +29,10 @@ class UserProvider with ChangeNotifier {
   String get targetDepartment => _userProfile?.targetDepartment ?? 'Genel Başarı Hedefi';
   double get targetScore => _userProfile?.targetScore ?? 400.0;
   double get targetNet => _userProfile?.targetNet ?? 75.0;
-  bool get isPremium => _userProfile?.isPremium ?? false;
+  bool get isPremium => _userProfile?.isPremiumActive ?? false;
+  DateTime? get premiumExpiresAt => _userProfile?.premiumExpiresAt;
+  int get remainingPremiumDays => _userProfile?.remainingPremiumDays ?? 0;
+  bool get isPremiumExpired => _userProfile?.isPremiumExpired ?? false;
   String get membershipPlan => _userProfile?.membershipPlan ?? '3 Ay Ücretsiz Deneme';
   bool get isEmailVerified => _userProfile?.isEmailVerified ?? false;
   String? get coachNote => _userProfile?.coachNote;
@@ -112,6 +115,10 @@ class UserProvider with ChangeNotifier {
         final cloudTrialDate = cloudTrialStr != null && cloudTrialStr.isNotEmpty
             ? DateTime.tryParse(cloudTrialStr)
             : null;
+        final cloudPremiumExpiresStr = cloudData['premiumExpiresAt'] as String?;
+        final cloudPremiumExpires = cloudPremiumExpiresStr != null && cloudPremiumExpiresStr.isNotEmpty
+            ? DateTime.tryParse(cloudPremiumExpiresStr)
+            : null;
         final cloudAssignments = cloudData['assignmentsJson'] as String?;
         final cloudMessages = cloudData['messagesJson'] as String?;
         final cloudStudyStats = cloudData['studyStatsJson'] as String?;
@@ -119,6 +126,7 @@ class UserProvider with ChangeNotifier {
         _userProfile = _userProfile!.copyWith(
           isPremium: cloudPremium,
           membershipPlan: cloudPlan,
+          premiumExpiresAt: cloudPremiumExpires ?? _userProfile!.premiumExpiresAt,
           coachNote: (cloudCoachNote != null && cloudCoachNote.isNotEmpty)
               ? cloudCoachNote
               : _userProfile!.coachNote,

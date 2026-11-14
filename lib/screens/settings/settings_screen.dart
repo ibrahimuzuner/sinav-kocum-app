@@ -203,22 +203,26 @@ class SettingsScreen extends StatelessWidget {
                       child: const Icon(Icons.workspace_premium_rounded, color: Colors.white, size: 24),
                     ),
                     const SizedBox(width: 14),
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '👑 Sınav Koçum PRO Aktif',
-                            style: TextStyle(
+                            userProvider.remainingPremiumDays > 0
+                                ? '👑 Sınav Koçum PRO • ${userProvider.remainingPremiumDays} Gün Kaldı'
+                                : '👑 Sınav Koçum PRO Aktif',
+                            style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
                             ),
                           ),
-                          SizedBox(height: 4),
+                          const SizedBox(height: 4),
                           Text(
-                            'Renkli PDF raporlar, sınırsız deneme sınavları ve koçluk ayrıcalıklarınız açık.',
-                            style: TextStyle(fontSize: 12, color: Color(0xFFCBD5E1)),
+                            userProvider.premiumExpiresAt != null
+                                ? 'Bitiş Tarihi: ${Formatters.formatDateTurkish(userProvider.premiumExpiresAt!)} (Süre bitiminde yenileme gerekir)'
+                                : 'Renkli PDF raporlar, sınırsız deneme sınavları ve koçluk ayrıcalıklarınız açık.',
+                            style: const TextStyle(fontSize: 12, color: Color(0xFFCBD5E1)),
                           ),
                         ],
                       ),

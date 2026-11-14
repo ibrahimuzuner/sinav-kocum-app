@@ -623,17 +623,27 @@ class AppFirebaseService {
 
   // --- YÖNETİCİ / PREMİUM / KOÇ NOTU ---
 
-  /// Öğrencinin Premium üyelik durumunu günceller (Admin yetkisi)
+  /// Öğrencinin Premium üyelik durumunu ve 90 Günlük bitiş süresini günceller (Admin yetkisi)
   Future<bool> setStudentPremiumStatus({
     required String userId,
     required String email,
     required bool isPremium,
+    int durationDays = 90,
+    DateTime? customExpiresAt,
   }) async {
-    final plan = isPremium ? 'Premium' : 'Ücretsiz';
-    final ok = await _patchUserFields(userId, {
+    DateTime? expiresAt;
+    if (isPremium) {
+      expiresAt = customExpiresAt ?? DateTime.now().add(Duration(days: durationDays));
+    }
+
+    final plan = isPremium ? 'Premium ($durationDays Gün)' : 'Ücretsiz';
+    final payload = <String, dynamic>{
       'isPremium': isPremium,
       'membershipPlan': plan,
-    });
+      'premiumExpiresAt': expiresAt?.toIso8601String(),
+    };
+
+    final ok = await _patchUserFields(userId, payload);
 
     final cleanEmail = email.toLowerCase().trim();
     if (cleanEmail.isNotEmpty) {
@@ -642,12 +652,13 @@ class AppFirebaseService {
         try {
           await _firestore!.collection('user_emails').doc(docId).set({
             'isPremium': isPremium,
+            'premiumExpiresAt': expiresAt?.toIso8601String(),
           }, SetOptions(merge: true));
         } catch (_) {}
       } else {
         try {
           final emailUri = Uri.parse(
-            '$_restBaseUrl/user_emails/$docId?updateMask.fieldPaths=isPremium&key=$_apiKey',
+            '$_restBaseUrl/user_emails/$docId?updateMask.fieldPaths=isPremium&updateMask.fieldPaths=premiumExpiresAt&key=$_apiKey',
           );
           await http.patch(
             emailUri,
@@ -655,6 +666,8 @@ class AppFirebaseService {
             body: jsonEncode({
               'fields': {
                 'isPremium': {'booleanValue': isPremium},
+                if (expiresAt != null)
+                  'premiumExpiresAt': {'stringValue': expiresAt.toIso8601String()},
               }
             }),
           );

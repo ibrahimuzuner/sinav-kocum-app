@@ -20,6 +20,7 @@ class StudentDetailModal extends StatefulWidget {
 
 class _StudentDetailModalState extends State<StudentDetailModal> {
   late bool _isPremium;
+  DateTime? _premiumExpiresAt;
   bool _isToggling = false;
   late TextEditingController _coachNoteController;
   bool _isSavingNote = false;
@@ -27,8 +28,17 @@ class _StudentDetailModalState extends State<StudentDetailModal> {
   @override
   void initState() {
     super.initState();
-    _isPremium = widget.student.isPremium;
+    _isPremium = widget.student.isPremiumActive;
+    _premiumExpiresAt = widget.student.premiumExpiresAt;
     _coachNoteController = TextEditingController(text: widget.student.coachNote ?? '');
+  }
+
+  int get _remainingDays {
+    if (!_isPremium) return 0;
+    if (_premiumExpiresAt == null) return 90;
+    final diffHours = _premiumExpiresAt!.difference(DateTime.now()).inHours;
+    if (diffHours <= 0) return 0;
+    return (diffHours / 24).ceil();
   }
 
   @override
@@ -69,19 +79,30 @@ class _StudentDetailModalState extends State<StudentDetailModal> {
     }
   }
 
-  Future<void> _togglePremium() async {
+  Future<void> _grant90DaysPremium({bool extend = false}) async {
     setState(() => _isToggling = true);
-    final newStatus = !_isPremium;
+    DateTime newExpiresAt;
+    if (extend && _premiumExpiresAt != null && _premiumExpiresAt!.isAfter(DateTime.now())) {
+      newExpiresAt = _premiumExpiresAt!.add(const Duration(days: 90));
+    } else {
+      newExpiresAt = DateTime.now().add(const Duration(days: 90));
+    }
+
     final success = await AppFirebaseService().setStudentPremiumStatus(
       userId: widget.student.id,
       email: widget.student.email,
-      isPremium: newStatus,
+      isPremium: true,
+      customExpiresAt: newExpiresAt,
+      durationDays: 90,
     );
 
     if (mounted) {
       setState(() {
         _isToggling = false;
-        if (success) _isPremium = newStatus;
+        if (success) {
+          _isPremium = true;
+          _premiumExpiresAt = newExpiresAt;
+        }
       });
 
       if (success) {
@@ -89,12 +110,40 @@ class _StudentDetailModalState extends State<StudentDetailModal> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              newStatus
-                  ? '👑 ${widget.student.fullName} öğrencisine Premium üyelik tanımlandı!'
-                  : 'ℹ️ ${widget.student.fullName} öğrencisinin Premium üyeliği kaldırıldı.',
+              '👑 ${widget.student.fullName} öğrencisine 90 Günlük PRO tanımlandı! (${Formatters.formatDateTurkish(newExpiresAt)} tarihine kadar)',
             ),
             behavior: SnackBarBehavior.floating,
-            backgroundColor: newStatus ? const Color(0xFF10B981) : const Color(0xFF64748B),
+            backgroundColor: const Color(0xFF10B981),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _revokePremium() async {
+    setState(() => _isToggling = true);
+    final success = await AppFirebaseService().setStudentPremiumStatus(
+      userId: widget.student.id,
+      email: widget.student.email,
+      isPremium: false,
+    );
+
+    if (mounted) {
+      setState(() {
+        _isToggling = false;
+        if (success) {
+          _isPremium = false;
+          _premiumExpiresAt = null;
+        }
+      });
+
+      if (success) {
+        widget.onStudentUpdated();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('ℹ️ ${widget.student.fullName} öğrencisinin Premium üyeliği kaldırıldı.'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: const Color(0xFF64748B),
           ),
         );
       }
@@ -409,31 +458,102 @@ class _StudentDetailModalState extends State<StudentDetailModal> {
             ),
             const SizedBox(height: 16),
 
-            // 5. YÖNETİCİ EYLEMLERİ (PREMİUM TANIMLAMA)
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton.icon(
-                onPressed: _isToggling ? null : _togglePremium,
-                icon: _isToggling
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                      )
-                    : Icon(_isPremium ? Icons.cancel_outlined : Icons.star_rounded),
-                label: Text(
-                  _isPremium ? '👑 Premium Üyeliği Kaldır' : '👑 Öğrenciye Premium Yetkisi Ver',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            // 5. YÖNETİCİ EYLEMLERİ (90 GÜNLÜK PREMİUM TANIMLAMA & SÜRE TAKİBİ)
+            if (_isPremium) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(bottom: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.4)),
                 ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _isPremium ? const Color(0xFFDC2626) : const Color(0xFFF59E0B),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  elevation: 2,
+                child: Row(
+                  children: [
+                    const Icon(Icons.workspace_premium_rounded, color: Color(0xFFF59E0B), size: 24),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '👑 90 Günlük PRO Aktif • $_remainingDays Gün Kaldı',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                          ),
+                          if (_premiumExpiresAt != null)
+                            Text(
+                              'Bitiş Tarihi: ${Formatters.formatDateTurkish(_premiumExpiresAt!)}',
+                              style: const TextStyle(fontSize: 11.5, color: Colors.grey),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
+              Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 46,
+                      child: ElevatedButton.icon(
+                        onPressed: _isToggling ? null : () => _grant90DaysPremium(extend: true),
+                        icon: _isToggling
+                            ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                            : const Icon(Icons.add_circle_outline_rounded, size: 18),
+                        label: const Text('+90 Gün Uzat', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF10B981),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: SizedBox(
+                      height: 46,
+                      child: OutlinedButton.icon(
+                        onPressed: _isToggling ? null : _revokePremium,
+                        icon: const Icon(Icons.cancel_outlined, size: 18, color: Color(0xFFDC2626)),
+                        label: const Text('Üyeliği Kaldır', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFDC2626))),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Color(0xFFDC2626)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ] else ...[
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton.icon(
+                  onPressed: _isToggling ? null : () => _grant90DaysPremium(extend: false),
+                  icon: _isToggling
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                        )
+                      : const Icon(Icons.star_rounded),
+                  label: const Text(
+                    '👑 Öğrenciye 90 Gün Premium Ver',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFF59E0B),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    elevation: 2,
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 10),
 
             // Kapat Butonu

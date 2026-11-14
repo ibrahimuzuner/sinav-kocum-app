@@ -63,7 +63,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         } else if (_selectedFilter == 'LGS') {
           matchCategory = student.targetExam.toLowerCase().contains('lgs');
         } else if (_selectedFilter == 'Premium') {
-          matchCategory = student.isPremium;
+          matchCategory = student.isPremiumActive;
         }
 
         return matchSearch && matchCategory;
@@ -86,7 +86,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final premiumCount = _allStudents.where((s) => s.isPremium).length;
+    final premiumCount = _allStudents.where((s) => s.isPremiumActive).length;
     final kpssCount = _allStudents.where((s) => s.targetExam.contains('KPSS')).length;
     final yksCount = _allStudents.where((s) => s.targetExam.contains('YKS')).length;
 
@@ -399,17 +399,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           color: isDark ? const Color(0xFF1E293B) : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: student.isPremium
+            color: student.isPremiumActive
                 ? const Color(0xFFF59E0B).withValues(alpha: 0.5)
                 : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
-            width: student.isPremium ? 1.5 : 1.0,
+            width: student.isPremiumActive ? 1.5 : 1.0,
           ),
         ),
         child: Row(
           children: [
             CircleAvatar(
               radius: 22,
-              backgroundColor: student.isPremium
+              backgroundColor: student.isPremiumActive
                   ? const Color(0xFFF59E0B)
                   : const Color(0xFF4F46E5),
               child: Text(
@@ -432,10 +432,31 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         ),
                       ),
                       const SizedBox(width: 6),
-                      if (student.isPremium)
-                        const Tooltip(
-                          message: 'Premium Öğrenci',
-                          child: Icon(Icons.star_rounded, size: 16, color: Color(0xFFF59E0B)),
+                      if (student.isPremiumActive)
+                        Tooltip(
+                          message: '90 Günlük PRO (${student.remainingPremiumDays} Gün Kaldı)',
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.star_rounded, size: 13, color: Color(0xFFF59E0B)),
+                                const SizedBox(width: 2),
+                                Text(
+                                  '${student.remainingPremiumDays}g',
+                                  style: const TextStyle(
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFFF59E0B),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       if (isApple)
                         const Padding(

@@ -28,6 +28,7 @@ class UserProfileModel {
   final String? teacherName; // Öğrencinin bağlı olduğu öğretmenin adı
   final String? teacherEmail; // Öğrencinin bağlı olduğu öğretmenin e-postası
   final DateTime? trialEndsAt; // İlk 3 ay (90 gün) ücretsiz deneme bitiş tarihi
+  final DateTime? premiumExpiresAt; // Tanımlanan 90 Günlük PRO üyelik bitiş tarihi
   final String? studyStatsJson; // Öğrencinin çalışma özeti JSON verisi
   final String? assignmentsJson; // Öğretmenin verdiği ödevler JSON listesi
   final String? messagesJson; // Öğretmen-Öğrenci mesajları JSON listesi
@@ -55,6 +56,7 @@ class UserProfileModel {
     this.teacherName,
     this.teacherEmail,
     this.trialEndsAt,
+    this.premiumExpiresAt,
     this.studyStatsJson,
     this.assignmentsJson,
     this.messagesJson,
@@ -85,8 +87,29 @@ class UserProfileModel {
     return (diffHours / 24).ceil();
   }
 
-  /// PRO özelliklere erişim var mı? (İlk 3 ay ücretsiz veya Premium üye)
-  bool get hasProAccess => isPremium || isInFreeTrial;
+  /// Premium süresi şu anda aktif mi?
+  /// Eğer isPremium true ise ve premiumExpiresAt henüz geçmemişse aktiftir.
+  bool get isPremiumActive {
+    if (!isPremium) return false;
+    if (premiumExpiresAt == null) return true; // Eski kayıtlar için geriye dönük uyumluluk
+    return DateTime.now().isBefore(premiumExpiresAt!);
+  }
+
+  /// Kalan Premium gün sayısı (Süre takibi)
+  int get remainingPremiumDays {
+    if (!isPremium) return 0;
+    if (premiumExpiresAt == null) return 90;
+    final diffHours = premiumExpiresAt!.difference(DateTime.now()).inHours;
+    if (diffHours <= 0) return 0;
+    return (diffHours / 24).ceil();
+  }
+
+  /// Kullanıcının Premium süresi daha önce tanımlanmış ama artık süresi dolmuş mu?
+  bool get isPremiumExpired =>
+      isPremium && premiumExpiresAt != null && DateTime.now().isAfter(premiumExpiresAt!);
+
+  /// PRO özelliklere erişim var mı? (Aktif Premium süresi VEYA 90 Günlük ilk deneme süresi)
+  bool get hasProAccess => isPremiumActive || isInFreeTrial;
 
   int get age {
     final now = DateTime.now();
@@ -166,6 +189,7 @@ class UserProfileModel {
       'teacherName': teacherName,
       'teacherEmail': teacherEmail,
       'trialEndsAt': effectiveTrialEndDate.toIso8601String(),
+      'premiumExpiresAt': premiumExpiresAt?.toIso8601String(),
       'studyStatsJson': studyStatsJson,
       'assignmentsJson': assignmentsJson,
       'messagesJson': messagesJson,
@@ -206,6 +230,9 @@ class UserProfileModel {
       trialEndsAt: json['trialEndsAt'] != null
           ? DateTime.tryParse(json['trialEndsAt'] as String)
           : created.add(const Duration(days: 90)),
+      premiumExpiresAt: json['premiumExpiresAt'] != null
+          ? DateTime.tryParse(json['premiumExpiresAt'] as String)
+          : null,
       studyStatsJson: json['studyStatsJson'] as String?,
       assignmentsJson: json['assignmentsJson'] as String?,
       messagesJson: json['messagesJson'] as String?,
@@ -236,6 +263,8 @@ class UserProfileModel {
     String? teacherEmail,
     bool clearTeacher = false,
     DateTime? trialEndsAt,
+    DateTime? premiumExpiresAt,
+    bool clearPremiumExpiresAt = false,
     String? studyStatsJson,
     String? assignmentsJson,
     String? messagesJson,
@@ -263,6 +292,9 @@ class UserProfileModel {
       teacherName: clearTeacher ? null : (teacherName ?? this.teacherName),
       teacherEmail: clearTeacher ? null : (teacherEmail ?? this.teacherEmail),
       trialEndsAt: trialEndsAt ?? this.trialEndsAt,
+      premiumExpiresAt: clearPremiumExpiresAt
+          ? null
+          : (premiumExpiresAt ?? this.premiumExpiresAt),
       studyStatsJson: studyStatsJson ?? this.studyStatsJson,
       assignmentsJson: assignmentsJson ?? this.assignmentsJson,
       messagesJson: messagesJson ?? this.messagesJson,
