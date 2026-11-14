@@ -798,6 +798,62 @@ class AppFirebaseService {
     return result;
   }
 
+  /// Öğrencinin / kullanıcının destek ve görüş mesajını Firebase Firestore 'support_messages' koleksiyonuna kaydeder
+  Future<bool> sendSupportFeedback({
+    required String userId,
+    required String userName,
+    required String userEmail,
+    required String userRole,
+    required String targetExam,
+    required String category,
+    required String message,
+  }) async {
+    final messageId = 'feedback_${DateTime.now().millisecondsSinceEpoch}';
+    final docData = <String, dynamic>{
+      'id': messageId,
+      'userId': userId,
+      'userName': userName,
+      'userEmail': userEmail,
+      'userRole': userRole,
+      'targetExam': targetExam,
+      'category': category,
+      'message': message,
+      'targetEmail': 'sinavkocumapp@gmail.com',
+      'createdAt': DateTime.now().toIso8601String(),
+      'platform': kIsWeb ? 'web' : 'mobile',
+      'status': 'new',
+    };
+
+    if (_isInitialized && _firestore != null) {
+      try {
+        final sdkData = Map<String, dynamic>.from(docData);
+        sdkData['serverTimestamp'] = FieldValue.serverTimestamp();
+        await _firestore!.collection('support_messages').doc(messageId).set(sdkData);
+        debugPrint('AppFirebaseService: Destek mesajı Firestore SDK ile kaydedildi.');
+        return true;
+      } catch (e) {
+        debugPrint('sendSupportFeedback SDK hatası: $e');
+      }
+    }
+
+    try {
+      final docUri = Uri.parse('$_restBaseUrl/support_messages/$messageId?key=$_apiKey');
+      final restFields = _toFirestoreRestFields(docData);
+      final resp = await http.patch(
+        docUri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'fields': restFields}),
+      );
+      if (resp.statusCode == 200 || resp.statusCode == 201) {
+        debugPrint('AppFirebaseService: Destek mesajı REST API ile kaydedildi.');
+        return true;
+      }
+    } catch (e) {
+      debugPrint('sendSupportFeedback REST hatası: $e');
+    }
+    return false;
+  }
+
   /// Dart Map'i Firestore REST API formatına dönüştürür
   static Map<String, dynamic> _toFirestoreRestFields(Map<String, dynamic> data) {
     final fields = <String, dynamic>{};

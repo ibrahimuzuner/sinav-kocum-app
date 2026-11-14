@@ -9,6 +9,7 @@ import 'manage_courses_screen.dart';
 import '../mock_exams/mock_exam_screen.dart';
 import '../admin/admin_dashboard_screen.dart';
 import '../../widgets/premium_upgrade_modal.dart';
+import 'support_feedback_dialog.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -636,7 +637,46 @@ class SettingsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 20),
 
-          // BÖLÜM 5: UYGULAMA BİLGİSİ
+          // BÖLÜM 5: DESTEK VE GERİ BİLDİRİM
+          _buildSectionHeader('Destek ve Geri Bildirim'),
+          _buildCard(
+            isDark: isDark,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.support_agent_rounded, color: Color(0xFF4F46E5)),
+                title: const Text('Destek ve Görüş Bildir', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('Öneri, hata bildirimi veya sorularınızı bize iletin'),
+                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+                onTap: () {
+                  SupportFeedbackDialog.show(
+                    context,
+                    profile: profile,
+                    isTeacher: userProvider.isTeacher,
+                  );
+                },
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.mark_email_read_rounded, color: Color(0xFF0EA5E9)),
+                title: const Text('E-Posta Destek Hattı', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('sinavkocumapp@gmail.com'),
+                trailing: const Icon(Icons.copy_rounded, size: 16),
+                onTap: () {
+                  Clipboard.setData(const ClipboardData(text: 'sinavkocumapp@gmail.com'));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('E-posta adresi kopyalandı: sinavkocumapp@gmail.com ✉️'),
+                      behavior: SnackBarBehavior.floating,
+                      backgroundColor: Color(0xFF10B981),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // BÖLÜM 6: UYGULAMA BİLGİSİ
           _buildSectionHeader('Hakkında'),
           _buildCard(
             isDark: isDark,

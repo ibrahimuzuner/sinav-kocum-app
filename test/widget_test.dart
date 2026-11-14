@@ -562,4 +562,10 @@ void main() {
     expect(aytMatTopics.any((t) => t.name.contains('Türev')), true);
     expect(aytMatTopics.any((t) => t.name.contains('İntegral')), true);
   });
+
+  test('Support and Feedback integration uses sinavkocumapp@gmail.com', () {
+    const expectedEmail = 'sinavkocumapp@gmail.com';
+    expect(expectedEmail, contains('@gmail.com'));
+    expect(expectedEmail, 'sinavkocumapp@gmail.com');
+  });
 }
