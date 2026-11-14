@@ -434,7 +434,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       const SizedBox(width: 6),
                       if (student.isPremiumActive)
                         Tooltip(
-                          message: '90 Günlük PRO (${student.remainingPremiumDays} Gün Kaldı)',
+                          message: 'PRO Aktif (${student.remainingPremiumDays} Gün Kaldı)',
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                             decoration: BoxDecoration(

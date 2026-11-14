@@ -35,7 +35,7 @@ class _StudentDetailModalState extends State<StudentDetailModal> {
 
   int get _remainingDays {
     if (!_isPremium) return 0;
-    if (_premiumExpiresAt == null) return 90;
+    if (_premiumExpiresAt == null) return 60;
     final diffHours = _premiumExpiresAt!.difference(DateTime.now()).inHours;
     if (diffHours <= 0) return 0;
     return (diffHours / 24).ceil();
@@ -79,13 +79,13 @@ class _StudentDetailModalState extends State<StudentDetailModal> {
     }
   }
 
-  Future<void> _grant90DaysPremium({bool extend = false}) async {
+  Future<void> _grant60DaysPremium({bool extend = false}) async {
     setState(() => _isToggling = true);
     DateTime newExpiresAt;
     if (extend && _premiumExpiresAt != null && _premiumExpiresAt!.isAfter(DateTime.now())) {
-      newExpiresAt = _premiumExpiresAt!.add(const Duration(days: 90));
+      newExpiresAt = _premiumExpiresAt!.add(const Duration(days: 60));
     } else {
-      newExpiresAt = DateTime.now().add(const Duration(days: 90));
+      newExpiresAt = DateTime.now().add(const Duration(days: 60));
     }
 
     final success = await AppFirebaseService().setStudentPremiumStatus(
@@ -93,7 +93,7 @@ class _StudentDetailModalState extends State<StudentDetailModal> {
       email: widget.student.email,
       isPremium: true,
       customExpiresAt: newExpiresAt,
-      durationDays: 90,
+      durationDays: 60,
     );
 
     if (mounted) {
@@ -110,7 +110,7 @@ class _StudentDetailModalState extends State<StudentDetailModal> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              '👑 ${widget.student.fullName} öğrencisine 90 Günlük PRO tanımlandı! (${Formatters.formatDateTurkish(newExpiresAt)} tarihine kadar)',
+              '👑 ${widget.student.fullName} öğrencisine 60 Günlük (2 Ay) PRO tanımlandı! (${Formatters.formatDateTurkish(newExpiresAt)} tarihine kadar)',
             ),
             behavior: SnackBarBehavior.floating,
             backgroundColor: const Color(0xFF10B981),
@@ -478,7 +478,7 @@ class _StudentDetailModalState extends State<StudentDetailModal> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '👑 90 Günlük PRO Aktif • $_remainingDays Gün Kaldı',
+                            '👑 PRO Aktif • $_remainingDays Gün Kaldı',
                             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                           ),
                           if (_premiumExpiresAt != null)
@@ -498,11 +498,11 @@ class _StudentDetailModalState extends State<StudentDetailModal> {
                     child: SizedBox(
                       height: 46,
                       child: ElevatedButton.icon(
-                        onPressed: _isToggling ? null : () => _grant90DaysPremium(extend: true),
+                        onPressed: _isToggling ? null : () => _grant60DaysPremium(extend: true),
                         icon: _isToggling
                             ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                             : const Icon(Icons.add_circle_outline_rounded, size: 18),
-                        label: const Text('+90 Gün Uzat', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                        label: const Text('+60 Gün Uzat', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF10B981),
                           foregroundColor: Colors.white,
@@ -533,7 +533,7 @@ class _StudentDetailModalState extends State<StudentDetailModal> {
                 width: double.infinity,
                 height: 48,
                 child: ElevatedButton.icon(
-                  onPressed: _isToggling ? null : () => _grant90DaysPremium(extend: false),
+                  onPressed: _isToggling ? null : () => _grant60DaysPremium(extend: false),
                   icon: _isToggling
                       ? const SizedBox(
                           width: 18,
@@ -542,7 +542,7 @@ class _StudentDetailModalState extends State<StudentDetailModal> {
                         )
                       : const Icon(Icons.star_rounded),
                   label: const Text(
-                    '👑 Öğrenciye 90 Gün Premium Ver',
+                    '👑 Öğrenciye 2 Ay (60 Gün) Premium Ver',
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                   ),
                   style: ElevatedButton.styleFrom(

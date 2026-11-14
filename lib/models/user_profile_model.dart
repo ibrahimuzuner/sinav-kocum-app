@@ -16,19 +16,19 @@ class UserProfileModel {
   final double targetNet; // Hedeflenen toplam net (örn: 105.0)
   final DateTime createdAt;
   final bool isPremium; // Ücretli / Premium üyelik durumu
-  final String membershipPlan; // Üyelik planı ('3 Ay Ücretsiz Deneme', 'Öğrenci PRO', 'Öğretmen PRO', 'Ücretsiz')
+  final String membershipPlan; // Üyelik planı ('2 Ay Hediye Deneme', 'Öğrenci PRO', 'Öğretmen PRO', 'Ücretsiz')
   final bool isEmailVerified; // E-posta adresi doğrulandı mı?
   final String? coachNote; // Koçun öğrenciye özel haftalık değerlendirmesi / tavsiyesi
   final DateTime? coachNoteUpdatedAt;
 
-  // Yeni Rol, 3 Ay Ücretsiz Deneme & Öğretmen-Öğrenci Sistemi Alanları
+  // Yeni Rol, 2 Ay Hediye Deneme & Öğretmen-Öğrenci Sistemi Alanları
   final String role; // 'student' veya 'teacher'
   final String? teacherCode; // Öğretmenlerin paylaşacağı koç kodu (örn: KOC-4829)
   final String? teacherId; // Öğrencinin bağlı olduğu öğretmenin ID'si
   final String? teacherName; // Öğrencinin bağlı olduğu öğretmenin adı
   final String? teacherEmail; // Öğrencinin bağlı olduğu öğretmenin e-postası
-  final DateTime? trialEndsAt; // İlk 3 ay (90 gün) ücretsiz deneme bitiş tarihi
-  final DateTime? premiumExpiresAt; // Tanımlanan 90 Günlük PRO üyelik bitiş tarihi
+  final DateTime? trialEndsAt; // İlk 2 ay (60 gün) hediye deneme bitiş tarihi
+  final DateTime? premiumExpiresAt; // Tanımlanan 60 Günlük PRO üyelik bitiş tarihi
   final String? studyStatsJson; // Öğrencinin çalışma özeti JSON verisi
   final String? assignmentsJson; // Öğretmenin verdiği ödevler JSON listesi
   final String? messagesJson; // Öğretmen-Öğrenci mesajları JSON listesi
@@ -46,7 +46,7 @@ class UserProfileModel {
     this.targetNet = 75.0,
     required this.createdAt,
     this.isPremium = false,
-    this.membershipPlan = '3 Ay Ücretsiz Deneme',
+    this.membershipPlan = '2 Ay Hediye Deneme',
     this.isEmailVerified = false,
     this.coachNote,
     this.coachNoteUpdatedAt,
@@ -73,11 +73,11 @@ class UserProfileModel {
           ? targetDepartment
           : 'Öğretmen / Eğitim Koçu';
 
-  /// İlk 3 ay (90 gün) ücretsiz deneme bitiş tarihi
+  /// İlk 2 ay (60 gün) hediye deneme bitiş tarihi
   DateTime get effectiveTrialEndDate =>
-      trialEndsAt ?? createdAt.add(const Duration(days: 90));
+      trialEndsAt ?? createdAt.add(const Duration(days: 60));
 
-  /// Kullanıcı şu an 3 aylık ücretsiz deneme süresinde mi?
+  /// Kullanıcı şu an 2 aylık hediye deneme süresinde mi?
   bool get isInFreeTrial => DateTime.now().isBefore(effectiveTrialEndDate);
 
   /// Ücretsiz deneme süresinden kalan gün sayısı
@@ -98,7 +98,7 @@ class UserProfileModel {
   /// Kalan Premium gün sayısı (Süre takibi)
   int get remainingPremiumDays {
     if (!isPremium) return 0;
-    if (premiumExpiresAt == null) return 90;
+    if (premiumExpiresAt == null) return 60;
     final diffHours = premiumExpiresAt!.difference(DateTime.now()).inHours;
     if (diffHours <= 0) return 0;
     return (diffHours / 24).ceil();
@@ -108,7 +108,7 @@ class UserProfileModel {
   bool get isPremiumExpired =>
       isPremium && premiumExpiresAt != null && DateTime.now().isAfter(premiumExpiresAt!);
 
-  /// PRO özelliklere erişim var mı? (Aktif Premium süresi VEYA 90 Günlük ilk deneme süresi)
+  /// PRO özelliklere erişim var mı? (Aktif Premium süresi VEYA 60 Günlük ilk deneme süresi)
   bool get hasProAccess => isPremiumActive || isInFreeTrial;
 
   int get age {
@@ -216,7 +216,7 @@ class UserProfileModel {
       targetNet: (json['targetNet'] as num?)?.toDouble() ?? 75.0,
       createdAt: created,
       isPremium: json['isPremium'] as bool? ?? false,
-      membershipPlan: json['membershipPlan'] as String? ?? '3 Ay Ücretsiz Deneme',
+      membershipPlan: json['membershipPlan'] as String? ?? '2 Ay Hediye Deneme',
       isEmailVerified: json['isEmailVerified'] as bool? ?? false,
       coachNote: json['coachNote'] as String?,
       coachNoteUpdatedAt: json['coachNoteUpdatedAt'] != null
@@ -229,7 +229,7 @@ class UserProfileModel {
       teacherEmail: json['teacherEmail'] as String?,
       trialEndsAt: json['trialEndsAt'] != null
           ? DateTime.tryParse(json['trialEndsAt'] as String)
-          : created.add(const Duration(days: 90)),
+          : created.add(const Duration(days: 60)),
       premiumExpiresAt: json['premiumExpiresAt'] != null
           ? DateTime.tryParse(json['premiumExpiresAt'] as String)
           : null,

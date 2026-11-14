@@ -623,12 +623,12 @@ class AppFirebaseService {
 
   // --- YÖNETİCİ / PREMİUM / KOÇ NOTU ---
 
-  /// Öğrencinin Premium üyelik durumunu ve 90 Günlük bitiş süresini günceller (Admin yetkisi)
+  /// Öğrencinin Premium üyelik durumunu ve bitiş süresini günceller (Admin yetkisi)
   Future<bool> setStudentPremiumStatus({
     required String userId,
     required String email,
     required bool isPremium,
-    int durationDays = 90,
+    int durationDays = 60,
     DateTime? customExpiresAt,
   }) async {
     DateTime? expiresAt;

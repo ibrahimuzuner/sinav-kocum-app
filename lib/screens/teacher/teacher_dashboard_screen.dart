@@ -580,7 +580,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              '3 Aylık Ücretsiz Denemen Aktif! Kalan süre: $remainingDays gün. Tüm öğretmen özellikleri açık.',
+              '2 Aylık Hediye Denemen Aktif! Kalan süre: $remainingDays gün. Tüm öğretmen özellikleri açık.',
               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
             ),
           ),
@@ -608,7 +608,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
           const SizedBox(width: 10),
           const Expanded(
             child: Text(
-              '3 aylık ücretsiz deneme süren sona erdi. Öğrenci ekleme ve koçluk için Öğretmen PRO paketine geçebilirsin.',
+              '2 aylık hediye deneme süren sona erdi. Öğrenci ekleme ve koçluk için Öğretmen PRO paketine geçebilirsin.',
               style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
             ),
           ),

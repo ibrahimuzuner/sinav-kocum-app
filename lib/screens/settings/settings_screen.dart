@@ -264,14 +264,14 @@ class SettingsScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'İlk 3 Ay Ücretsiz Deneme • ${userProvider.remainingTrialDays} Gün Kaldı',
+                              'İlk 2 Ay Hediye Deneme • ${userProvider.remainingTrialDays} Gün Kaldı',
                               style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold, color: Colors.white),
                             ),
                             const SizedBox(height: 3),
                             Text(
                               userProvider.isTeacher
-                                  ? 'Deneme bitiminde Öğretmen Paketi: ₺299 / Ay. Paketleri görmek için dokunun.'
-                                  : 'Deneme bitiminde Öğrenci Paketi: ₺99 / Ay. Paketleri görmek için dokunun.',
+                                  ? 'Deneme bitiminde Öğretmen Paketi: ₺149,99 / Ay. Paketleri görmek için dokunun.'
+                                  : 'Deneme bitiminde Öğrenci Paketi: ₺34,99 / Ay. Paketleri görmek için dokunun.',
                               style: const TextStyle(fontSize: 11.5, color: Colors.white70),
                             ),
                           ],

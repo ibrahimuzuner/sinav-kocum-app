@@ -33,7 +33,7 @@ class UserProvider with ChangeNotifier {
   DateTime? get premiumExpiresAt => _userProfile?.premiumExpiresAt;
   int get remainingPremiumDays => _userProfile?.remainingPremiumDays ?? 0;
   bool get isPremiumExpired => _userProfile?.isPremiumExpired ?? false;
-  String get membershipPlan => _userProfile?.membershipPlan ?? '3 Ay Ücretsiz Deneme';
+  String get membershipPlan => _userProfile?.membershipPlan ?? '2 Ay Hediye Deneme';
   bool get isEmailVerified => _userProfile?.isEmailVerified ?? false;
   String? get coachNote => _userProfile?.coachNote;
   DateTime? get coachNoteUpdatedAt => _userProfile?.coachNoteUpdatedAt;
@@ -57,11 +57,11 @@ class UserProvider with ChangeNotifier {
     return (e != null && e.isNotEmpty) ? e : null;
   }
 
-  // İlk 3 Ay Ücretsiz Deneme & PRO Erişim
+  // İlk 2 Ay Hediye Deneme & PRO Erişim
   DateTime get trialEndDate =>
-      _userProfile?.effectiveTrialEndDate ?? DateTime.now().add(const Duration(days: 90));
+      _userProfile?.effectiveTrialEndDate ?? DateTime.now().add(const Duration(days: 60));
   bool get isInFreeTrial => _userProfile?.isInFreeTrial ?? true;
-  int get remainingTrialDays => _userProfile?.remainingTrialDays ?? 90;
+  int get remainingTrialDays => _userProfile?.remainingTrialDays ?? 60;
   bool get hasProAccess => isAdmin || isPremium || isInFreeTrial;
 
   // Öğrenci Ödev & Mesaj Getters
@@ -213,9 +213,9 @@ class UserProvider with ChangeNotifier {
       targetScore: targetScore ?? 400.0,
       targetNet: targetNet ?? 75.0,
       createdAt: now,
-      trialEndsAt: now.add(const Duration(days: 90)),
+      trialEndsAt: now.add(const Duration(days: 60)),
       isPremium: false,
-      membershipPlan: '3 Ay Ücretsiz Deneme',
+      membershipPlan: '2 Ay Hediye Deneme',
       isEmailVerified: false,
       role: role,
       teacherCode: generatedCode,

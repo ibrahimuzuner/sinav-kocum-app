@@ -351,7 +351,7 @@ class _AuthScreenState extends State<AuthScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 🎁 3 AY ÜCRETSİZ BİLGİ ROZETİ
+            // 🎁 2 AY HEDİYE BİLGİ ROZETİ
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -368,7 +368,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Yeni üyelere İLK 3 AY TÜM ÖZELLİKLER ÜCRETSİZ! Sonrasında öğrenci ve öğretmen paketleri ayrıdır.',
+                      'Yeni üyelere İLK 2 AY TÜM ÖZELLİKLER HEDİYE! Sonrasında Öğrenci ₺34,99/Ay, Öğretmen ₺149,99/Ay.',
                       style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
                     ),
                   ),
@@ -968,8 +968,8 @@ class _AuthScreenState extends State<AuthScreen> {
                             SnackBar(
                               content: Text(
                                 isTeacher
-                                    ? '👨‍🏫 Hoş geldin $firstName Hocam! 3 aylık ücretsiz Öğretmen hesabın hazır!'
-                                    : '🎉 Hoş geldin $firstName! 3 aylık ücretsiz deneme hesabın hazır!',
+                                    ? '👨‍🏫 Hoş geldin $firstName Hocam! 2 aylık hediye Öğretmen hesabın hazır!'
+                                    : '🎉 Hoş geldin $firstName! 2 aylık hediye deneme hesabın hazır!',
                               ),
                               backgroundColor: const Color(0xFF10B981),
                               behavior: SnackBarBehavior.floating,

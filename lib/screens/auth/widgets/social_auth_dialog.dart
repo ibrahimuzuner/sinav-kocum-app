@@ -159,7 +159,7 @@ class SocialAuthHelper {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Hoş geldin, ${newProfile.firstName}! ${isGoogle ? "Google" : "Apple"} hesabın bağlandı ve 3 aylık ücretsiz üyeliğin başladı 🎓',
+            'Hoş geldin, ${newProfile.firstName}! ${isGoogle ? "Google" : "Apple"} hesabın bağlandı ve 2 aylık hediye üyeliğin başladı 🎓',
           ),
           behavior: SnackBarBehavior.floating,
           backgroundColor: const Color(0xFF10B981),
@@ -356,7 +356,7 @@ class _SocialAccountPickerModalState extends State<SocialAccountPickerModal> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'İlk 3 Ay Tamamen Ücretsiz!',
+                              'İlk 2 Ay Tamamen Hediye!',
                               style: TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,

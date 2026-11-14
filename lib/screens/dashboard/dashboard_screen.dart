@@ -714,7 +714,7 @@ class DashboardScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'İlk 3 Ay Ücretsiz Denemen Aktif (${userProvider.remainingTrialDays} gün kaldı)',
+                    'İlk 2 Ay Hediye Denemen Aktif (${userProvider.remainingTrialDays} gün kaldı)',
                     style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
                   ),
                   const Text(

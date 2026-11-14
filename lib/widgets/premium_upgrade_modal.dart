@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
 import '../utils/formatters.dart';
 
-/// Kullanıcıya 3 Ay Ücretsiz Deneme durumunu ve Öğrenci / Öğretmen ayrı PRO paketlerini sunan modern modal.
+/// Kullanıcıya 2 Ay Hediye Deneme durumunu ve Öğrenci / Öğretmen ayrı PRO paketlerini sunan modern modal.
 class PremiumUpgradeModal extends StatefulWidget {
   final String source; // 'pdf', 'mock_exam', 'coach', 'teacher', 'general'
 
@@ -89,7 +89,7 @@ class _PremiumUpgradeModalState extends State<PremiumUpgradeModal> {
             ),
             const SizedBox(height: 16),
 
-            // 🎁 PRO & DENEME DURUM BANNERI (90 GÜNLÜK SÜRE TAKİBİ)
+            // 🎁 PRO & DENEME DURUM BANNERI (60 GÜNLÜK SÜRE TAKİBİ)
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -131,7 +131,7 @@ class _PremiumUpgradeModalState extends State<PremiumUpgradeModal> {
                               ? 'PRO Üyeliğin Aktif (${userProvider.remainingPremiumDays} Gün Kaldı)'
                               : (userProvider.isPremiumExpired
                                   ? 'PRO Üyelik Süreniz Sona Erdi!'
-                                  : (inTrial ? 'İlk 3 Ay Ücretsiz Denemen Aktif!' : 'Yeni Üyelere İlk 3 Ay Ücretsiz!')),
+                                  : (inTrial ? 'İlk 2 Ay Hediye Denemen Aktif!' : 'Yeni Üyelere İlk 2 Ay Hediye!')),
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
@@ -140,12 +140,12 @@ class _PremiumUpgradeModalState extends State<PremiumUpgradeModal> {
                         ),
                         Text(
                           userProvider.isPremium
-                              ? 'Bitiş Tarihi: ${userProvider.premiumExpiresAt != null ? Formatters.formatDateTurkish(userProvider.premiumExpiresAt!) : "90 gün sonra"} • Süre bitiminde yenileme gerekir'
+                              ? 'Bitiş Tarihi: ${userProvider.premiumExpiresAt != null ? Formatters.formatDateTurkish(userProvider.premiumExpiresAt!) : "60 gün sonra"} • Süre bitiminde yenileme gerekir'
                               : (userProvider.isPremiumExpired
                                   ? 'Renkli PDF karne ve koçluk için paketinizi yenileyin.'
                                   : (inTrial
-                                      ? 'Kalan ücretsiz kullanım süren: $remainingDays gün • Tüm PRO özellikler açık'
-                                      : '90 günün sonunda rolünüze göre paketinizi yenileyebilirsiniz.')),
+                                      ? 'Kalan hediye kullanım süren: $remainingDays gün • Tüm PRO özellikler açık'
+                                      : '2 ayın (60 gün) sonunda rolünüze göre paketinizi yenileyebilirsiniz.')),
                           style: const TextStyle(color: Colors.white70, fontSize: 11),
                         ),
                       ],
@@ -350,8 +350,8 @@ class _PremiumUpgradeModalState extends State<PremiumUpgradeModal> {
                         const SizedBox(height: 2),
                         Text(
                           _showTeacherPlan
-                              ? 'İlk 3 Ay Ücretsiz • Sonrası ₺299 / Ay'
-                              : 'İlk 3 Ay Ücretsiz • Sonrası ₺99 / Ay',
+                              ? 'İlk 2 Ay Hediye • Sonrası ₺149,99 / Ay'
+                              : 'İlk 2 Ay Hediye • Sonrası ₺34,99 / Ay',
                           style: const TextStyle(
                             fontSize: 12,
                             color: Color(0xFF10B981),
@@ -486,14 +486,14 @@ class _PremiumUpgradeModalState extends State<PremiumUpgradeModal> {
               ),
             ] else if (userProvider.isInFreeTrial) ...[
               Text(
-                '🎁 İlk 3 aylık ücretsiz deneme süreniz devam ediyor (${userProvider.remainingTrialDays} gün kaldı).\n\n'
-                'Deneme süreniz dolduğunda ${isTeacherPlan ? "Öğretmen PRO (₺299/Ay)" : "Öğrenci PRO (₺99/Ay)"} paketini aktif etmek için destek ekibimizle iletişime geçebilirsiniz:',
+                '🎁 İlk 2 aylık hediye deneme süreniz devam ediyor (${userProvider.remainingTrialDays} gün kaldı).\n\n'
+                'Deneme süreniz dolduğunda ${isTeacherPlan ? "Öğretmen PRO (₺149,99/Ay)" : "Öğrenci PRO (₺34,99/Ay)"} paketini aktif etmek için destek ekibimizle iletişime geçebilirsiniz:',
               ),
               const SizedBox(height: 12),
               _buildContactInfoBox(),
             ] else ...[
               Text(
-                'Sınav Koçum ${isTeacherPlan ? "Öğretmen PRO (₺299/Ay)" : "Öğrenci PRO (₺99/Ay)"} üyeliğinizi anında aktif etmek için iletişime geçebilirsiniz:',
+                'Sınav Koçum ${isTeacherPlan ? "Öğretmen PRO (₺149,99/Ay)" : "Öğrenci PRO (₺34,99/Ay)"} üyeliğinizi anında aktif etmek için iletişime geçebilirsiniz:',
               ),
               const SizedBox(height: 12),
               _buildContactInfoBox(),
