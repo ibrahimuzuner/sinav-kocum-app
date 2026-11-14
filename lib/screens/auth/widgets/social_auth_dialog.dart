@@ -153,6 +153,7 @@ class SocialAuthHelper {
     );
 
     studyProvider.setCurrentExam(newProfile.targetExam);
+    await studyProvider.clearSchedule();
 
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

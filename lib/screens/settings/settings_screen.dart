@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../providers/settings_provider.dart';
+import '../../providers/study_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../utils/formatters.dart';
 import 'edit_profile_dialog.dart';
@@ -158,6 +159,9 @@ class SettingsScreen extends StatelessWidget {
                               onPressed: () async {
                                 Navigator.pop(ctx);
                                 await userProvider.logout();
+                                if (context.mounted) {
+                                  await context.read<StudyProvider>().clearSchedule();
+                                }
                               },
                               child: const Text('Sıfırla', style: TextStyle(color: Colors.red)),
                             ),

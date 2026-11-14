@@ -126,69 +126,21 @@ class StorageService {
   List<ScheduleItemModel> loadScheduleItems() {
     final raw = _prefs?.getString(_keySchedule);
     if (raw == null || raw.isEmpty) {
-      // Default initial schedule suggestion
-      final defaultItems = [
-        const ScheduleItemModel(
-          id: 'def_1',
-          dayOfWeek: 1, // Pazartesi
-          courseId: 'matematik',
-          courseName: 'Matematik',
-          topicName: 'Temel Kavramlar & Soru Çözümü',
-          targetMinutes: 60,
-          targetQuestions: 40,
-        ),
-        const ScheduleItemModel(
-          id: 'def_2',
-          dayOfWeek: 1,
-          courseId: 'turkce',
-          courseName: 'Türkçe',
-          topicName: 'Paragraf Soru Pratiği',
-          targetMinutes: 40,
-          targetQuestions: 30,
-        ),
-        const ScheduleItemModel(
-          id: 'def_3',
-          dayOfWeek: 2, // Salı
-          courseId: 'fizik',
-          courseName: 'Fizik',
-          topicName: 'Kuvvet ve Hareket',
-          targetMinutes: 60,
-          targetQuestions: 30,
-        ),
-        const ScheduleItemModel(
-          id: 'def_4',
-          dayOfWeek: 3, // Çarşamba
-          courseId: 'kimya',
-          courseName: 'Kimya',
-          topicName: 'Kimyasal Türler Arası Etkileşimler',
-          targetMinutes: 50,
-          targetQuestions: 30,
-        ),
-        const ScheduleItemModel(
-          id: 'def_5',
-          dayOfWeek: 4, // Perşembe
-          courseId: 'biyoloji',
-          courseName: 'Biyoloji',
-          topicName: 'Hücre ve Organelleri',
-          targetMinutes: 50,
-          targetQuestions: 35,
-        ),
-        const ScheduleItemModel(
-          id: 'def_6',
-          dayOfWeek: 5, // Cuma
-          courseId: 'geometri',
-          courseName: 'Geometri',
-          topicName: 'Üçgende Açılar',
-          targetMinutes: 60,
-          targetQuestions: 30,
-        ),
-      ];
-      saveScheduleItems(defaultItems);
-      return defaultItems;
+      // Yeni kullanıcılar için boş programla başla, kullanıcı kendi hedeflerini ekler
+      return [];
     }
     try {
       final List<dynamic> decoded = jsonDecode(raw);
-      return decoded.map((e) => ScheduleItemModel.fromJson(e as Map<String, dynamic>)).toList();
+      // Eski versiyonlardan kalan def_ ön ekli varsayılan dersleri (Fizik, Kimya vb.) temizle
+      final list = decoded
+          .map((e) => ScheduleItemModel.fromJson(e as Map<String, dynamic>))
+          .where((item) => !item.id.startsWith('def_'))
+          .toList();
+
+      if (list.length != decoded.length) {
+        saveScheduleItems(list);
+      }
+      return list;
     } catch (_) {
       return [];
     }
@@ -197,6 +149,10 @@ class StorageService {
   Future<void> saveScheduleItems(List<ScheduleItemModel> items) async {
     final raw = jsonEncode(items.map((i) => i.toJson()).toList());
     await _prefs?.setString(_keySchedule, raw);
+  }
+
+  Future<void> clearScheduleItems() async {
+    await _prefs?.remove(_keySchedule);
   }
 
   // --- MOCK EXAMS (DENEMELER) ---
@@ -327,5 +283,6 @@ class StorageService {
 
   Future<void> clearUserProfile() async {
     await _prefs?.remove(_keyUserProfile);
+    await _prefs?.remove(_keySchedule);
   }
 }

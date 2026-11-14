@@ -34,7 +34,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     final rawDayItems = studyProvider.getScheduleForDay(_selectedDay);
     final isSunday = _selectedDay == 7;
     final sundayCatchUpTasks = isSunday ? studyProvider.getSundayCatchUpTasks() : <ScheduleItemModel>[];
-    final isSundayRestDay = isSunday && rawDayItems.isEmpty;
+    final hasAnyWeeklySchedule = studyProvider.scheduleItems.isNotEmpty;
+    final isSundayRestDay = isSunday && rawDayItems.isEmpty && hasAnyWeeklySchedule;
     final isSundayCatchUpMode = isSundayRestDay && sundayCatchUpTasks.isNotEmpty;
 
     final items = isSundayCatchUpMode ? sundayCatchUpTasks : rawDayItems;
@@ -45,6 +46,12 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       appBar: AppBar(
         title: const Text('Çalışma Programı'),
         actions: [
+          if (studyProvider.scheduleItems.isNotEmpty)
+            IconButton(
+              tooltip: 'Tüm Programı Temizle',
+              icon: const Icon(Icons.delete_sweep_outlined, color: Colors.redAccent, size: 24),
+              onPressed: () => _confirmClearAllSchedule(context, studyProvider),
+            ),
           IconButton(
             tooltip: 'Akıllı Program Oluştur (Yapay Zeka)',
             icon: const Icon(Icons.auto_awesome_rounded, color: Color(0xFF8B5CF6), size: 26),
@@ -365,6 +372,45 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => const SmartScheduleDialog(),
+    );
+  }
+
+  void _confirmClearAllSchedule(BuildContext context, StudyProvider studyProvider) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.delete_sweep_rounded, color: Colors.redAccent),
+            SizedBox(width: 8),
+            Text('Programı Temizle'),
+          ],
+        ),
+        content: const Text(
+          'Haftalık çalışma programındaki tüm hedefleri silmek ve sıfırdan boş bir programla başlamak istediğinize emin misiniz?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('İptal'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await studyProvider.clearSchedule();
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Haftalık çalışma programı temizlendi.'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            },
+            child: const Text('Tümünü Temizle', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/user_profile_model.dart';
 import '../../providers/settings_provider.dart';
+import '../../providers/study_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../services/target_departments_data.dart';
 import '../../utils/formatters.dart';
@@ -308,6 +309,11 @@ class _AuthScreenState extends State<AuthScreen> {
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               ),
                             );
+                          } else {
+                            final targetExam = userProvider.targetExam;
+                            if (targetExam.isNotEmpty) {
+                              context.read<StudyProvider>().setCurrentExam(targetExam);
+                            }
                           }
                         }
                       },
@@ -948,6 +954,12 @@ class _AuthScreenState extends State<AuthScreen> {
 
                         if (!isTeacher) {
                           await settingsProvider.setTargetMinutes(_dailyTargetHours * 60);
+                        }
+
+                        if (mounted) {
+                          final studyProvider = context.read<StudyProvider>();
+                          studyProvider.setCurrentExam(isTeacher ? 'Öğretmen / Koç' : _selectedExam);
+                          await studyProvider.clearSchedule();
                         }
 
                         if (mounted) {

@@ -599,6 +599,13 @@ class StudyProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  /// Haftalık çalışma programındaki tüm hedefleri temizler (kullanıcı isteği veya yeni üyelik)
+  Future<void> clearSchedule() async {
+    _scheduleItems.clear();
+    await _storage.saveScheduleItems([]);
+    notifyListeners();
+  }
+
   /// Akıllı çalışma programı oluştur ve uygula
   Future<int> applySmartSchedule({
     required int dailyMinutes,
