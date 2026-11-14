@@ -204,7 +204,6 @@ class NotificationService {
         enableVibration: true,
         visibility: NotificationVisibility.public,
         category: AndroidNotificationCategory.alarm,
-        fullScreenIntent: true,
       );
 
       const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
