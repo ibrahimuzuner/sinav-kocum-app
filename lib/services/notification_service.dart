@@ -68,8 +68,26 @@ class NotificationService {
             playSound: true,
             enableVibration: true,
           );
+          const AndroidNotificationChannel reminderChannel = AndroidNotificationChannel(
+            'sinav_takip_channel',
+            'Sınav Hatırlatıcıları',
+            description: 'Ders çalışma, motivasyon ve test bildirimleri',
+            importance: Importance.max,
+            playSound: true,
+            enableVibration: true,
+          );
+          const AndroidNotificationChannel dailyChannel = AndroidNotificationChannel(
+            'sinav_daily_inactivity_channel',
+            'Günlük Çalışma Hatırlatıcısı',
+            description: 'Çalışmadığın günlerde seni uyaracak bildirimler',
+            importance: Importance.max,
+            playSound: true,
+            enableVibration: true,
+          );
           await androidImplementation.createNotificationChannel(liveChannel);
           await androidImplementation.createNotificationChannel(alarmChannel);
+          await androidImplementation.createNotificationChannel(reminderChannel);
+          await androidImplementation.createNotificationChannel(dailyChannel);
         }
       }
     } catch (e) {
@@ -77,26 +95,29 @@ class NotificationService {
     }
   }
 
-  Future<void> requestPermissions() async {
-    if (!isSupportedPlatform || !_isInitialized) return;
+  Future<bool> requestPermissions() async {
+    if (!isSupportedPlatform) return false;
 
     try {
       if (Platform.isAndroid) {
         final androidImplementation = _notificationsPlugin
             .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
-        await androidImplementation?.requestNotificationsPermission();
+        final granted = await androidImplementation?.requestNotificationsPermission();
+        return granted ?? false;
       } else if (Platform.isIOS) {
         final iosImplementation = _notificationsPlugin
             .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
-        await iosImplementation?.requestPermissions(
+        final granted = await iosImplementation?.requestPermissions(
           alert: true,
           badge: true,
           sound: true,
         );
+        return granted ?? false;
       }
     } catch (e) {
       debugPrint('Bildirim izin talebi hatası: $e');
     }
+    return false;
   }
 
   /// Canlı ve Sürekli (Ongoing) Sayaç Bildirimi Gösterir
@@ -222,18 +243,28 @@ class NotificationService {
     required String title,
     required String body,
   }) async {
-    if (!isSupportedPlatform || !_isInitialized) {
+    if (!isSupportedPlatform) {
       debugPrint('[TEST BILDIRIM] $title: $body');
       return;
     }
 
+    if (!_isInitialized) {
+      await init();
+    }
+
+    // İzin verilmemişse kullanıcıya bildirim izni sor
+    await requestPermissions();
+
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'sinav_takip_channel',
       'Sınav Hatırlatıcıları',
-      channelDescription: 'Ders çalışma ve motivasyon hatırlatıcıları',
-      importance: Importance.high,
+      channelDescription: 'Ders çalışma, motivasyon ve test bildirimleri',
+      importance: Importance.max,
       priority: Priority.high,
+      icon: '@mipmap/ic_launcher',
       showWhen: true,
+      playSound: true,
+      enableVibration: true,
     );
 
     const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
@@ -248,7 +279,7 @@ class NotificationService {
     );
 
     await _notificationsPlugin.show(
-      0,
+      DateTime.now().millisecondsSinceEpoch ~/ 1000,
       title,
       body,
       details,

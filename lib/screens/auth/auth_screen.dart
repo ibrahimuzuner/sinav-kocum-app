@@ -936,17 +936,19 @@ class _AuthScreenState extends State<AuthScreen> {
                           lastName: lastName,
                           email: _regEmailController.text.trim(),
                           birthDate: _birthDate,
-                          targetExam: _selectedExam,
-                          dailyTargetHours: _dailyTargetHours,
+                          targetExam: isTeacher ? 'Öğretmen / Koç' : _selectedExam,
+                          dailyTargetHours: isTeacher ? 0 : _dailyTargetHours,
                           targetDepartment: departmentToSave,
-                          targetScore: _targetScore,
-                          targetNet: _targetNet,
+                          targetScore: isTeacher ? 0.0 : _targetScore,
+                          targetNet: isTeacher ? 0.0 : _targetNet,
                           password: _regPasswordController.text.trim(),
                           role: _selectedRole,
                           teacherCodeInput: isTeacher ? null : _regTeacherCodeController.text.trim(),
                         );
 
-                        await settingsProvider.setTargetMinutes(_dailyTargetHours * 60);
+                        if (!isTeacher) {
+                          await settingsProvider.setTargetMinutes(_dailyTargetHours * 60);
+                        }
 
                         if (mounted) {
                           setState(() => _isRegistering = false);

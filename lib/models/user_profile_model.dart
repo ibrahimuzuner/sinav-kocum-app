@@ -65,6 +65,12 @@ class UserProfileModel {
   bool get isTeacher => role == 'teacher';
   bool get isStudent => role != 'teacher';
 
+  /// Öğretmen branşı veya uzmanlık alanı
+  String get teacherSpecialty =>
+      (isTeacher && targetDepartment.isNotEmpty && targetDepartment != 'Genel Başarı Hedefi')
+          ? targetDepartment
+          : 'Öğretmen / Eğitim Koçu';
+
   /// İlk 3 ay (90 gün) ücretsiz deneme bitiş tarihi
   DateTime get effectiveTrialEndDate =>
       trialEndsAt ?? createdAt.add(const Duration(days: 90));

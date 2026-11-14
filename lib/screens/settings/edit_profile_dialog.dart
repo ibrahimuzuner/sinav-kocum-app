@@ -39,24 +39,32 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
     _dailyTargetHours = widget.profile.dailyTargetHours;
 
     final existingDep = widget.profile.targetDepartment;
-    final found = TargetDepartmentsData.findDepartmentByName(existingDep);
-    if (found != null) {
-      _selectedDepartment = found.name;
-      _targetScore = widget.profile.targetScore > 0 ? widget.profile.targetScore : found.baseScore;
-      _targetNet = widget.profile.targetNet > 0 ? widget.profile.targetNet : found.targetNet;
-      _isCustomDepartment = false;
-    } else if (existingDep.isNotEmpty && existingDep != 'Genel Başarı Hedefi') {
-      _selectedDepartment = 'custom_dep';
+    if (widget.profile.isTeacher) {
+      _selectedDepartment = widget.profile.teacherSpecialty;
+      _customDepartmentController.text = widget.profile.teacherSpecialty;
+      _targetScore = 0;
+      _targetNet = 0;
       _isCustomDepartment = true;
-      _customDepartmentController.text = existingDep;
-      _targetScore = widget.profile.targetScore;
-      _targetNet = widget.profile.targetNet;
     } else {
-      final def = TargetDepartmentsData.getDefaultDepartmentForExam(_selectedExam);
-      _selectedDepartment = def.name;
-      _targetScore = def.baseScore;
-      _targetNet = def.targetNet;
-      _isCustomDepartment = false;
+      final found = TargetDepartmentsData.findDepartmentByName(existingDep);
+      if (found != null) {
+        _selectedDepartment = found.name;
+        _targetScore = widget.profile.targetScore > 0 ? widget.profile.targetScore : found.baseScore;
+        _targetNet = widget.profile.targetNet > 0 ? widget.profile.targetNet : found.targetNet;
+        _isCustomDepartment = false;
+      } else if (existingDep.isNotEmpty && existingDep != 'Genel Başarı Hedefi') {
+        _selectedDepartment = 'custom_dep';
+        _isCustomDepartment = true;
+        _customDepartmentController.text = existingDep;
+        _targetScore = widget.profile.targetScore;
+        _targetNet = widget.profile.targetNet;
+      } else {
+        final def = TargetDepartmentsData.getDefaultDepartmentForExam(_selectedExam);
+        _selectedDepartment = def.name;
+        _targetScore = def.baseScore;
+        _targetNet = def.targetNet;
+        _isCustomDepartment = false;
+      }
     }
   }
 
@@ -283,234 +291,293 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
               ),
               const SizedBox(height: 16),
 
-              // 4. HEDEF SINAV
-              const Text('Hedef Sınav', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
-                  ),
+              if (widget.profile.isTeacher) ...[
+                // ÖĞRETMEN BRANŞI VE UZMANLIK ALANI
+                const Text(
+                  'Branş / Koçluk Uzmanlık Alanınız',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                 ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: _selectedExam,
-                    isExpanded: true,
-                    items: ExamTypes.availableExams.map((exam) {
-                      return DropdownMenuItem(
-                        value: exam,
-                        child: Text(exam, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                      );
-                    }).toList(),
-                    onChanged: (val) {
-                      if (val != null) _onExamChanged(val);
-                    },
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // 5. HEDEF BÖLÜM / PROGRAM SEÇİMİ
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Hedef Bölüm / Program', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                  Text(
-                    '${_targetScore.toInt()} Puan Hedefi',
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5)),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
-                  ),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: _isCustomDepartment ? 'custom_dep' : _selectedDepartment,
-                    isExpanded: true,
-                    items: [
-                      ...TargetDepartmentsData.getDepartmentsForExam(_selectedExam).map((dep) {
-                        return DropdownMenuItem<String>(
-                          value: dep.name,
-                          child: Text(
-                            '${dep.name} (${dep.baseScore.toInt()} Puan)',
-                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        );
-                      }),
-                      const DropdownMenuItem<String>(
-                        value: 'custom_dep',
-                        child: Text(
-                          '✏️ Diğer / Kendi Hedefimi Belirle',
-                          style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF4F46E5), fontSize: 13),
-                        ),
-                      ),
-                    ],
-                    onChanged: (val) {
-                      if (val == null) return;
-                      if (val == 'custom_dep') {
-                        setState(() => _isCustomDepartment = true);
-                      } else {
-                        final found = TargetDepartmentsData.findDepartmentByName(val);
-                        setState(() {
-                          _isCustomDepartment = false;
-                          _selectedDepartment = val;
-                          if (found != null) {
-                            _targetScore = found.baseScore;
-                            _targetNet = found.targetNet;
-                            _dailyTargetHours = found.recommendedHours;
-                          }
-                        });
-                      }
-                    },
-                  ),
-                ),
-              ),
-              if (_isCustomDepartment) ...[
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _customDepartmentController,
                   decoration: const InputDecoration(
-                    hintText: 'Bölüm veya hedef adı',
-                    prefixIcon: Icon(Icons.edit_note_rounded),
+                    hintText: 'Örn: Matematik Öğretmeni, Fizik, Türkçe, Rehberlik / PDR',
+                    prefixIcon: Icon(Icons.school_outlined, color: Color(0xFF10B981)),
                   ),
-                  validator: (v) {
-                    if (_isCustomDepartment && (v == null || v.trim().isEmpty)) {
-                      return 'Lütfen hedef bölümünüzü yazın';
-                    }
-                    return null;
-                  },
+                  validator: (v) => v == null || v.trim().isEmpty ? 'Lütfen branşınızı girin' : null,
                 ),
-              ],
-              const SizedBox(height: 12),
+                const SizedBox(height: 16),
 
-              // 🤖 YAPAY ZEKA HEDEF & PUAN KARTI
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      const Color(0xFF4F46E5).withValues(alpha: 0.12),
-                      const Color(0xFF6366F1).withValues(alpha: 0.06),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFF4F46E5).withValues(alpha: 0.25)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+                if (widget.profile.teacherCode != null && widget.profile.teacherCode!.isNotEmpty) ...[
+                  const Text('Öğretmen Koç Kodunuz', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF0F172A) : const Color(0xFFECFDF5),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.4)),
+                    ),
+                    child: Row(
                       children: [
-                        const Icon(Icons.auto_awesome_rounded, color: Color(0xFF4F46E5), size: 16),
-                        const SizedBox(width: 6),
-                        const Text(
-                          'Yapay Zeka Taban Puan & Net Hedefi',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5)),
+                        const Icon(Icons.qr_code_2_rounded, color: Color(0xFF10B981), size: 24),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.profile.teacherCode!,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 1.2,
+                                  color: Color(0xFF10B981),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              const Text(
+                                'Öğrencileriniz bu kodu girerek sınıfınıza bağlanabilir.',
+                                style: TextStyle(fontSize: 11, color: Colors.grey),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text('Taban Puan', style: TextStyle(fontSize: 9, color: Color(0xFF94A3B8))),
-                                Text('${_targetScore.toInt()} Puan', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5))),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text('Gereken Net', style: TextStyle(fontSize: 9, color: Color(0xFF94A3B8))),
-                                Text('~${_targetNet.toStringAsFixed(1)} Net', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF10B981))),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text('Önerilen', style: TextStyle(fontSize: 9, color: Color(0xFF94A3B8))),
-                                Text('$_dailyTargetHours Sa/Gün', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFFF59E0B))),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              ] else ...[
+                // 4. HEDEF SINAV
+                const Text('Hedef Sınav', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+                    ),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: _selectedExam,
+                      isExpanded: true,
+                      items: ExamTypes.availableExams.map((exam) {
+                        return DropdownMenuItem(
+                          value: exam,
+                          child: Text(exam, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) _onExamChanged(val);
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // 5. HEDEF BÖLÜM / PROGRAM SEÇİMİ
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Hedef Bölüm / Program', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                    Text(
+                      '${_targetScore.toInt()} Puan Hedefi',
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5)),
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 16),
-
-              // 6. GÜNLÜK HEDEF ÇALIŞMA SÜRESİ
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Günlük Hedef Çalışma Süren', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                  Text('$_dailyTargetHours Saat / Gün', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF4F46E5))),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [2, 3, 4, 5, 6].map((hours) {
-                  final isSelected = _dailyTargetHours == hours;
-                  return ChoiceChip(
-                    label: Text('$hours Saat'),
-                    selected: isSelected,
-                    onSelected: (_) => setState(() => _dailyTargetHours = hours),
-                    selectedColor: const Color(0xFF4F46E5),
-                    labelStyle: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                      color: isSelected ? Colors.white : null,
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
                     ),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 24),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: _isCustomDepartment ? 'custom_dep' : _selectedDepartment,
+                      isExpanded: true,
+                      items: [
+                        ...TargetDepartmentsData.getDepartmentsForExam(_selectedExam).map((dep) {
+                          return DropdownMenuItem<String>(
+                            value: dep.name,
+                            child: Text(
+                              '${dep.name} (${dep.baseScore.toInt()} Puan)',
+                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          );
+                        }),
+                        const DropdownMenuItem<String>(
+                          value: 'custom_dep',
+                          child: Text(
+                            '✏️ Diğer / Kendi Hedefimi Belirle',
+                            style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF4F46E5), fontSize: 13),
+                          ),
+                        ),
+                      ],
+                      onChanged: (val) {
+                        if (val == null) return;
+                        if (val == 'custom_dep') {
+                          setState(() => _isCustomDepartment = true);
+                        } else {
+                          final found = TargetDepartmentsData.findDepartmentByName(val);
+                          setState(() {
+                            _isCustomDepartment = false;
+                            _selectedDepartment = val;
+                            if (found != null) {
+                              _targetScore = found.baseScore;
+                              _targetNet = found.targetNet;
+                              _dailyTargetHours = found.recommendedHours;
+                            }
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                ),
+                if (_isCustomDepartment) ...[
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _customDepartmentController,
+                    decoration: const InputDecoration(
+                      hintText: 'Bölüm veya hedef adı',
+                      prefixIcon: Icon(Icons.edit_note_rounded),
+                    ),
+                    validator: (v) {
+                      if (_isCustomDepartment && (v == null || v.trim().isEmpty)) {
+                        return 'Lütfen hedef bölümünüzü yazın';
+                      }
+                      return null;
+                    },
+                  ),
+                ],
+                const SizedBox(height: 12),
+
+                // 🤖 YAPAY ZEKA HEDEF & PUAN KARTI
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        const Color(0xFF4F46E5).withValues(alpha: 0.12),
+                        const Color(0xFF6366F1).withValues(alpha: 0.06),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFF4F46E5).withValues(alpha: 0.25)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.auto_awesome_rounded, color: Color(0xFF4F46E5), size: 16),
+                          const SizedBox(width: 6),
+                          const Text(
+                            'Yapay Zeka Taban Puan & Net Hedefi',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5)),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('Taban Puan', style: TextStyle(fontSize: 9, color: Color(0xFF94A3B8))),
+                                  Text('${_targetScore.toInt()} Puan', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5))),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('Gereken Net', style: TextStyle(fontSize: 9, color: Color(0xFF94A3B8))),
+                                  Text('~${_targetNet.toStringAsFixed(1)} Net', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF10B981))),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('Önerilen', style: TextStyle(fontSize: 9, color: Color(0xFF94A3B8))),
+                                  Text('$_dailyTargetHours Sa/Gün', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFFF59E0B))),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // 6. GÜNLÜK HEDEF ÇALIŞMA SÜRESİ
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Günlük Hedef Çalışma Süren', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                    Text('$_dailyTargetHours Saat / Gün', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF4F46E5))),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [2, 3, 4, 5, 6].map((hours) {
+                    final isSelected = _dailyTargetHours == hours;
+                    return ChoiceChip(
+                      label: Text('$hours Saat'),
+                      selected: isSelected,
+                      onSelected: (_) => setState(() => _dailyTargetHours = hours),
+                      selectedColor: const Color(0xFF4F46E5),
+                      labelStyle: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                        color: isSelected ? Colors.white : null,
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 24),
+              ],
 
               // GÜNCELLE BUTONU
               SizedBox(
@@ -530,15 +597,21 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                         firstName: _firstNameController.text.trim(),
                         lastName: _lastNameController.text.trim(),
                         birthDate: _birthDate,
-                        targetExam: _selectedExam,
-                        dailyTargetHours: _dailyTargetHours,
-                        targetDepartment: departmentToSave,
-                        targetScore: _targetScore,
-                        targetNet: _targetNet,
+                        targetDepartment: widget.profile.isTeacher
+                            ? _customDepartmentController.text.trim()
+                            : departmentToSave,
+                        targetExam: widget.profile.isTeacher
+                            ? 'Öğretmen / Koç'
+                            : _selectedExam,
+                        dailyTargetHours: widget.profile.isTeacher ? 0 : _dailyTargetHours,
+                        targetScore: widget.profile.isTeacher ? 0.0 : _targetScore,
+                        targetNet: widget.profile.isTeacher ? 0.0 : _targetNet,
                       );
 
                       await userProvider.updateProfile(updatedProfile);
-                      await settingsProvider.setTargetMinutes(_dailyTargetHours * 60);
+                      if (!widget.profile.isTeacher) {
+                        await settingsProvider.setTargetMinutes(_dailyTargetHours * 60);
+                      }
 
                       if (context.mounted) {
                         context.read<StudyProvider>().setCurrentExam(updatedProfile.targetExam);

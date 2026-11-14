@@ -94,15 +94,29 @@ class SettingsScreen extends StatelessWidget {
                           ),
                         ],
                         const SizedBox(height: 2),
-                        Text(
-                          profile.targetExam,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF4F46E5),
+                        if (userProvider.isTeacher) ...[
+                          Text(
+                            userProvider.teacherSpecialty,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF10B981),
+                            ),
                           ),
-                        ),
-                        if (!userProvider.isTeacher) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            '${profile.age} Yaşında • Koçluk Kodu: ${userProvider.teacherCode ?? "-"}',
+                            style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                          ),
+                        ] else ...[
+                          Text(
+                            profile.targetExam,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF4F46E5),
+                            ),
+                          ),
                           const SizedBox(height: 2),
                           Text(
                             '${profile.age} Yaşında • Hedef: ${profile.dailyTargetHours} Saat/Gün',
@@ -479,54 +493,56 @@ class SettingsScreen extends StatelessWidget {
               const SizedBox(height: 20),
             ],
           ],
-          // BÖLÜM 1: ÇALIŞMA HEDEFLERİ
-          _buildSectionHeader('Çalışma Hedefleri'),
-          _buildCard(
-            isDark: isDark,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.quiz_outlined, color: Color(0xFF4F46E5)),
-                title: const Text('Günlük Hedef Soru', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text('${settingsProvider.targetQuestions} soru'),
-                trailing: DropdownButton<int>(
-                  value: settingsProvider.targetQuestions,
-                  underline: const SizedBox(),
-                  items: const [
-                    DropdownMenuItem(value: 50, child: Text('50')),
-                    DropdownMenuItem(value: 75, child: Text('75')),
-                    DropdownMenuItem(value: 100, child: Text('100')),
-                    DropdownMenuItem(value: 150, child: Text('150')),
-                    DropdownMenuItem(value: 200, child: Text('200')),
-                  ],
-                  onChanged: (val) {
-                    if (val != null) settingsProvider.setTargetQuestions(val);
-                  },
+          // BÖLÜM 1: ÇALIŞMA HEDEFLERİ (Yalnızca Öğrenciler İçin)
+          if (!userProvider.isTeacher) ...[
+            _buildSectionHeader('Çalışma Hedefleri'),
+            _buildCard(
+              isDark: isDark,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.quiz_outlined, color: Color(0xFF4F46E5)),
+                  title: const Text('Günlük Hedef Soru', style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: Text('${settingsProvider.targetQuestions} soru'),
+                  trailing: DropdownButton<int>(
+                    value: settingsProvider.targetQuestions,
+                    underline: const SizedBox(),
+                    items: const [
+                      DropdownMenuItem(value: 50, child: Text('50')),
+                      DropdownMenuItem(value: 75, child: Text('75')),
+                      DropdownMenuItem(value: 100, child: Text('100')),
+                      DropdownMenuItem(value: 150, child: Text('150')),
+                      DropdownMenuItem(value: 200, child: Text('200')),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) settingsProvider.setTargetQuestions(val);
+                    },
+                  ),
                 ),
-              ),
-              const Divider(height: 1),
-              ListTile(
-                leading: const Icon(Icons.timer_outlined, color: Color(0xFF0EA5E9)),
-                title: const Text('Günlük Hedef Süre', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text(Formatters.formatMinutesToDuration(settingsProvider.targetMinutes)),
-                trailing: DropdownButton<int>(
-                  value: settingsProvider.targetMinutes,
-                  underline: const SizedBox(),
-                  items: const [
-                    DropdownMenuItem(value: 60, child: Text('1 saat')),
-                    DropdownMenuItem(value: 120, child: Text('2 saat')),
-                    DropdownMenuItem(value: 180, child: Text('3 saat')),
-                    DropdownMenuItem(value: 240, child: Text('4 saat')),
-                    DropdownMenuItem(value: 300, child: Text('5 saat')),
-                    DropdownMenuItem(value: 360, child: Text('6 saat')),
-                  ],
-                  onChanged: (val) {
-                    if (val != null) settingsProvider.setTargetMinutes(val);
-                  },
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.timer_outlined, color: Color(0xFF0EA5E9)),
+                  title: const Text('Günlük Hedef Süre', style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: Text(Formatters.formatMinutesToDuration(settingsProvider.targetMinutes)),
+                  trailing: DropdownButton<int>(
+                    value: settingsProvider.targetMinutes,
+                    underline: const SizedBox(),
+                    items: const [
+                      DropdownMenuItem(value: 60, child: Text('1 saat')),
+                      DropdownMenuItem(value: 120, child: Text('2 saat')),
+                      DropdownMenuItem(value: 180, child: Text('3 saat')),
+                      DropdownMenuItem(value: 240, child: Text('4 saat')),
+                      DropdownMenuItem(value: 300, child: Text('5 saat')),
+                      DropdownMenuItem(value: 360, child: Text('6 saat')),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) settingsProvider.setTargetMinutes(val);
+                    },
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
+              ],
+            ),
+            const SizedBox(height: 20),
+          ],
 
           // BÖLÜM 2: BİLDİRİMLER VE HATIRLATICI
           _buildSectionHeader('Hatırlatıcı & Bildirimler'),
@@ -583,39 +599,41 @@ class SettingsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 20),
 
-          // BÖLÜM 3: DERS VE İÇERİK YÖNETİMİ
-          _buildSectionHeader('İçerik Yönetimi'),
-          _buildCard(
-            isDark: isDark,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.auto_stories_rounded, color: Color(0xFF8B5CF6)),
-                title: const Text('Dersler ve Konular', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('Yeni dersler ekle, renklerini ve konularını yönet'),
-                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (ctx) => const ManageCoursesScreen()),
-                  );
-                },
-              ),
-              const Divider(height: 1),
-              ListTile(
-                leading: const Icon(Icons.assignment_turned_in_rounded, color: Color(0xFF4F46E5)),
-                title: const Text('Deneme Sınavlarım', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('Deneme sınavı sonuçları ve net gelişim analizi'),
-                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (ctx) => const MockExamScreen()),
-                  );
-                },
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
+          // BÖLÜM 3: DERS VE İÇERİK YÖNETİMİ (Yalnızca Öğrenciler İçin)
+          if (!userProvider.isTeacher) ...[
+            _buildSectionHeader('İçerik Yönetimi'),
+            _buildCard(
+              isDark: isDark,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.auto_stories_rounded, color: Color(0xFF8B5CF6)),
+                  title: const Text('Dersler ve Konular', style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: const Text('Yeni dersler ekle, renklerini ve konularını yönet'),
+                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (ctx) => const ManageCoursesScreen()),
+                    );
+                  },
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.assignment_turned_in_rounded, color: Color(0xFF4F46E5)),
+                  title: const Text('Deneme Sınavlarım', style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: const Text('Deneme sınavı sonuçları ve net gelişim analizi'),
+                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (ctx) => const MockExamScreen()),
+                    );
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+          ],
 
           // BÖLÜM 4: GÖRÜNÜM VE TEMA
           _buildSectionHeader('Görünüm'),

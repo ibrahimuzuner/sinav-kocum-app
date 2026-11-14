@@ -130,8 +130,23 @@ void _initServicesAsync() async {
   }
 }
 
-class SinavTakipApp extends StatelessWidget {
+class SinavTakipApp extends StatefulWidget {
   const SinavTakipApp({super.key});
+
+  @override
+  State<SinavTakipApp> createState() => _SinavTakipAppState();
+}
+
+class _SinavTakipAppState extends State<SinavTakipApp> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Uygulama ilk açıldığında Android 13+ yerel bildirim izin diyaloğunu tetikle
+      await Future.delayed(const Duration(milliseconds: 700));
+      await NotificationService().requestPermissions();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

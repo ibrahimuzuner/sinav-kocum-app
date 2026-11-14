@@ -39,6 +39,7 @@ class UserProvider with ChangeNotifier {
   String get role => _userProfile?.role ?? 'student';
   bool get isTeacher => _userProfile?.isTeacher ?? false;
   bool get isStudent => _userProfile?.isStudent ?? true;
+  String get teacherSpecialty => _userProfile?.teacherSpecialty ?? 'Öğretmen / Eğitim Koçu';
   String? get teacherCode => _userProfile?.teacherCode;
   String? get teacherId {
     final t = _userProfile?.teacherId;
@@ -470,6 +471,7 @@ class UserProvider with ChangeNotifier {
     String role = 'student',
     String? targetExam,
     String? teacherCodeInput,
+    String? targetDepartment,
   }) async {
     final cleanEmail = email.trim().toLowerCase();
     await _storage.setLastSocialEmail(cleanEmail);
@@ -498,19 +500,23 @@ class UserProvider with ChangeNotifier {
       }
     }
 
-    final exam = targetExam ?? ExamTypes.availableExams.first;
-    final defDept = TargetDepartmentsData.getDefaultDepartmentForExam(exam);
+    final isTeacher = role == 'teacher';
+    final exam = isTeacher ? 'Öğretmen / Koç' : (targetExam ?? ExamTypes.availableExams.first);
+    final defDept = isTeacher ? null : TargetDepartmentsData.getDefaultDepartmentForExam(exam);
+    final deptToSave = isTeacher
+        ? (targetDepartment != null && targetDepartment.isNotEmpty ? targetDepartment : 'Öğretmen / Eğitim Koçu')
+        : (targetDepartment ?? defDept?.name ?? 'Genel Başarı Hedefi');
 
     await registerUser(
       firstName: firstName,
       lastName: lastName,
       email: cleanEmail,
-      birthDate: DateTime(2007, 6, 15),
+      birthDate: isTeacher ? DateTime(1995, 1, 1) : DateTime(2007, 6, 15),
       targetExam: exam,
-      dailyTargetHours: defDept.recommendedHours > 0 ? defDept.recommendedHours : 3,
-      targetDepartment: defDept.name,
-      targetScore: defDept.baseScore,
-      targetNet: defDept.targetNet,
+      dailyTargetHours: isTeacher ? 0 : (defDept != null && defDept.recommendedHours > 0 ? defDept.recommendedHours : 3),
+      targetDepartment: deptToSave,
+      targetScore: isTeacher ? 0.0 : (defDept?.baseScore ?? 400.0),
+      targetNet: isTeacher ? 0.0 : (defDept?.targetNet ?? 75.0),
       role: role,
       teacherCodeInput: teacherCodeInput,
     );
