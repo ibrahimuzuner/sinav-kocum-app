@@ -94,7 +94,7 @@ class _SupportFeedbackDialogState extends State<SupportFeedbackDialog> {
     return buffer.toString();
   }
 
-  Future<void> _handleSend({bool openWebmail = false}) async {
+  Future<void> _handleSend({bool openClient = false, bool openWebmail = false}) async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isSending = true);
@@ -102,7 +102,7 @@ class _SupportFeedbackDialogState extends State<SupportFeedbackDialog> {
     final subject = _buildFormattedSubject();
     final body = _buildFormattedBody();
 
-    // 1. Firebase Firestore'a kaydet (arka planda çalışır, internet yoksa da devam eder)
+    // 1. Firebase Firestore'a kaydet ve otomatik olarak sinavkocumapp@gmail.com adresine e-posta yolla
     try {
       await AppFirebaseService().sendSupportFeedback(
         userId: widget.profile?.id ?? 'guest_${DateTime.now().millisecondsSinceEpoch}',
@@ -120,14 +120,14 @@ class _SupportFeedbackDialogState extends State<SupportFeedbackDialog> {
     if (!mounted) return;
     setState(() => _isSending = false);
 
-    // 2. E-posta uygulamasını / Gmail'i aç
+    // 2. İsteğe bağlı mail istemcisini açma
     if (openWebmail) {
       UrlLauncherHelper.openGmailWeb(
         to: supportEmail,
         subject: subject,
         body: body,
       );
-    } else {
+    } else if (openClient) {
       UrlLauncherHelper.openMail(
         to: supportEmail,
         subject: subject,
@@ -145,7 +145,7 @@ class _SupportFeedbackDialogState extends State<SupportFeedbackDialog> {
             SizedBox(width: 10),
             Expanded(
               child: Text(
-                'Geri bildiriminiz kaydedildi ve e-posta gönderimi açıldı! Teşekkür ederiz.',
+                'Mesajınız başarıyla iletildi! sinavkocumapp@gmail.com adresine bildirildi. Teşekkür ederiz! 🎉',
                 style: TextStyle(fontWeight: FontWeight.w600),
               ),
             ),
@@ -417,7 +417,7 @@ class _SupportFeedbackDialogState extends State<SupportFeedbackDialog> {
                     // Gönderim Butonları
                     SizedBox(
                       width: double.infinity,
-                      height: 48,
+                      height: 50,
                       child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF4F46E5),
@@ -425,7 +425,7 @@ class _SupportFeedbackDialogState extends State<SupportFeedbackDialog> {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                           elevation: 2,
                         ),
-                        onPressed: _isSending ? null : () => _handleSend(openWebmail: false),
+                        onPressed: _isSending ? null : () => _handleSend(),
                         icon: _isSending
                             ? const SizedBox(
                                 width: 18,
@@ -434,14 +434,14 @@ class _SupportFeedbackDialogState extends State<SupportFeedbackDialog> {
                               )
                             : const Icon(Icons.send_rounded, size: 18),
                         label: Text(
-                          _isSending ? 'Kaydediliyor...' : 'E-Posta ile Gönder (Varsayılan)',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          _isSending ? 'İletiliyor...' : 'Mesajı Gönder (Otomatik)',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                         ),
                       ),
                     ),
                     const SizedBox(height: 10),
 
-                    // İkinci seçenek: Gmail Web ve Kopyala
+                    // İkinci seçenekler
                     Row(
                       children: [
                         Expanded(
@@ -454,22 +454,36 @@ class _SupportFeedbackDialogState extends State<SupportFeedbackDialog> {
                             ),
                             onPressed: _isSending ? null : () => _handleSend(openWebmail: true),
                             icon: const Icon(Icons.mail_outline_rounded, size: 18),
-                            label: const Text('Gmail Web\'de Aç', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                            label: const Text('Gmail Web ile Aç', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5)),
                           ),
                         ),
-                        const SizedBox(width: 10),
-                        OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: const Color(0xFF64748B),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFF64748B),
+                              side: BorderSide(
+                                color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+                              ),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            onPressed: _isSending ? null : () => _handleSend(openClient: true),
+                            icon: const Icon(Icons.outgoing_mail, size: 18),
+                            label: const Text('E-Posta Uygulaması', style: TextStyle(fontSize: 12)),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          tooltip: 'Panoya Kopyala',
+                          style: IconButton.styleFrom(
                             side: BorderSide(
                               color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
                             ),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
                           ),
                           onPressed: _copyAllToClipboard,
-                          icon: const Icon(Icons.copy_rounded, size: 16),
-                          label: const Text('Kopyala', style: TextStyle(fontSize: 13)),
+                          icon: const Icon(Icons.copy_rounded, size: 18),
                         ),
                       ],
                     ),

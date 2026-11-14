@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/user_profile_model.dart';
 import '../../services/firebase_service.dart';
+import 'support_messages_modal.dart';
 import 'widgets/student_detail_modal.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
@@ -109,6 +110,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         elevation: 0,
         actions: [
           IconButton(
+            icon: const Icon(Icons.mark_email_unread_rounded, color: Colors.amber),
+            tooltip: 'Gelen Destek Mesajları',
+            onPressed: () => SupportMessagesModal.show(context),
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh_rounded),
             tooltip: 'Yenile',
             onPressed: _loadStudents,
@@ -159,6 +165,38 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 12),
+
+              // Destek ve Görüş Mesajları Bildirim Kartı
+              InkWell(
+                onTap: () => SupportMessagesModal.show(context),
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: isDark
+                          ? [const Color(0xFF1E1B4B), const Color(0xFF1E293B)]
+                          : [const Color(0xFFEEF2FF), const Color(0xFFE0E7FF)],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFF6366F1).withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.mark_email_unread_rounded, color: Color(0xFF6366F1), size: 22),
+                      const SizedBox(width: 10),
+                      const Expanded(
+                        child: Text(
+                          'Öğrenci Destek & Görüş Mesajları (Canlı Gelen Kutusu)',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5)),
+                        ),
+                      ),
+                      const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFF6366F1), size: 14),
+                    ],
+                  ),
+                ),
               ),
               const SizedBox(height: 16),
 

@@ -799,6 +799,7 @@ class AppFirebaseService {
   }
 
   /// Öğrencinin / kullanıcının destek ve görüş mesajını Firebase Firestore 'support_messages' koleksiyonuna kaydeder
+  /// ve arka planda sinavkocumapp@gmail.com adresine otomatik e-posta gönderir
   Future<bool> sendSupportFeedback({
     required String userId,
     required String userName,
@@ -809,6 +810,7 @@ class AppFirebaseService {
     required String message,
   }) async {
     final messageId = 'feedback_${DateTime.now().millisecondsSinceEpoch}';
+    final nowStr = DateTime.now().toIso8601String();
     final docData = <String, dynamic>{
       'id': messageId,
       'userId': userId,
@@ -819,10 +821,12 @@ class AppFirebaseService {
       'category': category,
       'message': message,
       'targetEmail': 'sinavkocumapp@gmail.com',
-      'createdAt': DateTime.now().toIso8601String(),
+      'createdAt': nowStr,
       'platform': kIsWeb ? 'web' : 'mobile',
       'status': 'new',
     };
+
+    bool savedToFirestore = false;
 
     if (_isInitialized && _firestore != null) {
       try {
@@ -830,28 +834,103 @@ class AppFirebaseService {
         sdkData['serverTimestamp'] = FieldValue.serverTimestamp();
         await _firestore!.collection('support_messages').doc(messageId).set(sdkData);
         debugPrint('AppFirebaseService: Destek mesajı Firestore SDK ile kaydedildi.');
-        return true;
+        savedToFirestore = true;
       } catch (e) {
         debugPrint('sendSupportFeedback SDK hatası: $e');
       }
     }
 
+    if (!savedToFirestore) {
+      try {
+        final docUri = Uri.parse('$_restBaseUrl/support_messages/$messageId?key=$_apiKey');
+        final restFields = _toFirestoreRestFields(docData);
+        final resp = await http.patch(
+          docUri,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'fields': restFields}),
+        );
+        if (resp.statusCode == 200 || resp.statusCode == 201) {
+          debugPrint('AppFirebaseService: Destek mesajı REST API ile kaydedildi.');
+          savedToFirestore = true;
+        }
+      } catch (e) {
+        debugPrint('sendSupportFeedback REST hatası: $e');
+      }
+    }
+
+    // 2. FormSubmit üzerinden sinavkocumapp@gmail.com adresine arka planda otomatik e-posta tetikleme
     try {
-      final docUri = Uri.parse('$_restBaseUrl/support_messages/$messageId?key=$_apiKey');
-      final restFields = _toFirestoreRestFields(docData);
-      final resp = await http.patch(
-        docUri,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'fields': restFields}),
-      );
-      if (resp.statusCode == 200 || resp.statusCode == 201) {
-        debugPrint('AppFirebaseService: Destek mesajı REST API ile kaydedildi.');
-        return true;
+      final emailPayload = {
+        '_subject': '[Sınav Koçum Destek] $category - $userName (${targetExam.isNotEmpty ? targetExam : "Genel"})',
+        '_captcha': 'false',
+        '_template': 'table',
+        'name': userName.isNotEmpty ? userName : 'Kullanıcı',
+        'email': userEmail.isNotEmpty ? userEmail : 'kullanici@sinavkocum.app',
+        'kullanici': userName,
+        'iletisim_epostasi': userEmail,
+        'hedef_sinav': targetExam,
+        'kategori': category,
+        'rol': userRole == 'teacher' ? 'Öğretmen / Koç' : 'Öğrenci',
+        'mesaj': message,
+        'tarih': DateTime.now().toString().split('.')[0],
+      };
+
+      http.post(
+        Uri.parse('https://formsubmit.co/ajax/sinavkocumapp@gmail.com'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode(emailPayload),
+      ).then((resp) {
+        debugPrint('sendSupportFeedback FormSubmit yanıtı: ${resp.statusCode} - ${resp.body}');
+      }).catchError((err) {
+        debugPrint('sendSupportFeedback FormSubmit arka plan hatası: $err');
+      });
+    } catch (e) {
+      debugPrint('sendSupportFeedback FormSubmit çağrı hatası: $e');
+    }
+
+    return savedToFirestore;
+  }
+
+  /// Tüm destek ve geri bildirim mesajlarını çeker (Yönetici & Koç paneli için)
+  Future<List<Map<String, dynamic>>> fetchAllSupportMessages() async {
+    final List<Map<String, dynamic>> messages = [];
+    if (_isInitialized && _firestore != null) {
+      try {
+        final snap = await _firestore!.collection('support_messages').get();
+        for (final doc in snap.docs) {
+          messages.add(doc.data());
+        }
+        if (messages.isNotEmpty) {
+          messages.sort((a, b) => (b['createdAt'] ?? '').toString().compareTo((a['createdAt'] ?? '').toString()));
+          return messages;
+        }
+      } catch (e) {
+        debugPrint('fetchAllSupportMessages SDK hatası: $e');
+      }
+    }
+
+    try {
+      final uri = Uri.parse('$_restBaseUrl/support_messages?pageSize=100&key=$_apiKey');
+      final resp = await http.get(uri);
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body) as Map<String, dynamic>;
+        final docs = data['documents'] as List? ?? [];
+        for (final doc in docs) {
+          if (doc is Map && doc.containsKey('fields')) {
+            final flat = _flattenFirestoreFields(doc['fields'] as Map<String, dynamic>);
+            messages.add(flat);
+          }
+        }
       }
     } catch (e) {
-      debugPrint('sendSupportFeedback REST hatası: $e');
+      debugPrint('fetchAllSupportMessages REST hatası: $e');
     }
-    return false;
+
+    messages.sort((a, b) => (b['createdAt'] ?? '').toString().compareTo((a['createdAt'] ?? '').toString()));
+    return messages;
   }
 
   /// Dart Map'i Firestore REST API formatına dönüştürür
