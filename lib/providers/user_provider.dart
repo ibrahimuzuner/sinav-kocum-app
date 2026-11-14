@@ -122,6 +122,7 @@ class UserProvider with ChangeNotifier {
         final cloudAssignments = cloudData['assignmentsJson'] as String?;
         final cloudMessages = cloudData['messagesJson'] as String?;
         final cloudStudyStats = cloudData['studyStatsJson'] as String?;
+        final cloudEmailVerified = cloudData['isEmailVerified'] as bool? ?? _userProfile!.isEmailVerified;
 
         _userProfile = _userProfile!.copyWith(
           isPremium: cloudPremium,
@@ -142,6 +143,7 @@ class UserProvider with ChangeNotifier {
           assignmentsJson: cloudAssignments ?? _userProfile!.assignmentsJson,
           messagesJson: cloudMessages ?? _userProfile!.messagesJson,
           studyStatsJson: cloudStudyStats ?? _userProfile!.studyStatsJson,
+          isEmailVerified: cloudEmailVerified,
         );
         await _storage.saveUserProfile(_userProfile!);
         notifyListeners();
@@ -235,6 +237,7 @@ class UserProvider with ChangeNotifier {
 
     // Resmi e-posta doğrulama linki gönder
     if (password != null && password.isNotEmpty) {
+      await _storage.setLastAuthPassword(password);
       _firebaseService.sendVerificationEmail(
         email: newProfile.email,
         password: password,
@@ -383,9 +386,23 @@ class UserProvider with ChangeNotifier {
 
   Future<bool> checkEmailVerification([String? password]) async {
     if (_userProfile == null) return false;
+
+    // 1. Önce Firestore bulutundaki güncel onay durumuna bak (Admin paneli / Konsol onayı)
+    try {
+      final cloudData = await _firebaseService.fetchCloudUserData(_userProfile!.id);
+      if (cloudData != null && cloudData['isEmailVerified'] == true) {
+        await setEmailVerified(true);
+        return true;
+      }
+    } catch (_) {}
+
+    // 2. Firebase Auth e-posta doğrulama linkine tıklandı mı kontrol et
+    final pwd = (password != null && password.isNotEmpty)
+        ? password
+        : (_storage.getLastAuthPassword() ?? '');
     final isVerified = await _firebaseService.checkEmailVerified(
       email: _userProfile!.email,
-      password: password ?? '',
+      password: pwd,
     );
     if (isVerified && !_userProfile!.isEmailVerified) {
       await setEmailVerified(true);
@@ -415,6 +432,9 @@ class UserProvider with ChangeNotifier {
     required String password,
   }) async {
     final cleanEmail = email.toLowerCase().trim();
+    if (password.isNotEmpty) {
+      await _storage.setLastAuthPassword(password);
+    }
     // 1. Önce yerelde kayıtlı mı kontrol et
     final existing = _storage.findProfileByEmail(cleanEmail);
     if (existing != null) {

@@ -281,6 +281,16 @@ class StorageService {
     }
   }
 
+  String? getLastAuthPassword() {
+    return _prefs?.getString('last_auth_password');
+  }
+
+  Future<void> setLastAuthPassword(String password) async {
+    if (password.isNotEmpty) {
+      await _prefs?.setString('last_auth_password', password);
+    }
+  }
+
   Future<void> clearUserProfile() async {
     await _prefs?.remove(_keyUserProfile);
     await _prefs?.remove(_keySchedule);
