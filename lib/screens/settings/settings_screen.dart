@@ -681,10 +681,45 @@ class SettingsScreen extends StatelessWidget {
           _buildCard(
             isDark: isDark,
             children: [
-              const ListTile(
-                leading: Icon(Icons.info_outline_rounded, color: Color(0xFF94A3B8)),
-                title: Text('Sınav Çalışma Takip Asistanı', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text('Versiyon 1.0.0 • iOS & Android Uyumlu'),
+              ListTile(
+                leading: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF4F46E5),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.asset(
+                      'assets/icon/app_icon.png',
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const Icon(
+                        Icons.school_rounded,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+                title: const Text(
+                  'Sınav Koçum',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                subtitle: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(height: 3),
+                    Text(
+                      'Versiyon 1.0.0 (Build 1)',
+                      style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      '© 2026 Sınav Koçum. Tüm hakları saklıdır.',
+                      style: TextStyle(fontSize: 11.5, color: Color(0xFF94A3B8)),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),

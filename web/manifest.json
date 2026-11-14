@@ -5,7 +5,7 @@
     "display": "standalone",
     "background_color": "#0d1b2a",
     "theme_color": "#1e3a8a",
-    "description": "YKS & LGS Sınav Çalışma ve Koçluk Takip Uygulaması",
+    "description": "Sınav Koçum - Sınav Çalışma ve Kişisel Koçluk Takip Uygulaması",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

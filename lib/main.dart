@@ -74,7 +74,7 @@ class SinavTakipApp extends StatelessWidget {
     final userProvider = Provider.of<UserProvider>(context);
 
     return MaterialApp(
-      title: 'Sınav Çalışma Takip',
+      title: 'Sınav Koçum',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
