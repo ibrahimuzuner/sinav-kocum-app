@@ -17,41 +17,36 @@ import 'theme/app_theme.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Set preferred orientations for smooth mobile experience
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
+  // Flutter hata yakalama (Bembeyaz ekran donmalarını önler)
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+    debugPrint('Flutter Error: ${details.exception}');
+  };
 
-  // Initialize Firebase safely (offline graceful fallback)
+  PlatformDispatcher.instance.onError = (error, stack) {
+    debugPrint('Platform Error: $error');
+    return true; // Hatayı yutarak uygulamanın çökmesini veya donmasını engeller
+  };
+
+  // Mobil dikey yönlendirme kilidi
   try {
-    if (kIsWeb) {
-      await Firebase.initializeApp(
-        options: const FirebaseOptions(
-          apiKey: 'AIzaSyB0gbVTJWYKLFQBUQWgbalCqg4qV1azOUE',
-          appId: '1:104704232110:web:a1abfd662ed07a3a113b3f',
-          messagingSenderId: '104704232110',
-          projectId: 'sinavkocum-2e212',
-          authDomain: 'sinavkocum-2e212.firebaseapp.com',
-          storageBucket: 'sinavkocum-2e212.firebasestorage.app',
-        ),
-      );
-    } else {
-      await Firebase.initializeApp();
-    }
-    await AppFirebaseService().init();
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
   } catch (e) {
-    debugPrint('Firebase başlatma uyarısı: $e');
+    debugPrint('Orientations hatası: $e');
   }
 
-  // Initialize Storage
+  // Yerel depolamayı hızlıca yükle (milisaniyeler içinde tamamlanır)
   final storageService = StorageService();
-  await storageService.init();
+  try {
+    await storageService.init().timeout(const Duration(seconds: 2));
+  } catch (e) {
+    debugPrint('StorageService init hatası: $e');
+  }
 
-  // Initialize Notifications
-  final notificationService = NotificationService();
-  await notificationService.init();
-
+  // ARAYÜZÜ ANINDA BAŞLAT! (Kullanıcı asla beyaz ekranda beklemez)
   runApp(
     MultiProvider(
       providers: [
@@ -63,6 +58,48 @@ void main() async {
       child: const SinavTakipApp(),
     ),
   );
+
+  // Arka plan servislerini (Firebase ve Bildirimler) arayüzü engellemeden başlat
+  _initServicesAsync();
+}
+
+void _initServicesAsync() async {
+  // 1. Firebase Başlatma (Güvenli zaman aşımı ile)
+  try {
+    if (kIsWeb) {
+      await Firebase.initializeApp(
+        options: const FirebaseOptions(
+          apiKey: 'AIzaSyB0gbVTJWYKLFQBUQWgbalCqg4qV1azOUE',
+          appId: '1:104704232110:web:a1abfd662ed07a3a113b3f',
+          messagingSenderId: '104704232110',
+          projectId: 'sinavkocum-2e212',
+          authDomain: 'sinavkocum-2e212.firebaseapp.com',
+          storageBucket: 'sinavkocum-2e212.firebasestorage.app',
+        ),
+      ).timeout(const Duration(seconds: 4));
+    } else {
+      await Firebase.initializeApp(
+        options: const FirebaseOptions(
+          apiKey: 'AIzaSyB0gbVTJWYKLFQBUQWgbalCqg4qV1azOUE',
+          appId: '1:104704232110:android:a1abfd662ed07a3a113b3f',
+          messagingSenderId: '104704232110',
+          projectId: 'sinavkocum-2e212',
+          storageBucket: 'sinavkocum-2e212.firebasestorage.app',
+        ),
+      ).timeout(const Duration(seconds: 4));
+    }
+    await AppFirebaseService().init().timeout(const Duration(seconds: 4));
+  } catch (e) {
+    debugPrint('Firebase arka plan başlatma uyarısı: $e');
+  }
+
+  // 2. Bildirim Servisi Başlatma
+  try {
+    final notificationService = NotificationService();
+    await notificationService.init().timeout(const Duration(seconds: 4));
+  } catch (e) {
+    debugPrint('Bildirim servisi başlatma uyarısı: $e');
+  }
 }
 
 class SinavTakipApp extends StatelessWidget {

@@ -72,8 +72,6 @@ class NotificationService {
           await androidImplementation.createNotificationChannel(alarmChannel);
         }
       }
-
-      await requestPermissions();
     } catch (e) {
       debugPrint('Bildirim servisi başlatılamadı: $e');
     }
@@ -87,7 +85,6 @@ class NotificationService {
         final androidImplementation = _notificationsPlugin
             .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
         await androidImplementation?.requestNotificationsPermission();
-        await androidImplementation?.requestExactAlarmsPermission();
       } else if (Platform.isIOS) {
         final iosImplementation = _notificationsPlugin
             .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
@@ -312,7 +309,7 @@ class NotificationService {
         'Bugün henüz ders çalışmadın! Hedeflerine ulaşmak için biraz soru çözmeye ne dersin? 🔥',
         scheduledDate,
         details,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
         matchDateTimeComponents: DateTimeComponents.time,
       );
 
