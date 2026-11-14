@@ -991,7 +991,7 @@ Sınav Koçum ile hedefine emin adımlarla ilerle! 🚀
 
       if (!context.mounted) return;
 
-      // Hem PDF Önizleme ekranını aç hem de cihaz indirmesini tetikle
+      // PDF Önizleme ekranını aç
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -1002,16 +1002,20 @@ Sınav Koçum ile hedefine emin adımlarla ilerle! 🚀
         ),
       );
 
-      // Web ve cihaz indirme / paylaşma akışını başlat
-      await PdfReportService.sharePdf(
-        user: profile,
-        period: _selectedPeriod,
-        periodLogs: periodLogs,
-        periodSessions: periodSessions,
-        courses: studyProvider.courses,
-        mockExams: studyProvider.mockExams,
-        streak: studyProvider.streak,
-      );
+      // Paylaş seçeneği seçildiyse doğrudan cihazın paylaşım menüsünü de aç
+      if (isShare) {
+        try {
+          await PdfReportService.sharePdf(
+            user: profile,
+            period: _selectedPeriod,
+            periodLogs: periodLogs,
+            periodSessions: periodSessions,
+            courses: studyProvider.courses,
+            mockExams: studyProvider.mockExams,
+            streak: studyProvider.streak,
+          );
+        } catch (_) {}
+      }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

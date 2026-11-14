@@ -33,15 +33,27 @@ class PdfPreviewScreen extends StatelessWidget {
             icon: const Icon(Icons.download_rounded),
             tooltip: 'PDF İndir',
             onPressed: () async {
-              await Printing.sharePdf(bytes: pdfBytes, filename: fileName);
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('PDF indirme başlatıldı 📥'),
-                    behavior: SnackBarBehavior.floating,
-                    backgroundColor: Color(0xFF10B981),
-                  ),
-                );
+              try {
+                await Printing.sharePdf(bytes: pdfBytes, filename: fileName);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('PDF indirme başlatıldı 📥'),
+                      behavior: SnackBarBehavior.floating,
+                      backgroundColor: Color(0xFF10B981),
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('İndirme hatası: $e'),
+                      behavior: SnackBarBehavior.floating,
+                      backgroundColor: Colors.redAccent,
+                    ),
+                  );
+                }
               }
             },
           ),
