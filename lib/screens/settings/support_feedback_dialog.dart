@@ -46,6 +46,8 @@ class _SupportFeedbackDialogState extends State<SupportFeedbackDialog> {
 
   late String _selectedCategory;
   bool _isSending = false;
+  bool _alreadySentToday = false;
+  bool _checkingLimit = true;
 
   @override
   void initState() {
@@ -57,6 +59,18 @@ class _SupportFeedbackDialogState extends State<SupportFeedbackDialog> {
       text: widget.isTeacher ? 'Öğretmen / Koç' : (widget.profile?.targetExam ?? ''),
     );
     _messageController = TextEditingController();
+    _checkDailyLimit();
+  }
+
+  Future<void> _checkDailyLimit() async {
+    final userId = widget.profile?.id ?? 'guest';
+    final canSend = await AppFirebaseService().canUserSendSupportFeedback(userId);
+    if (mounted) {
+      setState(() {
+        _alreadySentToday = !canSend;
+        _checkingLimit = false;
+      });
+    }
   }
 
   @override
@@ -97,15 +111,34 @@ class _SupportFeedbackDialogState extends State<SupportFeedbackDialog> {
   Future<void> _handleSend({bool openClient = false, bool openWebmail = false}) async {
     if (!_formKey.currentState!.validate()) return;
 
+    final userId = widget.profile?.id ?? 'guest_${DateTime.now().millisecondsSinceEpoch}';
+
+    // Günlük limit kontrolü
+    final canSend = await AppFirebaseService().canUserSendSupportFeedback(userId);
+    if (!canSend) {
+      if (mounted) {
+        setState(() => _alreadySentToday = true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('⚠️ Bugün zaten 1 destek mesajı gönderdiniz. Günde en fazla 1 mesaj iletilebilir.'),
+            backgroundColor: Color(0xFFD97706),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
+
     setState(() => _isSending = true);
 
     final subject = _buildFormattedSubject();
     final body = _buildFormattedBody();
 
     // 1. Firebase Firestore'a kaydet ve otomatik olarak sinavkocumapp@gmail.com adresine e-posta yolla
+    bool success = false;
     try {
-      await AppFirebaseService().sendSupportFeedback(
-        userId: widget.profile?.id ?? 'guest_${DateTime.now().millisecondsSinceEpoch}',
+      success = await AppFirebaseService().sendSupportFeedback(
+        userId: userId,
         userName: _nameController.text.trim(),
         userEmail: _emailController.text.trim(),
         userRole: widget.isTeacher ? 'teacher' : 'student',
@@ -118,7 +151,10 @@ class _SupportFeedbackDialogState extends State<SupportFeedbackDialog> {
     }
 
     if (!mounted) return;
-    setState(() => _isSending = false);
+    setState(() {
+      _isSending = false;
+      _alreadySentToday = true;
+    });
 
     // 2. İsteğe bağlı mail istemcisini açma
     if (openWebmail) {
@@ -139,14 +175,16 @@ class _SupportFeedbackDialogState extends State<SupportFeedbackDialog> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Row(
+        content: Row(
           children: [
-            Icon(Icons.check_circle_rounded, color: Colors.white),
-            SizedBox(width: 10),
+            const Icon(Icons.check_circle_rounded, color: Colors.white),
+            const SizedBox(width: 10),
             Expanded(
               child: Text(
-                'Mesajınız başarıyla iletildi! sinavkocumapp@gmail.com adresine bildirildi. Teşekkür ederiz! 🎉',
-                style: TextStyle(fontWeight: FontWeight.w600),
+                success
+                    ? 'Mesajınız başarıyla iletildi! sinavkocumapp@gmail.com adresine bildirildi. Teşekkür ederiz! 🎉'
+                    : 'Mesajınız sisteme iletildi. Teşekkür ederiz!',
+                style: const TextStyle(fontWeight: FontWeight.w600),
               ),
             ),
           ],
@@ -306,7 +344,55 @@ class _SupportFeedbackDialogState extends State<SupportFeedbackDialog> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
+
+                    // Günlük Limit & Spam Koruma Uyarısı
+                    if (_alreadySentToday)
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: const Color(0xFFF59E0B).withValues(alpha: 0.4),
+                          ),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.shield_outlined, color: Color(0xFFF59E0B), size: 24),
+                            SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'Bugünkü mesaj hakkınızı kullandınız. Spam ve yoğunluğu önlemek amacıyla günde en fazla 1 destek mesajı gönderilebilir. Yeni mesajınızı yarın iletebilirsiniz.',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFFD97706),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.blueGrey.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.verified_user_outlined, size: 16, color: Color(0xFF64748B)),
+                            SizedBox(width: 8),
+                            Text(
+                              'Spam koruması: Her kullanıcı günde 1 destek mesajı gönderebilir.',
+                              style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    const SizedBox(height: 14),
 
                     // Kategori seçimi
                     const Text(
@@ -420,22 +506,27 @@ class _SupportFeedbackDialogState extends State<SupportFeedbackDialog> {
                       height: 50,
                       child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF4F46E5),
+                          backgroundColor: _alreadySentToday ? Colors.grey : const Color(0xFF4F46E5),
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                          elevation: 2,
+                          elevation: _alreadySentToday ? 0 : 2,
                         ),
-                        onPressed: _isSending ? null : () => _handleSend(),
+                        onPressed: (_isSending || _alreadySentToday || _checkingLimit) ? null : () => _handleSend(),
                         icon: _isSending
                             ? const SizedBox(
                                 width: 18,
                                 height: 18,
                                 child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                               )
-                            : const Icon(Icons.send_rounded, size: 18),
+                            : Icon(
+                                _alreadySentToday ? Icons.block_rounded : Icons.send_rounded,
+                                size: 18,
+                              ),
                         label: Text(
-                          _isSending ? 'İletiliyor...' : 'Mesajı Gönder (Otomatik)',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                          _alreadySentToday
+                              ? 'Bugünkü Mesaj Hakkı Doldu (Günde 1 Mesaj)'
+                              : (_isSending ? 'İletiliyor...' : 'Mesajı Gönder (Otomatik)'),
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5),
                         ),
                       ),
                     ),

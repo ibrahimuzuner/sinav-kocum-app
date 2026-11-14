@@ -3,10 +3,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/assignment_model.dart';
 import '../models/coach_message_model.dart';
 import '../models/student_study_stats_model.dart';
 import '../models/user_profile_model.dart';
+import '../utils/form_submit_helper.dart';
 
 /// Firebase Cloud Firestore Senkronizasyon ve E-posta Doğrulama Servisi
 /// Bu servis, öğrenci ve öğretmen kayıtlarını, hedef bölüm ve puanlarını,
@@ -798,6 +800,23 @@ class AppFirebaseService {
     return result;
   }
 
+  /// Kullanıcının bugün destek/görüş mesajı gönderip gönderemeyeceğini kontrol eder (Günde max 1 mesaj spam koruması)
+  Future<bool> canUserSendSupportFeedback(String userId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final today = DateTime.now().toIso8601String().substring(0, 10);
+      final lastUserDate = prefs.getString('last_support_date_$userId');
+      final lastGlobalDate = prefs.getString('last_support_date_global');
+
+      if (lastUserDate == today || lastGlobalDate == today) {
+        return false;
+      }
+    } catch (e) {
+      debugPrint('canUserSendSupportFeedback hata: $e');
+    }
+    return true;
+  }
+
   /// Öğrencinin / kullanıcının destek ve görüş mesajını Firebase Firestore 'support_messages' koleksiyonuna kaydeder
   /// ve arka planda sinavkocumapp@gmail.com adresine otomatik e-posta gönderir
   Future<bool> sendSupportFeedback({
@@ -809,8 +828,17 @@ class AppFirebaseService {
     required String category,
     required String message,
   }) async {
+    // 0. Günlük spam koruma kontrolü (Günde max 1 mesaj)
+    final allowed = await canUserSendSupportFeedback(userId);
+    if (!allowed) {
+      debugPrint('AppFirebaseService: Günlük 1 mesaj limiti aşıldı ($userId).');
+      return false;
+    }
+
     final messageId = 'feedback_${DateTime.now().millisecondsSinceEpoch}';
     final nowStr = DateTime.now().toIso8601String();
+    final today = nowStr.substring(0, 10);
+
     final docData = <String, dynamic>{
       'id': messageId,
       'userId': userId,
@@ -860,7 +888,7 @@ class AppFirebaseService {
 
     // 2. FormSubmit üzerinden sinavkocumapp@gmail.com adresine arka planda otomatik e-posta tetikleme
     try {
-      final emailPayload = {
+      final emailFields = <String, String>{
         '_subject': '[Sınav Koçum Destek] $category - $userName (${targetExam.isNotEmpty ? targetExam : "Genel"})',
         '_captcha': 'false',
         '_template': 'table',
@@ -875,21 +903,35 @@ class AppFirebaseService {
         'tarih': DateTime.now().toString().split('.')[0],
       };
 
-      http.post(
-        Uri.parse('https://formsubmit.co/ajax/sinavkocumapp@gmail.com'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: jsonEncode(emailPayload),
-      ).then((resp) {
-        debugPrint('sendSupportFeedback FormSubmit yanıtı: ${resp.statusCode} - ${resp.body}');
-      }).catchError((err) {
-        debugPrint('sendSupportFeedback FormSubmit arka plan hatası: $err');
-      });
+      // A) Cross-Origin Form Submit (Web iframe DOM submit & IO)
+      FormSubmitHelper.submit(
+        actionUrl: 'https://formsubmit.co/sinavkocumapp@gmail.com',
+        fields: emailFields,
+      );
+
+      // B) İkinci kanal olarak urlencoded HTTP POST (Mobile/Desktop için)
+      if (!kIsWeb) {
+        http.post(
+          Uri.parse('https://formsubmit.co/sinavkocumapp@gmail.com'),
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          },
+          body: emailFields,
+        ).catchError((_) => http.Response('', 500));
+      }
+
+      debugPrint('sendSupportFeedback FormSubmit tetiklendi.');
     } catch (e) {
       debugPrint('sendSupportFeedback FormSubmit çağrı hatası: $e');
     }
+
+    // 3. Günlük mesaj gönderim tarihini yerel hafızaya kaydet
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('last_support_date_$userId', today);
+      await prefs.setString('last_support_date_global', today);
+    } catch (_) {}
 
     return savedToFirestore;
   }

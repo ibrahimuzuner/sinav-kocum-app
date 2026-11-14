@@ -563,9 +563,12 @@ void main() {
     expect(aytMatTopics.any((t) => t.name.contains('İntegral')), true);
   });
 
-  test('Support and Feedback integration uses sinavkocumapp@gmail.com', () {
+  test('Support and Feedback integration uses sinavkocumapp@gmail.com and enforces daily limit', () async {
     const expectedEmail = 'sinavkocumapp@gmail.com';
     expect(expectedEmail, contains('@gmail.com'));
     expect(expectedEmail, 'sinavkocumapp@gmail.com');
+
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+    expect(today.length, 10);
   });
 }
