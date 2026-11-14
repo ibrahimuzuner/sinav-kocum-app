@@ -520,5 +520,46 @@ void main() {
     final aytSaySum = aytSayCourses.fold(0, (sum, c) => sum + PredefinedData.getMaxQuestionsForCourse('AYT Sayısal', c.id));
     expect(aytSaySum, 80);
     expect(PredefinedData.getTotalQuestionsForExam('AYT Sayısal'), 80);
+
+    // 10. YKS AYT Eşit Ağırlık (80 Soru)
+    final aytEaCourses = PredefinedData.getCoursesForExam('AYT Eşit Ağırlık');
+    final aytEaSum = aytEaCourses.fold(0, (sum, c) => sum + PredefinedData.getMaxQuestionsForCourse('AYT Eşit Ağırlık', c.id));
+    expect(aytEaSum, 80);
+    expect(PredefinedData.getTotalQuestionsForExam('AYT Eşit Ağırlık'), 80);
+
+    // 11. YKS AYT Sözel (80 Soru)
+    final aytSozCourses = PredefinedData.getCoursesForExam('AYT Sözel');
+    final aytSozSum = aytSozCourses.fold(0, (sum, c) => sum + PredefinedData.getMaxQuestionsForCourse('AYT Sözel', c.id));
+    expect(aytSozSum, 80);
+    expect(PredefinedData.getTotalQuestionsForExam('AYT Sözel'), 80);
+
+    // 12. YDS / YÖKDİL / YDT (80 Soru)
+    expect(PredefinedData.getTotalQuestionsForExam('YDS'), 80);
+    expect(PredefinedData.getTotalQuestionsForExam('YÖKDİL'), 80);
+    expect(PredefinedData.getTotalQuestionsForExam('YDT'), 80);
+    final ydsTopics = PredefinedData.getTopicsForExam('YDS', courseId: 'ingilizce');
+    expect(ydsTopics.any((t) => t.name.contains('Cloze Test')), true);
+    expect(ydsTopics.any((t) => t.name.contains('Cümle Tamamlama')), true);
+
+    // 13. Ehliyet (50 Soru: Trafik 23, İlk Yardım 12, Motor 9, Adab 6)
+    expect(PredefinedData.getTotalQuestionsForExam('Ehliyet'), 50);
+    expect(PredefinedData.getMaxQuestionsForCourse('Ehliyet', 'trafik'), 23);
+    expect(PredefinedData.getMaxQuestionsForCourse('Ehliyet', 'yardim'), 12);
+    expect(PredefinedData.getMaxQuestionsForCourse('Ehliyet', 'motor'), 9);
+    expect(PredefinedData.getMaxQuestionsForCourse('Ehliyet', 'adab'), 6);
+
+    // 14. TUS (200 Soru) & DUS (120 Soru)
+    expect(PredefinedData.getTotalQuestionsForExam('TUS'), 200);
+    expect(PredefinedData.getTotalQuestionsForExam('DUS'), 120);
+
+    // 15. TYT ve AYT Konuları Kontrolü
+    final tytMatTopics = PredefinedData.getTopicsForExam('YKS (TYT)', courseId: 'matematik');
+    expect(tytMatTopics.any((t) => t.name.contains('Trigonometri')), false); // TYT'de Trigonometri YOK
+    expect(tytMatTopics.any((t) => t.name.contains('Problemler')), true);
+
+    final aytMatTopics = PredefinedData.getTopicsForExam('YKS (AYT)', courseId: 'matematik');
+    expect(aytMatTopics.any((t) => t.name.contains('Trigonometri')), true); // AYT'de Trigonometri VAR
+    expect(aytMatTopics.any((t) => t.name.contains('Türev')), true);
+    expect(aytMatTopics.any((t) => t.name.contains('İntegral')), true);
   });
 }

@@ -932,6 +932,202 @@ class PredefinedData {
       }
     }
 
+    // 4. YKS - TYT & MSÜ MÜFREDATI (120 Soru)
+    if (examName.contains('TYT') || examName.contains('MSÜ') || (examName.contains('YKS') && !examName.contains('AYT'))) {
+      if (courseId == 'turkce') {
+        return const [
+          TopicModel(id: 'tyt_tur_1', courseId: 'turkce', name: 'Sözcükte ve Cümlede Anlam (7 Soru)'),
+          TopicModel(id: 'tyt_tur_2', courseId: 'turkce', name: 'Paragrafta Anlam ve Yapı (22 Soru - Belirleyici)'),
+          TopicModel(id: 'tyt_tur_3', courseId: 'turkce', name: 'Ses Bilgisi, Yazım Kuralları ve Noktalama (5 Soru)'),
+          TopicModel(id: 'tyt_tur_4', courseId: 'turkce', name: 'Dil Bilgisi: Ekler, Sözcük Türleri, Cümle Ögeleri (6 Soru)'),
+        ];
+      }
+      if (courseId == 'matematik') {
+        return const [
+          TopicModel(id: 'tyt_mat_1', courseId: 'matematik', name: 'Temel Kavramlar, Sayı Basamakları, Bölünebilme (5 Soru)'),
+          TopicModel(id: 'tyt_mat_2', courseId: 'matematik', name: 'Rasyonel Sayılar, Eşitsizlik, Mutlak Değer, Üslü-Köklü (6 Soru)'),
+          TopicModel(id: 'tyt_mat_3', courseId: 'matematik', name: 'Çarpanlara Ayırma ve Oran-Orantı (2 Soru)'),
+          TopicModel(id: 'tyt_mat_4', courseId: 'matematik', name: 'Problemler: Sayı, Kesir, Yaş, Yüzde, Hız, Grafik (12 Soru)'),
+          TopicModel(id: 'tyt_mat_5', courseId: 'matematik', name: 'Kümeler, Fonksiyonlar, Polinomlar, 2. Derece Denklemler (3 Soru)'),
+          TopicModel(id: 'tyt_mat_6', courseId: 'matematik', name: 'Permütasyon, Kombinasyon, Olasılık, Veri/İstatistik (2 Soru)'),
+        ];
+      }
+      if (courseId == 'geometri') {
+        return const [
+          TopicModel(id: 'tyt_geo_1', courseId: 'geometri', name: 'Üçgenler, Çokgenler, Dörtgenler (5-6 Soru)'),
+          TopicModel(id: 'tyt_geo_2', courseId: 'geometri', name: 'Çember, Daire ve Katı Cisimler (4-5 Soru)'),
+        ];
+      }
+      if (courseId == 'fizik') {
+        return const [
+          TopicModel(id: 'tyt_fiz_1', courseId: 'fizik', name: 'Fizik Bilimi, Madde, Hareket, Kuvvet, Enerji, Isı-Sıcaklık (4 Soru)'),
+          TopicModel(id: 'tyt_fiz_2', courseId: 'fizik', name: 'Elektrik, Manyetizma, Basınç, Kaldırma, Dalgalar, Optik (3 Soru)'),
+        ];
+      }
+      if (courseId == 'kimya') {
+        return const [
+          TopicModel(id: 'tyt_kim_1', courseId: 'kimya', name: 'Kimya Bilimi, Atom, Periyodik Sistem, Etkileşimler (4 Soru)'),
+          TopicModel(id: 'tyt_kim_2', courseId: 'kimya', name: 'Maddenin Halleri, Karışımlar, Asit-Baz-Tuz (3 Soru)'),
+        ];
+      }
+      if (courseId == 'biyoloji') {
+        return const [
+          TopicModel(id: 'tyt_biy_1', courseId: 'biyoloji', name: 'Yaşam Bilimi, Hücre, Canlıların Sınıflandırılması (3 Soru)'),
+          TopicModel(id: 'tyt_biy_2', courseId: 'biyoloji', name: 'Hücre Bölünmeleri, Kalıtım, Ekosistem Ekolojisi (3 Soru)'),
+        ];
+      }
+      if (courseId == 'tarih' || courseId == 'cografya' || courseId == 'felsefe' || courseId == 'din_kulturu') {
+        return [
+          TopicModel(id: 'tyt_${courseId}_1', courseId: courseId!, name: '$courseId Temel Kavramlar ve Yorum Soruları (5 Soru)'),
+        ];
+      }
+    }
+
+    // 5. YKS - AYT MÜFREDATI (160 Soru Kitapçık / 80 Soru Alan)
+    if (examName.contains('AYT')) {
+      if (courseId == 'matematik') {
+        return const [
+          TopicModel(id: 'ayt_mat_1', courseId: 'matematik', name: 'Polinomlar, 2. Derece Denklemler, Parabol (5 Soru)'),
+          TopicModel(id: 'ayt_mat_2', courseId: 'matematik', name: 'Fonksiyonlar, Eşitsizlikler, Logaritma, Diziler (6 Soru)'),
+          TopicModel(id: 'ayt_mat_3', courseId: 'matematik', name: 'Trigonometri (4 Soru - Banko)'),
+          TopicModel(id: 'ayt_mat_4', courseId: 'matematik', name: 'Limit ve Süreklilik (2 Soru)'),
+          TopicModel(id: 'ayt_mat_5', courseId: 'matematik', name: 'Türev ve Uygulamaları (4 Soru - Belirleyici)'),
+          TopicModel(id: 'ayt_mat_6', courseId: 'matematik', name: 'İntegral ve Alan Hesabı (4 Soru - Belirleyici)'),
+          TopicModel(id: 'ayt_mat_7', courseId: 'matematik', name: 'Temel Kavramlar, Kümeler, P-K-O, Binom (5 Soru)'),
+        ];
+      }
+      if (courseId == 'geometri') {
+        return const [
+          TopicModel(id: 'ayt_geo_1', courseId: 'geometri', name: 'Üçgenler, Dörtgenler, Çember-Daire (6 Soru)'),
+          TopicModel(id: 'ayt_geo_2', courseId: 'geometri', name: 'Analitik Geometri ve Katı Cisimler (4 Soru)'),
+        ];
+      }
+      if (courseId == 'fizik') {
+        return const [
+          TopicModel(id: 'ayt_fiz_1', courseId: 'fizik', name: 'Kuvvet-Hareket, Elektrik-Manyetizma, Basit Harmonik, Modern Fizik (14 Soru)'),
+        ];
+      }
+      if (courseId == 'kimya') {
+        return const [
+          TopicModel(id: 'ayt_kim_1', courseId: 'kimya', name: 'Modern Atom, Gazlar, Çözeltiler, Denge, Organik Kimya (13 Soru)'),
+        ];
+      }
+      if (courseId == 'biyoloji') {
+        return const [
+          TopicModel(id: 'ayt_biy_1', courseId: 'biyoloji', name: 'Sistemler, Genden Proteine, Enerji Dönüşümleri, Bitki (13 Soru)'),
+        ];
+      }
+      if (courseId == 'edebiyat') {
+        return const [
+          TopicModel(id: 'ayt_edb_1', courseId: 'edebiyat', name: 'Divan, Tanzimat, Milli ve Cumhuriyet Dönemi Edebiyatı (24 Soru)'),
+        ];
+      }
+    }
+
+    // 6. YDS - YÖKDİL - YDT (Yabancı Dil Sınavları: 80 Soru)
+    if (examName.contains('YDS') || examName.contains('YÖKDİL') || examName.contains('YDT') || examName.contains('Dil')) {
+      if (courseId == 'ingilizce') {
+        return const [
+          TopicModel(id: 'yds_1', courseId: 'ingilizce', name: 'Kelime Bilgisi (Vocabulary - 5-6 Soru)'),
+          TopicModel(id: 'yds_2', courseId: 'ingilizce', name: 'Dil Bilgisi: Tense, Modal, Passive, Clauses, Bağlaç (10 Soru)'),
+          TopicModel(id: 'yds_3', courseId: 'ingilizce', name: 'Cloze Test: Boşluk Doldurma (5-10 Soru)'),
+          TopicModel(id: 'yds_4', courseId: 'ingilizce', name: 'Cümle Tamamlama ve Anlam Bütünlüğü (8-11 Soru)'),
+          TopicModel(id: 'yds_5', courseId: 'ingilizce', name: 'İngilizce - Türkçe / Türkçe - İngilizce Çeviri (6-12 Soru)'),
+          TopicModel(id: 'yds_6', courseId: 'ingilizce', name: 'Paragraf Soruları & Okuduğunu Anlama (15-20 Soru)'),
+          TopicModel(id: 'yds_7', courseId: 'ingilizce', name: 'Diyalog Tamamlama ve Duruma Uygun İfade (5 Soru)'),
+          TopicModel(id: 'yds_8', courseId: 'ingilizce', name: 'Yakın Anlamlı Cümle & Yeniden İfade Etme (4-5 Soru)'),
+          TopicModel(id: 'yds_9', courseId: 'ingilizce', name: 'Paragraf Tamamlama ve Akışı Bozan Cümle (8-10 Soru)'),
+        ];
+      }
+    }
+
+    // 7. KPSS Eğitim Bilimleri (80 Soru)
+    if (examName.contains('Eğitim Bilimleri')) {
+      if (courseId == 'kpss_oyt') {
+        return const [TopicModel(id: 'egt_oyt_1', courseId: 'kpss_oyt', name: 'Öğretim İlke ve Yöntemleri (ÖYT - 21 Soru)')];
+      }
+      if (courseId == 'kpss_olcme') {
+        return const [TopicModel(id: 'egt_olc_1', courseId: 'kpss_olcme', name: 'Ölçme ve Değerlendirme (12 Soru)')];
+      }
+      if (courseId == 'kpss_psikoloji') {
+        return const [TopicModel(id: 'egt_psi_1', courseId: 'kpss_psikoloji', name: 'Gelişim Psikolojisi (10 Soru) & Öğrenme Psikolojisi (12 Soru)')];
+      }
+      if (courseId == 'kpss_rehberlik') {
+        return const [TopicModel(id: 'egt_reh_1', courseId: 'kpss_rehberlik', name: 'Rehberlik ve Özel Eğitim (11 Soru)')];
+      }
+      if (courseId == 'kpss_program') {
+        return const [TopicModel(id: 'egt_prg_1', courseId: 'kpss_program', name: 'Program Geliştirme (5 Soru), Sınıf Yönetimi (5 Soru), Materyal (4 Soru)')];
+      }
+    }
+
+    // 8. AGS (Akademi Giriş Sınavı: 80 Soru)
+    if (examName.contains('AGS')) {
+      if (courseId == 'ags_egitim_temelleri') {
+        return const [TopicModel(id: 'ags_egt_1', courseId: 'ags_egitim_temelleri', name: 'Eğitimin Temelleri ve Türk Milli Eğitim Sistemi (30 Soru)')];
+      }
+      if (courseId == 'ags_mevzuat') {
+        return const [TopicModel(id: 'ags_mev_1', courseId: 'ags_mevzuat', name: 'Milli Eğitim Sistemi & İlgili Mevzuat (8 Soru)')];
+      }
+      if (courseId == 'turkce') {
+        return const [TopicModel(id: 'ags_tur_1', courseId: 'turkce', name: 'Sözel Yetenek ve Mantıksal Akıl Yürütme (15 Soru)')];
+      }
+      if (courseId == 'matematik') {
+        return const [TopicModel(id: 'ags_mat_1', courseId: 'matematik', name: 'Sayısal Yetenek ve Muhakeme (15 Soru)')];
+      }
+      if (courseId == 'tarih') {
+        return const [TopicModel(id: 'ags_tar_1', courseId: 'tarih', name: 'Tarih: Türk Tarihi & Atatürk İlkeleri (6 Soru)')];
+      }
+      if (courseId == 'cografya') {
+        return const [TopicModel(id: 'ags_cog_1', courseId: 'cografya', name: 'Türkiye Coğrafyası: Fiziki ve Beşeri (6 Soru)')];
+      }
+    }
+
+    // 9. HMGS (Hukuk Mesleklerine Giriş: 120 Soru)
+    if (examName.contains('HMGS')) {
+      if (courseId == 'hmgs_idare') {
+        return const [TopicModel(id: 'hmgs_ida_1', courseId: 'hmgs_idare', name: 'İdare Hukuku & İYUK (15 Soru)')];
+      }
+      if (courseId == 'hmgs_medeni') {
+        return const [TopicModel(id: 'hmgs_med_1', courseId: 'hmgs_medeni', name: 'Medeni Hukuk: Kişiler, Aile, Miras, Eşya (15 Soru)')];
+      }
+      if (courseId == 'hmgs_ceza') {
+        return const [TopicModel(id: 'hmgs_cez_1', courseId: 'hmgs_ceza', name: 'Ceza Hukuku Genel-Özel & CMK (15 Soru)')];
+      }
+      if (courseId == 'hmgs_anayasa') {
+        return const [TopicModel(id: 'hmgs_ana_1', courseId: 'hmgs_anayasa', name: 'Anayasa Hukuku & Anayasa Yargısı (10 Soru)')];
+      }
+      if (courseId == 'hmgs_borclar') {
+        return const [TopicModel(id: 'hmgs_bor_1', courseId: 'hmgs_borclar', name: 'Borçlar Hukuku (10 Soru)')];
+      }
+      if (courseId == 'hmgs_hmk') {
+        return const [TopicModel(id: 'hmgs_hmk_1', courseId: 'hmgs_hmk', name: 'Hukuk Muhakemeleri Usulü - HMK (10 Soru)')];
+      }
+      if (courseId == 'hmgs_ticaret') {
+        return const [TopicModel(id: 'hmgs_tic_1', courseId: 'hmgs_ticaret', name: 'Ticaret Hukuku (10 Soru)')];
+      }
+      if (courseId == 'hmgs_icra') {
+        return const [TopicModel(id: 'hmgs_icr_1', courseId: 'hmgs_icra', name: 'İcra ve İflas Hukuku (10 Soru)')];
+      }
+      if (courseId == 'hmgs_is_sosyal') {
+        return const [TopicModel(id: 'hmgs_is_1', courseId: 'hmgs_is_sosyal', name: 'İş ve Sosyal Güvenlik Hukuku (10 Soru)')];
+      }
+      if (courseId == 'hmgs_vergi') {
+        return const [TopicModel(id: 'hmgs_vrg_1', courseId: 'hmgs_vergi', name: 'Vergi Hukuku & VUK (10 Soru)')];
+      }
+      if (courseId == 'hmgs_avukatlik') {
+        return const [TopicModel(id: 'hmgs_avu_1', courseId: 'hmgs_avukatlik', name: 'Avukatlık Hukuku & Felsefesi (5 Soru)')];
+      }
+    }
+
+    // 10. EKPSS (60 Soru)
+    if (examName.contains('EKPSS')) {
+      if (courseId == 'turkce') return const [TopicModel(id: 'ekpss_tur_1', courseId: 'turkce', name: 'Türkçe: Anlam, Dil Bilgisi ve Yazım (15 Soru)')];
+      if (courseId == 'matematik') return const [TopicModel(id: 'ekpss_mat_1', courseId: 'matematik', name: 'Matematik: Sayılar, İşlem ve Problemler (15 Soru)')];
+      if (courseId == 'tarih') return const [TopicModel(id: 'ekpss_tar_1', courseId: 'tarih', name: 'Tarih: Türk Tarihi & İnkılap Tarihi (10 Soru)')];
+      if (courseId == 'cografya') return const [TopicModel(id: 'ekpss_cog_1', courseId: 'cografya', name: 'Türkiye Coğrafyası (5 Soru)')];
+      if (courseId == 'vatandaslik') return const [TopicModel(id: 'ekpss_vat_1', courseId: 'vatandaslik', name: 'Temel Yurttaşlık (5 Soru) & Güncel Bilgiler (10 Soru)')];
+    }
+
     // Belirli bir ders için filtrele veya tüm ders konularını döndür
     if (courseId != null) {
       final list = all.where((t) => t.courseId == courseId).toList();
