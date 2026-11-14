@@ -1022,6 +1022,28 @@ class PredefinedData {
       }
     }
 
+    // AGS Soru Dağılımları (80 Soru: %37,5 Eğitim, %18,75 Sözel, %18,75 Sayısal, %10 Mevzuat, %7,5 Tarih, %7,5 Coğrafya)
+    if (examName.contains('AGS')) {
+      switch (courseId) {
+        case 'ags_egitim_temelleri':
+          return 30; // 30 Soru (%37,5)
+        case 'sozel_mantik':
+        case 'turkce':
+          return 15; // 15 Soru (%18,75)
+        case 'sayisal_mantik':
+        case 'matematik':
+          return 15; // 15 Soru (%18,75)
+        case 'ags_mevzuat':
+          return 8;  // 8 Soru (%10)
+        case 'tarih':
+          return 6;  // 6 Soru Tarih (%7,5)
+        case 'cografya':
+          return 6;  // 6 Soru Coğrafya (%7,5)
+        default:
+          return 10;
+      }
+    }
+
     return 20; // Varsayılan ağırlık
   }
 
@@ -1131,14 +1153,14 @@ class PredefinedData {
       return 50;
     }
 
-    // 9. AGS (Akademi Giriş Sınavı: 80 Soru)
+    // 9. AGS (Akademi Giriş Sınavı: 80 Soru: %37,5 Eğitim, %18,75 Sözel, %18,75 Sayısal, %10 Mevzuat, %7,5 Tarih, %7,5 Coğrafya)
     if (lowerExam.contains('ags')) {
       if (lowerCourse.contains('sozel') || lowerCourse.contains('turk')) return 15;
       if (lowerCourse.contains('sayisal') || lowerCourse.contains('mat')) return 15;
-      if (lowerCourse.contains('tar')) return 10;
-      if (lowerCourse.contains('cog')) return 8;
-      if (lowerCourse.contains('egitim')) return 24;
-      if (lowerCourse.contains('mevzuat')) return 8;
+      if (lowerCourse.contains('tar')) return 6;  // 6 Soru Tarih (%7,5)
+      if (lowerCourse.contains('cog')) return 6;  // 6 Soru Coğrafya (%7,5)
+      if (lowerCourse.contains('egitim')) return 30; // 30 Soru Eğitimin Temelleri (%37,5)
+      if (lowerCourse.contains('mevzuat')) return 8;  // 8 Soru Mevzuat (%10)
       return 15;
     }
 

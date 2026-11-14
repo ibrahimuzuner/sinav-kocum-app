@@ -491,7 +491,13 @@ void main() {
     final msuSum = msuCourses.fold(0, (sum, c) => sum + PredefinedData.getMaxQuestionsForCourse('MSÜ', c.id));
     expect(msuSum, 120);
 
-    // 6. AGS Soru Sınırları (80 Soru)
+    // 6. AGS Soru Sınırları (80 Soru: %37,5 Eğitim, %18,75 Sözel, %18,75 Sayısal, %10 Mevzuat, %7,5 Tarih, %7,5 Coğrafya)
+    expect(PredefinedData.getMaxQuestionsForCourse('AGS', 'tarih'), 6);
+    expect(PredefinedData.getMaxQuestionsForCourse('AGS', 'cografya'), 6);
+    expect(PredefinedData.getMaxQuestionsForCourse('AGS', 'turkce'), 15);
+    expect(PredefinedData.getMaxQuestionsForCourse('AGS', 'matematik'), 15);
+    expect(PredefinedData.getMaxQuestionsForCourse('AGS', 'ags_egitim_temelleri'), 30);
+    expect(PredefinedData.getMaxQuestionsForCourse('AGS', 'ags_mevzuat'), 8);
     final agsCourses = PredefinedData.getCoursesForExam('AGS');
     final agsSum = agsCourses.fold(0, (sum, c) => sum + PredefinedData.getMaxQuestionsForCourse('AGS', c.id));
     expect(agsSum, 80);
