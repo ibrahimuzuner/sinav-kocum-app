@@ -155,11 +155,8 @@ class DashboardScreen extends StatelessWidget {
                 const SizedBox(height: 14),
               ],
 
-              // 👑 Koçluk Tavsiyesi (PRO / Ücretsiz Deneme) veya PRO Tanıtım Kartı
-              if (userProvider.hasProAccess) ...[
-                _buildCoachFeedbackCard(context, userProvider, isDark),
-                const SizedBox(height: 14),
-              ] else ...[
+              // 👑 PRO Tanıtım Kartı (Sadece deneme süresi bitmiş ve PRO olmayanlar için)
+              if (!userProvider.hasProAccess) ...[
                 _buildProUpgradeBanner(context, isDark),
                 const SizedBox(height: 14),
               ],
@@ -168,20 +165,6 @@ class DashboardScreen extends StatelessWidget {
               if (!userProvider.isEmailVerified && userProvider.email.isNotEmpty) ...[
                 _buildEmailVerificationNotice(context, userProvider),
                 const SizedBox(height: 14),
-              ],
-
-              // 👨‍🏫 Öğretmen Bağlantısı, Ödevler ve Mesajlar
-              if (userProvider.isRegistered) ...[
-                _buildTeacherConnectionCard(context, userProvider, isDark),
-                const SizedBox(height: 14),
-                if (userProvider.studentAssignments.isNotEmpty) ...[
-                  _buildStudentAssignmentsCard(context, userProvider, isDark),
-                  const SizedBox(height: 14),
-                ],
-                if (userProvider.teacherId != null || userProvider.studentMessages.isNotEmpty) ...[
-                  _buildTeacherMessagesCard(context, userProvider, isDark),
-                  const SizedBox(height: 14),
-                ],
               ],
 
               // 🎯 Yapay Zeka Hedef & Puan Takip Kartı
@@ -389,7 +372,28 @@ class DashboardScreen extends StatelessWidget {
                     onDelete: () => studyProvider.deleteScheduleItem(item.id),
                   );
                 }),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
+
+              // 👨‍🏫 Öğretmen & Koç Bölümü (En aşağıya taşındı)
+              if (userProvider.isRegistered) ...[
+                // Koçun tavsiyesi: SADECE bir öğretmene/koça bağlanıldığında çıksın (Kullanıcı talebi)
+                if (userProvider.teacherId != null && userProvider.teacherId!.isNotEmpty) ...[
+                  _buildCoachFeedbackCard(context, userProvider, isDark),
+                  const SizedBox(height: 14),
+                  if (userProvider.studentAssignments.isNotEmpty) ...[
+                    _buildStudentAssignmentsCard(context, userProvider, isDark),
+                    const SizedBox(height: 14),
+                  ],
+                  if (userProvider.studentMessages.isNotEmpty || userProvider.teacherId != null) ...[
+                    _buildTeacherMessagesCard(context, userProvider, isDark),
+                    const SizedBox(height: 14),
+                  ],
+                ],
+
+                // Öğretmene / Koça Bağlan Kartı (En altta)
+                _buildTeacherConnectionCard(context, userProvider, isDark),
+                const SizedBox(height: 24),
+              ],
             ],
           ),
         ),
@@ -516,6 +520,9 @@ class DashboardScreen extends StatelessWidget {
     final note = userProvider.coachNote;
     final hasNote = note != null && note.trim().isNotEmpty;
     final updated = userProvider.coachNoteUpdatedAt;
+    final teacherName = (userProvider.teacherName != null && userProvider.teacherName!.trim().isNotEmpty)
+        ? userProvider.teacherName!.trim()
+        : 'Eğitim Koçun';
 
     return Container(
       width: double.infinity,
@@ -562,7 +569,7 @@ class DashboardScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '👨‍🏫 Koçun İbrahim\'den Sana Özel Tavsiye',
+                      '👨‍🏫 Koçun $teacherName\'den Sana Özel Tavsiye',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
@@ -570,7 +577,7 @@ class DashboardScreen extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      '👑 Birebir Koçluk Desteği',
+                      '👑 Birebir Öğretmen & Koçluk Desteği',
                       style: TextStyle(
                         fontSize: 11,
                         color: isDark ? const Color(0xFFFBBF24) : const Color(0xFFB45309),
@@ -593,7 +600,7 @@ class DashboardScreen extends StatelessWidget {
             child: Text(
               hasNote
                   ? note
-                  : 'Koçun İbrahim çalışmalarını ve soru çözümlerini inceliyor. Performansını analiz edip sana özel haftalık stratejini buraya iletecek!',
+                  : '$teacherName çalışmalarını ve soru çözümlerini inceliyor. Performansını analiz edip sana özel haftalık stratejini buraya iletecek!',
               style: TextStyle(
                 fontSize: 13,
                 fontStyle: hasNote ? FontStyle.normal : FontStyle.italic,
