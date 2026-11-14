@@ -306,7 +306,8 @@ void main() {
     final agsCourseNames = agsCourses.map((c) => c.name).toList();
     expect(agsCourseNames.contains('Eğitimin Temelleri'), true);
     expect(agsCourseNames.contains('Milli Eğitim Sistemi & Mevzuat'), true);
-    expect(agsCourseNames.contains('ÖABT (Alan Bilgisi)'), true);
+    expect(agsCourseNames.contains('Türkçe'), true);
+    expect(agsCourseNames.contains('Matematik'), true);
 
     // Target departments check
     final hmgsDepts = TargetDepartmentsData.getDepartmentsForExam('HMGS (Hukuk Mesleklerine Giriş Sınavı)');
@@ -440,32 +441,78 @@ void main() {
   });
 
   test('PredefinedData restricts question counts strictly according to exam curriculum', () {
-    // KPSS Soru Sınırları
+    // 1. KPSS (GY-GK: 120 Soru - 60 GY + 60 GK)
     expect(PredefinedData.getMaxQuestionsForCourse('KPSS (Genel Yetenek - Kültür)', 'turkce'), 30);
     expect(PredefinedData.getMaxQuestionsForCourse('KPSS (Genel Yetenek - Kültür)', 'matematik'), 27);
-    expect(PredefinedData.getMaxQuestionsForCourse('KPSS (Genel Yetenek - Kültür)', 'geometri'), 4);
+    expect(PredefinedData.getMaxQuestionsForCourse('KPSS (Genel Yetenek - Kültür)', 'geometri'), 3); // 27 + 3 = 30; GY = 60
     expect(PredefinedData.getMaxQuestionsForCourse('KPSS (Genel Yetenek - Kültür)', 'tarih'), 27);
     expect(PredefinedData.getMaxQuestionsForCourse('KPSS (Genel Yetenek - Kültür)', 'cografya'), 18);
-    expect(PredefinedData.getMaxQuestionsForCourse('KPSS (Genel Yetenek - Kültür)', 'vatandaslik'), 15);
+    expect(PredefinedData.getMaxQuestionsForCourse('KPSS (Genel Yetenek - Kültür)', 'vatandaslik'), 15); // GK = 60
     expect(PredefinedData.getTotalQuestionsForExam('KPSS (Genel Yetenek - Kültür)'), 120);
 
-    // LGS Soru Sınırları
+    final kpssCourses = PredefinedData.getCoursesForExam('KPSS (Genel Yetenek - Kültür)');
+    final kpssSum = kpssCourses.fold(0, (sum, c) => sum + PredefinedData.getMaxQuestionsForCourse('KPSS (Genel Yetenek - Kültür)', c.id));
+    expect(kpssSum, 120);
+
+    // 2. KPSS Eğitim Bilimleri (80 Soru)
+    final egitimCourses = PredefinedData.getCoursesForExam('KPSS (Eğitim Bilimleri)');
+    final egitimSum = egitimCourses.fold(0, (sum, c) => sum + PredefinedData.getMaxQuestionsForCourse('KPSS (Eğitim Bilimleri)', c.id));
+    expect(egitimSum, 80);
+    expect(PredefinedData.getTotalQuestionsForExam('KPSS (Eğitim Bilimleri)'), 80);
+
+    // 3. LGS Soru Sınırları (90 Soru)
     expect(PredefinedData.getMaxQuestionsForCourse('LGS', 'turkce'), 20);
     expect(PredefinedData.getMaxQuestionsForCourse('LGS', 'matematik'), 20);
     expect(PredefinedData.getMaxQuestionsForCourse('LGS', 'fen_bilimleri'), 20);
     expect(PredefinedData.getMaxQuestionsForCourse('LGS', 'inkilap'), 10);
     expect(PredefinedData.getTotalQuestionsForExam('LGS'), 90);
 
-    // DGS Soru Sınırları
+    final lgsCourses = PredefinedData.getCoursesForExam('LGS');
+    final lgsSum = lgsCourses.fold(0, (sum, c) => sum + PredefinedData.getMaxQuestionsForCourse('LGS', c.id));
+    expect(lgsSum, 90);
+
+    // 4. DGS / ALES Soru Sınırları (100 Soru)
     expect(PredefinedData.getMaxQuestionsForCourse('DGS', 'turkce'), 50);
     expect(PredefinedData.getMaxQuestionsForCourse('DGS', 'matematik'), 43);
     expect(PredefinedData.getMaxQuestionsForCourse('DGS', 'geometri'), 7);
     expect(PredefinedData.getTotalQuestionsForExam('DGS'), 100);
 
-    // YKS TYT Soru Sınırları
+    final dgsCourses = PredefinedData.getCoursesForExam('DGS');
+    final dgsSum = dgsCourses.fold(0, (sum, c) => sum + PredefinedData.getMaxQuestionsForCourse('DGS', c.id));
+    expect(dgsSum, 100);
+
+    // 5. YKS TYT & MSÜ Soru Sınırları (120 Soru)
     expect(PredefinedData.getMaxQuestionsForCourse('YKS (TYT)', 'turkce'), 40);
     expect(PredefinedData.getMaxQuestionsForCourse('YKS (TYT)', 'matematik'), 30);
     expect(PredefinedData.getMaxQuestionsForCourse('YKS (TYT)', 'geometri'), 10);
     expect(PredefinedData.getTotalQuestionsForExam('YKS (TYT)'), 120);
+
+    final msuCourses = PredefinedData.getCoursesForExam('MSÜ');
+    final msuSum = msuCourses.fold(0, (sum, c) => sum + PredefinedData.getMaxQuestionsForCourse('MSÜ', c.id));
+    expect(msuSum, 120);
+
+    // 6. AGS Soru Sınırları (80 Soru)
+    final agsCourses = PredefinedData.getCoursesForExam('AGS');
+    final agsSum = agsCourses.fold(0, (sum, c) => sum + PredefinedData.getMaxQuestionsForCourse('AGS', c.id));
+    expect(agsSum, 80);
+    expect(PredefinedData.getTotalQuestionsForExam('AGS'), 80);
+
+    // 7. HMGS Soru Sınırları (120 Soru)
+    final hmgsCourses = PredefinedData.getCoursesForExam('HMGS');
+    final hmgsSum = hmgsCourses.fold(0, (sum, c) => sum + PredefinedData.getMaxQuestionsForCourse('HMGS', c.id));
+    expect(hmgsSum, 120);
+    expect(PredefinedData.getTotalQuestionsForExam('HMGS'), 120);
+
+    // 8. EKPSS Soru Sınırları (60 Soru)
+    final ekpssCourses = PredefinedData.getCoursesForExam('EKPSS');
+    final ekpssSum = ekpssCourses.fold(0, (sum, c) => sum + PredefinedData.getMaxQuestionsForCourse('EKPSS', c.id));
+    expect(ekpssSum, 60);
+    expect(PredefinedData.getTotalQuestionsForExam('EKPSS'), 60);
+
+    // 9. YKS AYT Sayısal (80 Soru)
+    final aytSayCourses = PredefinedData.getCoursesForExam('AYT Sayısal');
+    final aytSaySum = aytSayCourses.fold(0, (sum, c) => sum + PredefinedData.getMaxQuestionsForCourse('AYT Sayısal', c.id));
+    expect(aytSaySum, 80);
+    expect(PredefinedData.getTotalQuestionsForExam('AYT Sayısal'), 80);
   });
 }

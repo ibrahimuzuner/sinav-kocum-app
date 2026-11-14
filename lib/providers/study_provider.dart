@@ -393,6 +393,13 @@ class StudyProvider with ChangeNotifier {
 
   // --- CRUD: KONULAR ---
   List<TopicModel> getTopicsForCourse(String courseId) {
+    final examTopics = PredefinedData.getTopicsForExam(_currentExam, courseId: courseId);
+    if (examTopics.isNotEmpty) {
+      // Sınav müfredatına özel konuları döndür, varsa kullanıcının kendi eklediği özel konuları da iliştir
+      final defaultIds = PredefinedData.getDefaultTopics().map((t) => t.id).toSet();
+      final customTopics = _topics.where((t) => t.courseId == courseId && !defaultIds.contains(t.id));
+      return [...examTopics, ...customTopics];
+    }
     return _topics.where((t) => t.courseId == courseId).toList();
   }
 

@@ -136,12 +136,24 @@ class _AddMockExamDialogState extends State<AddMockExamDialog> {
 
   String _getDefaultDuration(String targetExam) {
     final lower = targetExam.toLowerCase();
-    if (lower.contains('kpss')) return '130';
-    if (lower.contains('tyt')) return '165';
+    if (lower.contains('kpss')) {
+      if (lower.contains('eğitim') || lower.contains('egitim')) return '100';
+      if (lower.contains('öabt') || lower.contains('oabt')) return '150';
+      return '130';
+    }
+    if (lower.contains('tyt') || lower.contains('msü')) return '165';
     if (lower.contains('ayt')) return '180';
     if (lower.contains('ales')) return '150';
     if (lower.contains('dgs')) return '135';
     if (lower.contains('lgs')) return '155';
+    if (lower.contains('ags')) return '110';
+    if (lower.contains('hmgs')) return '150';
+    if (lower.contains('ekpss')) return '60';
+    if (lower.contains('ehliyet')) return '45';
+    if (lower.contains('yds') || lower.contains('yökdil')) return '180';
+    if (lower.contains('ydt')) return '120';
+    if (lower.contains('tus')) return '300';
+    if (lower.contains('dus')) return '150';
     return '120';
   }
 

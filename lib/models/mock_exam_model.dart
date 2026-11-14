@@ -237,6 +237,24 @@ class MockExamModel {
       return double.parse(score.clamp(0.0, 100.0).toStringAsFixed(2));
     }
 
+    // 7. EKPSS (60 Soru) -> 100 Puan Ölçeği (50 Taban + Net Katsayısı)
+    if (targetExam.contains('EKPSS')) {
+      final score = 50.0 + (totalNet * (50.0 / 60.0));
+      return double.parse(score.clamp(0.0, 100.0).toStringAsFixed(2));
+    }
+
+    // 8. YDS / YÖKDİL / YDT (80 Soru) -> 100 Puan Ölçeği (Her Net 1.25 Puan)
+    if (targetExam.contains('YDS') || targetExam.contains('YÖKDİL') || targetExam.contains('YDT')) {
+      final score = (totalNet / 80.0) * 100.0;
+      return double.parse(score.clamp(0.0, 100.0).toStringAsFixed(2));
+    }
+
+    // 9. Ehliyet (50 Soru) -> 100 Puan Ölçeği (Baraj 70 Puan / Her Soru 2 Puan)
+    if (targetExam.contains('Ehliyet')) {
+      final score = (totalNet / 50.0) * 100.0;
+      return double.parse(score.clamp(0.0, 100.0).toStringAsFixed(2));
+    }
+
     final maxQ = scores.fold(0, (sum, c) => sum + c.totalQuestions);
     if (maxQ == 0) return 0.0;
     return double.parse(((totalNet / maxQ) * 100.0).clamp(0.0, 100.0).toStringAsFixed(2));
