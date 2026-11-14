@@ -17,15 +17,43 @@ import 'theme/app_theme.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Flutter hata yakalama (Bembeyaz ekran donmalarını önler)
+  // Flutter hata yakalama (Gri ekran çıkmasını engeller, okunabilir arayüz sunar)
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.presentError(details);
     debugPrint('Flutter Error: ${details.exception}');
   };
 
+  ErrorWidget.builder = (FlutterErrorDetails details) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.school_rounded, color: Color(0xFF4F46E5), size: 64),
+                  const SizedBox(height: 16),
+                  const Text('Sınav Koçum 🎓', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+                  const Text('Uygulama başlatılıyor, lütfen bekleyin...', style: TextStyle(fontSize: 14, color: Colors.black54)),
+                  const SizedBox(height: 16),
+                  Text(details.exceptionAsString(), textAlign: TextAlign.center, style: const TextStyle(color: Colors.redAccent, fontSize: 11)),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  };
+
   PlatformDispatcher.instance.onError = (error, stack) {
     debugPrint('Platform Error: $error');
-    return true; // Hatayı yutarak uygulamanın çökmesini veya donmasını engeller
+    return true; // Hatayı yutarak uygulamanın çökmesini engeller
   };
 
   // Mobil dikey yönlendirme kilidi
@@ -38,15 +66,15 @@ void main() async {
     debugPrint('Orientations hatası: $e');
   }
 
-  // Yerel depolamayı hızlıca yükle (milisaniyeler içinde tamamlanır)
+  // Yerel depolamayı güvenle başlat
   final storageService = StorageService();
   try {
-    await storageService.init().timeout(const Duration(seconds: 2));
+    await storageService.init();
   } catch (e) {
     debugPrint('StorageService init hatası: $e');
   }
 
-  // ARAYÜZÜ ANINDA BAŞLAT! (Kullanıcı asla beyaz ekranda beklemez)
+  // ARAYÜZÜ BAŞLAT
   runApp(
     MultiProvider(
       providers: [
@@ -59,7 +87,7 @@ void main() async {
     ),
   );
 
-  // Arka plan servislerini (Firebase ve Bildirimler) arayüzü engellemeden başlat
+  // Arka plan servislerini arayüzü engellemeden başlat
   _initServicesAsync();
 }
 

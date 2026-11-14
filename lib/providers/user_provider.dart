@@ -82,7 +82,6 @@ class UserProvider with ChangeNotifier {
 
   void _loadProfile() {
     _userProfile = _storage.loadUserProfile();
-    notifyListeners();
 
     // Arka planda Firebase'den güncel verileri (üyelik, ödevler, mesajlar vb.) kontrol et
     if (_userProfile != null) {

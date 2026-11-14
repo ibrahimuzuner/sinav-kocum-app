@@ -26,7 +26,7 @@ class StorageService {
   static const String _keyIsDarkMode = 'app_is_dark_mode';
   static const String _keyUserProfile = 'app_user_profile';
 
-  late SharedPreferences _prefs;
+  SharedPreferences? _prefs;
 
   Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
@@ -35,7 +35,7 @@ class StorageService {
   // --- COURSES ---
   List<CourseModel> loadCourses() {
     final allPredefined = PredefinedData.getAllAvailableCourses();
-    final raw = _prefs.getString(_keyCourses);
+    final raw = _prefs?.getString(_keyCourses);
     if (raw == null || raw.isEmpty) {
       saveCourses(allPredefined);
       return allPredefined;
@@ -57,13 +57,13 @@ class StorageService {
 
   Future<void> saveCourses(List<CourseModel> courses) async {
     final raw = jsonEncode(courses.map((c) => c.toJson()).toList());
-    await _prefs.setString(_keyCourses, raw);
+    await _prefs?.setString(_keyCourses, raw);
   }
 
   // --- TOPICS ---
   List<TopicModel> loadTopics() {
     final allPredefined = PredefinedData.getDefaultTopics();
-    final raw = _prefs.getString(_keyTopics);
+    final raw = _prefs?.getString(_keyTopics);
     if (raw == null || raw.isEmpty) {
       saveTopics(allPredefined);
       return allPredefined;
@@ -85,12 +85,12 @@ class StorageService {
 
   Future<void> saveTopics(List<TopicModel> topics) async {
     final raw = jsonEncode(topics.map((t) => t.toJson()).toList());
-    await _prefs.setString(_keyTopics, raw);
+    await _prefs?.setString(_keyTopics, raw);
   }
 
   // --- QUESTIONS ---
   List<QuestionLogModel> loadQuestionLogs() {
-    final raw = _prefs.getString(_keyQuestions);
+    final raw = _prefs?.getString(_keyQuestions);
     if (raw == null || raw.isEmpty) return [];
     try {
       final List<dynamic> decoded = jsonDecode(raw);
@@ -102,12 +102,12 @@ class StorageService {
 
   Future<void> saveQuestionLogs(List<QuestionLogModel> logs) async {
     final raw = jsonEncode(logs.map((l) => l.toJson()).toList());
-    await _prefs.setString(_keyQuestions, raw);
+    await _prefs?.setString(_keyQuestions, raw);
   }
 
   // --- STUDY SESSIONS ---
   List<StudySessionModel> loadStudySessions() {
-    final raw = _prefs.getString(_keySessions);
+    final raw = _prefs?.getString(_keySessions);
     if (raw == null || raw.isEmpty) return [];
     try {
       final List<dynamic> decoded = jsonDecode(raw);
@@ -119,12 +119,12 @@ class StorageService {
 
   Future<void> saveStudySessions(List<StudySessionModel> sessions) async {
     final raw = jsonEncode(sessions.map((s) => s.toJson()).toList());
-    await _prefs.setString(_keySessions, raw);
+    await _prefs?.setString(_keySessions, raw);
   }
 
   // --- SCHEDULE ITEMS ---
   List<ScheduleItemModel> loadScheduleItems() {
-    final raw = _prefs.getString(_keySchedule);
+    final raw = _prefs?.getString(_keySchedule);
     if (raw == null || raw.isEmpty) {
       // Default initial schedule suggestion
       final defaultItems = [
@@ -196,12 +196,12 @@ class StorageService {
 
   Future<void> saveScheduleItems(List<ScheduleItemModel> items) async {
     final raw = jsonEncode(items.map((i) => i.toJson()).toList());
-    await _prefs.setString(_keySchedule, raw);
+    await _prefs?.setString(_keySchedule, raw);
   }
 
   // --- MOCK EXAMS (DENEMELER) ---
   List<MockExamModel> loadMockExams() {
-    final raw = _prefs.getString(_keyMockExams);
+    final raw = _prefs?.getString(_keyMockExams);
     if (raw == null || raw.isEmpty) return [];
     try {
       final List<dynamic> decoded = jsonDecode(raw);
@@ -213,38 +213,54 @@ class StorageService {
 
   Future<void> saveMockExams(List<MockExamModel> exams) async {
     final raw = jsonEncode(exams.map((e) => e.toJson()).toList());
-    await _prefs.setString(_keyMockExams, raw);
+    await _prefs?.setString(_keyMockExams, raw);
   }
 
   // --- STREAK & STATS ---
-  int loadStreak() => _prefs.getInt(_keyStreak) ?? 0;
-  Future<void> saveStreak(int streak) => _prefs.setInt(_keyStreak, streak);
+  int loadStreak() => _prefs?.getInt(_keyStreak) ?? 0;
+  Future<void> saveStreak(int streak) async {
+    await _prefs?.setInt(_keyStreak, streak);
+  }
 
-  String? loadLastActiveDate() => _prefs.getString(_keyLastActiveDate);
-  Future<void> saveLastActiveDate(String dateStr) => _prefs.setString(_keyLastActiveDate, dateStr);
+  String? loadLastActiveDate() => _prefs?.getString(_keyLastActiveDate);
+  Future<void> saveLastActiveDate(String dateStr) async {
+    await _prefs?.setString(_keyLastActiveDate, dateStr);
+  }
 
   // --- SETTINGS ---
-  int loadTargetQuestions() => _prefs.getInt(_keyTargetDailyQuestions) ?? 100;
-  Future<void> saveTargetQuestions(int val) => _prefs.setInt(_keyTargetDailyQuestions, val);
+  int loadTargetQuestions() => _prefs?.getInt(_keyTargetDailyQuestions) ?? 100;
+  Future<void> saveTargetQuestions(int val) async {
+    await _prefs?.setInt(_keyTargetDailyQuestions, val);
+  }
 
-  int loadTargetMinutes() => _prefs.getInt(_keyTargetDailyMinutes) ?? 180; // 3 saat
-  Future<void> saveTargetMinutes(int val) => _prefs.setInt(_keyTargetDailyMinutes, val);
+  int loadTargetMinutes() => _prefs?.getInt(_keyTargetDailyMinutes) ?? 180; // 3 saat
+  Future<void> saveTargetMinutes(int val) async {
+    await _prefs?.setInt(_keyTargetDailyMinutes, val);
+  }
 
-  bool loadNotificationsEnabled() => _prefs.getBool(_keyNotificationsEnabled) ?? true;
-  Future<void> saveNotificationsEnabled(bool val) => _prefs.setBool(_keyNotificationsEnabled, val);
+  bool loadNotificationsEnabled() => _prefs?.getBool(_keyNotificationsEnabled) ?? true;
+  Future<void> saveNotificationsEnabled(bool val) async {
+    await _prefs?.setBool(_keyNotificationsEnabled, val);
+  }
 
-  int loadReminderHour() => _prefs.getInt(_keyReminderHour) ?? 20;
-  Future<void> saveReminderHour(int hour) => _prefs.setInt(_keyReminderHour, hour);
+  int loadReminderHour() => _prefs?.getInt(_keyReminderHour) ?? 20;
+  Future<void> saveReminderHour(int hour) async {
+    await _prefs?.setInt(_keyReminderHour, hour);
+  }
 
-  int loadReminderMinute() => _prefs.getInt(_keyReminderMinute) ?? 30;
-  Future<void> saveReminderMinute(int min) => _prefs.setInt(_keyReminderMinute, min);
+  int loadReminderMinute() => _prefs?.getInt(_keyReminderMinute) ?? 30;
+  Future<void> saveReminderMinute(int min) async {
+    await _prefs?.setInt(_keyReminderMinute, min);
+  }
 
-  bool loadIsDarkMode() => _prefs.getBool(_keyIsDarkMode) ?? false;
-  Future<void> saveIsDarkMode(bool isDark) => _prefs.setBool(_keyIsDarkMode, isDark);
+  bool loadIsDarkMode() => _prefs?.getBool(_keyIsDarkMode) ?? false;
+  Future<void> saveIsDarkMode(bool isDark) async {
+    await _prefs?.setBool(_keyIsDarkMode, isDark);
+  }
 
   // --- USER PROFILE ---
   UserProfileModel? loadUserProfile() {
-    final raw = _prefs.getString(_keyUserProfile);
+    final raw = _prefs?.getString(_keyUserProfile);
     if (raw == null || raw.isEmpty) return null;
     try {
       final Map<String, dynamic> decoded = jsonDecode(raw);
@@ -255,7 +271,7 @@ class StorageService {
   }
 
   List<UserProfileModel> loadAllUserProfiles() {
-    final raw = _prefs.getString('app_all_user_profiles');
+    final raw = _prefs?.getString('app_all_user_profiles');
     if (raw == null || raw.isEmpty) {
       final current = loadUserProfile();
       return current != null ? [current] : [];
@@ -281,11 +297,11 @@ class StorageService {
 
   Future<void> saveUserProfile(UserProfileModel profile) async {
     final raw = jsonEncode(profile.toJson());
-    await _prefs.setString(_keyUserProfile, raw);
+    await _prefs?.setString(_keyUserProfile, raw);
 
     final cleanEmail = profile.email.trim().toLowerCase();
     if (cleanEmail.isNotEmpty) {
-      await _prefs.setString('last_social_email', cleanEmail);
+      await _prefs?.setString('last_social_email', cleanEmail);
     }
 
     final all = loadAllUserProfiles();
@@ -295,21 +311,21 @@ class StorageService {
     } else {
       all.add(profile);
     }
-    await _prefs.setString('app_all_user_profiles', jsonEncode(all.map((p) => p.toJson()).toList()));
+    await _prefs?.setString('app_all_user_profiles', jsonEncode(all.map((p) => p.toJson()).toList()));
   }
 
   String? getLastSocialEmail() {
-    return _prefs.getString('last_social_email');
+    return _prefs?.getString('last_social_email');
   }
 
   Future<void> setLastSocialEmail(String email) async {
     final clean = email.trim().toLowerCase();
     if (clean.isNotEmpty) {
-      await _prefs.setString('last_social_email', clean);
+      await _prefs?.setString('last_social_email', clean);
     }
   }
 
   Future<void> clearUserProfile() async {
-    await _prefs.remove(_keyUserProfile);
+    await _prefs?.remove(_keyUserProfile);
   }
 }

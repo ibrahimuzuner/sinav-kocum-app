@@ -121,7 +121,6 @@ class StudyProvider with ChangeNotifier {
 
     // Check streak decay if more than 1 day skipped
     _validateStreak();
-    notifyListeners();
 
     if (userProfile != null && userProfile.isStudent) {
       syncStudyStatsToCloud();

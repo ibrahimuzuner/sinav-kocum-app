@@ -120,6 +120,17 @@ class _AuthScreenState extends State<AuthScreen> {
                       width: 96,
                       height: 96,
                       fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        width: 96,
+                        height: 96,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF4F46E5),
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        child: const Center(
+                          child: Text('🎓', style: TextStyle(fontSize: 48)),
+                        ),
+                      ),
                     ),
                   ],
                 ),
