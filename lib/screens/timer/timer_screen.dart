@@ -35,12 +35,18 @@ class TimerScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Çalışma Sayacı'),
         actions: [
-          if (isPomodoro)
+          if (isPomodoro) ...[
+            IconButton(
+              icon: const Icon(Icons.help_outline_rounded),
+              tooltip: 'Pomodoro Nedir?',
+              onPressed: () => _showPomodoroInfoModal(context),
+            ),
             IconButton(
               icon: const Icon(Icons.tune_rounded),
               tooltip: 'Pomodoro Ayarları',
               onPressed: () => _showPomodoroSettings(context, timerProvider),
             ),
+          ],
         ],
       ),
       body: SingleChildScrollView(
@@ -79,6 +85,73 @@ class TimerScreen extends StatelessWidget {
                 ],
               ),
             ),
+            if (isPomodoro) ...[
+              const SizedBox(height: 12),
+              InkWell(
+                onTap: () => _showPomodoroInfoModal(context),
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEF4444).withValues(alpha: isDark ? 0.15 : 0.08),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: const Color(0xFFEF4444).withValues(alpha: isDark ? 0.35 : 0.25),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(7),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEF4444).withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Text('🍅', style: TextStyle(fontSize: 16)),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Row(
+                              children: [
+                                Text(
+                                  'Pomodoro Tekniği Nedir?',
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFFEF4444),
+                                  ),
+                                ),
+                                Spacer(),
+                                Text(
+                                  'Detaylı Bilgi >',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFFEF4444),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${timerProvider.pomodoroStudyMinutes} dk odaklı çalışma + ${timerProvider.pomodoroRestMinutes} dk mola! Zihni yormadan verimi artıran bilimsel yöntem.',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                height: 1.3,
+                                color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 20),
 
             // Ders & Konu Seçim Hapı (Pill)
@@ -564,6 +637,201 @@ class TimerScreen extends StatelessWidget {
             ],
           );
         },
+      ),
+    );
+  }
+
+  void _showPomodoroInfoModal(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E293B) : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 44,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF475569) : const Color(0xFFCBD5E1),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEF4444).withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Text('🍅', style: TextStyle(fontSize: 22)),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Pomodoro Tekniği Nedir?',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'Bilimsel Yüksek Odaklanma Yöntemi',
+                          style: TextStyle(fontSize: 12.5, color: Color(0xFF94A3B8)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Pomodoro Tekniği, 1980\'lerin sonunda geliştirilen ve dünyada milyonlarca başarılı öğrencinin kullandığı en popüler odaklanma ve zaman yönetimi metodudur.',
+                style: TextStyle(
+                  fontSize: 13,
+                  height: 1.45,
+                  color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF334155),
+                ),
+              ),
+              const SizedBox(height: 18),
+              const Text(
+                'Nasıl Uygulanır? (4 Kolay Adım)',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              _buildInfoStep(
+                icon: Icons.checklist_rounded,
+                color: const Color(0xFF4F46E5),
+                title: '1. Ders ve Konunu Belirle',
+                desc: 'Çalışacağın konuyu seç ve masanı sadece o ders için hazırla.',
+                isDark: isDark,
+              ),
+              _buildInfoStep(
+                icon: Icons.timer_outlined,
+                color: const Color(0xFFEF4444),
+                title: '2. 25 Dakika Tam Odaklan (1 Pomodoro)',
+                desc: 'Telefonunu sessize al. Sayaç çalana kadar sadece dersine odaklan.',
+                isDark: isDark,
+              ),
+              _buildInfoStep(
+                icon: Icons.coffee_rounded,
+                color: const Color(0xFF10B981),
+                title: '3. 5 Dakika Mola Ver',
+                desc: 'Masadan kalk, su iç, gerin. Zihnini dinlendir (ekrana bakma!).',
+                isDark: isDark,
+              ),
+              _buildInfoStep(
+                icon: Icons.emoji_events_rounded,
+                color: const Color(0xFFF59E0B),
+                title: '4. 4 Pomodoro = Büyük Mola!',
+                desc: '4 seansı tamamladığında (yaklaşık 2 saat), 20-30 dakikalık uzun mola yap.',
+                isDark: isDark,
+              ),
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF3B82F6).withValues(alpha: isDark ? 0.2 : 0.08),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFF3B82F6).withValues(alpha: 0.25)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.psychology_rounded, color: Color(0xFF3B82F6), size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        '💡 Neden İşe Yarar? Beynimiz en yüksek verimi 25-30 dakikalık bloklarda sağlar. Düzenli kısa molalar zihnin yorulmasını ve sınav stresini önler.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          height: 1.4,
+                          color: isDark ? const Color(0xFF93C5FD) : const Color(0xFF1E40AF),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF4F46E5),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                  child: const Text('Harika, Anladım!', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoStep({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String desc,
+    required bool isDark,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: color, size: 18),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                const SizedBox(height: 2),
+                Text(
+                  desc,
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 1.35,
+                    color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
