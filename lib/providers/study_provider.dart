@@ -513,7 +513,16 @@ class StudyProvider with ChangeNotifier {
     required String topicName,
     required int targetMinutes,
     required int targetQuestions,
+    String activityType = 'practice',
+    int? lectureMinutes,
+    int? practiceMinutes,
   }) async {
+    final int lMins = lectureMinutes ??
+        ((activityType == 'video' || activityType == 'lecture' || activityType == 'review')
+            ? targetMinutes
+            : (activityType == 'hybrid' ? (targetMinutes / 2).round() : 0));
+    final int pMins = practiceMinutes ?? (targetMinutes - lMins);
+
     final item = ScheduleItemModel(
       id: _uuid.v4(),
       dayOfWeek: dayOfWeek,
@@ -522,6 +531,9 @@ class StudyProvider with ChangeNotifier {
       topicName: topicName,
       targetMinutes: targetMinutes,
       targetQuestions: targetQuestions,
+      activityType: activityType,
+      lectureMinutes: lMins,
+      practiceMinutes: pMins,
     );
     _scheduleItems.add(item);
     await _storage.saveScheduleItems(_scheduleItems);
@@ -543,29 +555,45 @@ class StudyProvider with ChangeNotifier {
       );
       await _storage.saveScheduleItems(_scheduleItems);
 
-      // Görev tamamlandığında sisteme ve rapora gerçek soru kaydı ve süre ekle (Kullanıcı talebi 2)
-      final qCount = current.targetQuestions > 0 ? current.targetQuestions : 25;
-      final correctCount = (qCount * 0.85).round().clamp(1, qCount);
-      final wrongCount = qCount - correctCount;
+      // Görev tamamlandığında sisteme ve rapora gerçek soru kaydı ve süre ekle
+      final qCount = current.targetQuestions;
       final durationMins = current.targetMinutes > 0 ? current.targetMinutes : 30;
 
-      await addQuestionLog(
-        courseId: current.courseId,
-        courseName: current.courseName,
-        topicName: current.topicName,
-        correct: correctCount,
-        wrong: wrongCount,
-        empty: 0,
-        durationMinutes: durationMins,
-        notes: 'Program Görevi: ${current.topicName}',
-      );
+      // Sadece hedef soru 0'dan büyükse soru kaydı oluştur (Video/Tekrar için sahte soru eklenmez)
+      if (qCount > 0) {
+        final correctCount = (qCount * 0.85).round().clamp(1, qCount);
+        final wrongCount = qCount - correctCount;
+
+        await addQuestionLog(
+          courseId: current.courseId,
+          courseName: current.courseName,
+          topicName: current.topicName,
+          correct: correctCount,
+          wrong: wrongCount,
+          empty: 0,
+          durationMinutes: durationMins,
+          notes: 'Program Görevi: ${current.topicName}',
+        );
+      }
+
+      // Çalışma süresi istatistiğini ve raporunu her durumda kaydet
+      String activityNote = 'Program Görevi: ${current.topicName}';
+      if (current.activityType == 'video') {
+        activityNote = 'Video İzleme: ${current.topicName}';
+      } else if (current.activityType == 'review') {
+        activityNote = 'Konu Tekrarı: ${current.topicName}';
+      } else if (current.activityType == 'lecture') {
+        activityNote = 'Konu Anlatımı: ${current.topicName}';
+      } else if (current.activityType == 'hybrid') {
+        activityNote = 'Video & Soru: ${current.topicName}';
+      }
 
       await addStudySession(
         courseId: current.courseId,
         courseName: current.courseName,
         topicName: current.topicName,
         durationSeconds: durationMins * 60,
-        notes: 'Program Görevi: ${current.topicName}',
+        notes: activityNote,
       );
 
       notifyListeners();

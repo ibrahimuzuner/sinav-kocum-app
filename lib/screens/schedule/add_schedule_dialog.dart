@@ -19,6 +19,89 @@ class _AddScheduleDialogState extends State<AddScheduleDialog> {
   final TextEditingController _topicController = TextEditingController();
   int _targetMinutes = 60;
   int _targetQuestions = 30;
+  String _activityType = 'practice'; // 'practice', 'video', 'review', 'hybrid'
+
+  String get _topicHintText {
+    switch (_activityType) {
+      case 'video':
+        return 'Örn: YouTube Konu Anlatımı 1. ve 2. Video';
+      case 'review':
+        return 'Örn: Not & Formül Tekrarı, Özet Çıkarma';
+      case 'hybrid':
+        return 'Örn: Fonksiyonlar Video İzleme + 20 Soru';
+      case 'practice':
+      default:
+        return 'Örn: Fonksiyonlar 50 Soru Kampı';
+    }
+  }
+
+  Widget _buildActivityTypeButton({
+    required String type,
+    required String title,
+    required IconData icon,
+    required Color activeColor,
+    required bool isDark,
+  }) {
+    final isSelected = _activityType == type;
+    return Expanded(
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            _activityType = type;
+            if (type == 'video' || type == 'review') {
+              _targetQuestions = 0;
+            } else if (type == 'practice' && _targetQuestions == 0) {
+              _targetQuestions = 30;
+            } else if (type == 'hybrid' && _targetQuestions == 0) {
+              _targetQuestions = 20;
+            }
+          });
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? activeColor.withValues(alpha: isDark ? 0.25 : 0.12)
+                : (isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC)),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected
+                  ? activeColor
+                  : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+              width: isSelected ? 1.8 : 1.0,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 17,
+                color: isSelected ? activeColor : const Color(0xFF94A3B8),
+              ),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                    color: isSelected
+                        ? (isDark ? Colors.white : activeColor)
+                        : (isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -162,6 +245,53 @@ class _AddScheduleDialogState extends State<AddScheduleDialog> {
             ),
             const SizedBox(height: 14),
 
+            // Çalışma Türü Seçimi
+            const Text(
+              'Çalışma Türü',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF94A3B8)),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                _buildActivityTypeButton(
+                  type: 'practice',
+                  title: 'Soru Çözümü',
+                  icon: Icons.edit_note_rounded,
+                  activeColor: const Color(0xFF8B5CF6),
+                  isDark: isDark,
+                ),
+                const SizedBox(width: 8),
+                _buildActivityTypeButton(
+                  type: 'video',
+                  title: 'Video İzleme',
+                  icon: Icons.play_circle_fill_rounded,
+                  activeColor: const Color(0xFFEF4444),
+                  isDark: isDark,
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                _buildActivityTypeButton(
+                  type: 'review',
+                  title: 'Konu Tekrarı',
+                  icon: Icons.auto_stories_rounded,
+                  activeColor: const Color(0xFFF59E0B),
+                  isDark: isDark,
+                ),
+                const SizedBox(width: 8),
+                _buildActivityTypeButton(
+                  type: 'hybrid',
+                  title: 'Video + Soru',
+                  icon: Icons.bolt_rounded,
+                  activeColor: const Color(0xFF4F46E5),
+                  isDark: isDark,
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+
             // Konu / Görev Başlığı
             const Text(
               'Hedef Konu veya Görev',
@@ -171,7 +301,7 @@ class _AddScheduleDialogState extends State<AddScheduleDialog> {
             TextField(
               controller: _topicController,
               decoration: InputDecoration(
-                hintText: 'Örn: Fonksiyonlar 50 Soru & Video İzleme',
+                hintText: _topicHintText,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
               ),
             ),
@@ -185,7 +315,7 @@ class _AddScheduleDialogState extends State<AddScheduleDialog> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Hedef Süre (dk)',
+                        'Hedef Süre',
                         style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF94A3B8)),
                       ),
                       const SizedBox(height: 8),
@@ -237,15 +367,27 @@ class _AddScheduleDialogState extends State<AddScheduleDialog> {
                             value: _targetQuestions,
                             isExpanded: true,
                             items: const [
+                              DropdownMenuItem(value: 0, child: Text('0 (Soru Yok)')),
+                              DropdownMenuItem(value: 10, child: Text('10 Soru')),
                               DropdownMenuItem(value: 20, child: Text('20 Soru')),
                               DropdownMenuItem(value: 30, child: Text('30 Soru')),
                               DropdownMenuItem(value: 40, child: Text('40 Soru')),
                               DropdownMenuItem(value: 50, child: Text('50 Soru')),
                               DropdownMenuItem(value: 75, child: Text('75 Soru')),
                               DropdownMenuItem(value: 100, child: Text('100 Soru')),
+                              DropdownMenuItem(value: 150, child: Text('150 Soru')),
                             ],
                             onChanged: (v) {
-                              if (v != null) setState(() => _targetQuestions = v);
+                              if (v != null) {
+                                setState(() {
+                                  _targetQuestions = v;
+                                  if (v == 0 && _activityType == 'practice') {
+                                    _activityType = 'video';
+                                  } else if (v > 0 && (_activityType == 'video' || _activityType == 'review')) {
+                                    _activityType = 'hybrid';
+                                  }
+                                });
+                              }
                             },
                           ),
                         ),
@@ -272,6 +414,7 @@ class _AddScheduleDialogState extends State<AddScheduleDialog> {
                           topicName: _topicController.text.trim(),
                           targetMinutes: _targetMinutes,
                           targetQuestions: _targetQuestions,
+                          activityType: _activityType,
                         );
                         if (context.mounted) {
                           Navigator.pop(context);

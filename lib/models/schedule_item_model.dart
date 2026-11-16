@@ -8,7 +8,7 @@ class ScheduleItemModel {
   final int targetQuestions;
   final bool isCompleted;
   final DateTime? completedDate;
-  final String activityType; // 'hybrid' (Video/Tekrar + Soru), 'practice' (Sadece Soru), 'lecture' (Konu Ağırlıklı)
+  final String activityType; // 'practice' (Soru Çözümü), 'video' (Video İzleme), 'review' (Konu Tekrarı), 'hybrid' (Video + Soru), 'lecture' (Konu Anlatımı)
   final int lectureMinutes; // Video ders / konu tekrar süresi (örn: 30 dk)
   final int practiceMinutes; // Soru çözme süresi (örn: 30 dk)
 

@@ -147,7 +147,39 @@ class ScheduleCard extends StatelessWidget {
                               runSpacing: 4,
                               crossAxisAlignment: WrapCrossAlignment.center,
                               children: [
-                                if (item.activityType == 'hybrid')
+                                if (item.activityType == 'video')
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEF4444).withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.play_circle_fill_rounded, size: 13, color: Color(0xFFEF4444)),
+                                        SizedBox(width: 4),
+                                        Text('Video İzleme', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFEF4444))),
+                                      ],
+                                    ),
+                                  )
+                                else if (item.activityType == 'review')
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.auto_stories_rounded, size: 13, color: Color(0xFFF59E0B)),
+                                        SizedBox(width: 4),
+                                        Text('Konu Tekrarı', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFD97706))),
+                                      ],
+                                    ),
+                                  )
+                                else if (item.activityType == 'hybrid')
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
                                     decoration: BoxDecoration(
@@ -206,17 +238,30 @@ class ScheduleCard extends StatelessWidget {
                                     ),
                                   ],
                                 ),
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(Icons.help_outline_rounded, size: 13, color: Color(0xFF94A3B8)),
-                                    const SizedBox(width: 3),
-                                    Text(
-                                      '${item.targetQuestions} soru',
-                                      style: const TextStyle(fontSize: 11.5, color: Color(0xFF94A3B8), fontWeight: FontWeight.w500),
-                                    ),
-                                  ],
-                                ),
+                                if (item.targetQuestions > 0)
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.help_outline_rounded, size: 13, color: Color(0xFF94A3B8)),
+                                      const SizedBox(width: 3),
+                                      Text(
+                                        '${item.targetQuestions} soru',
+                                        style: const TextStyle(fontSize: 11.5, color: Color(0xFF94A3B8), fontWeight: FontWeight.w500),
+                                      ),
+                                    ],
+                                  )
+                                else
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.videocam_outlined, size: 13, color: Color(0xFF10B981)),
+                                      const SizedBox(width: 3),
+                                      const Text(
+                                        'Soru Yok (Video/Tekrar)',
+                                        style: TextStyle(fontSize: 11.5, color: Color(0xFF10B981), fontWeight: FontWeight.w600),
+                                      ),
+                                    ],
+                                  ),
                               ],
                             ),
                           ],
@@ -260,11 +305,16 @@ class ScheduleCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              'Bu görevi onayladığınızda:\n'
-              '• ${item.targetQuestions} soru çözümü\n'
-              '• ${item.targetMinutes} dakika çalışma süresi\n'
-              'istatistiklerinize ve PDF raporunuza kalıcı olarak eklenecektir.\n\n'
-              '⚠️ Not: Tamamlanan görevler sistem kaydı yapıldığı için geri alınamaz.',
+              item.targetQuestions > 0
+                  ? 'Bu görevi onayladığınızda:\n'
+                      '• ${item.targetQuestions} soru çözümü\n'
+                      '• ${item.targetMinutes} dakika çalışma süresi\n'
+                      'istatistiklerinize ve PDF raporunuza kalıcı olarak eklenecektir.\n\n'
+                      '⚠️ Not: Tamamlanan görevler sistem kaydı yapıldığı için geri alınamaz.'
+                  : 'Bu görevi onayladığınızda:\n'
+                      '• ${item.targetMinutes} dakika video izleme / konu tekrarı süresi\n'
+                      'istatistiklerinize ve PDF raporunuza kalıcı olarak eklenecektir.\n\n'
+                      '⚠️ Not: Tamamlanan görevler sistem kaydı yapıldığı için geri alınamaz.',
               style: const TextStyle(fontSize: 12.5, height: 1.4),
             ),
           ],
