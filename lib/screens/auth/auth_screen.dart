@@ -351,31 +351,6 @@ class _AuthScreenState extends State<AuthScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 🎁 2 AY HEDİYE BİLGİ ROZETİ
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              margin: const EdgeInsets.only(bottom: 16),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF059669), Color(0xFF10B981)],
-                ),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: const Row(
-                children: [
-                  Text('🎁', style: TextStyle(fontSize: 18)),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'Yeni üyelere İLK 2 AY TÜM ÖZELLİKLER HEDİYE! Sonrasında Öğrenci ₺34,99/Ay, Öğretmen ₺149,99/Ay.',
-                      style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
             // HESAP TÜRÜ SEÇİMİ (ÖĞRENCİ / ÖĞRETMEN)
             const Text('Hesap Türü Seçin', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
