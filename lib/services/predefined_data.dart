@@ -1273,7 +1273,23 @@ class PredefinedData {
       return 75;
     }
 
-    // 4. KPSS (GY-GK: 120 Soru: GY 60 + GK 60)
+    // 4. KPSS Alan Bilgisi (P48: GY 60 + GK 60 + Her Alan Testi 40 Soru)
+    if (lowerExam.contains('kpss') && lowerExam.contains('alan')) {
+      if (lowerCourse.contains('turk')) return 30;
+      if (lowerCourse.contains('mat')) return 30; // Alan Bilgisi'nde Geometri ayrı ders olmadığı için 30 Soru
+      if (lowerCourse.contains('geo')) return 3;
+      if (lowerCourse.contains('tar')) return 27;
+      if (lowerCourse.contains('cog')) return 18;
+      if (lowerCourse.contains('vat') || lowerCourse.contains('gunc')) return 15;
+      if (lowerCourse.contains('hukuk')) return 40;
+      if (lowerCourse.contains('iktisat')) return 40;
+      if (lowerCourse.contains('maliye')) return 40;
+      if (lowerCourse.contains('muhasebe')) return 40;
+      if (lowerCourse.contains('kamu')) return 40;
+      return 40;
+    }
+
+    // 4b. KPSS (GY-GK: 120 Soru: GY 60 + GK 60)
     if (lowerExam.contains('kpss')) {
       if (lowerCourse.contains('turk')) return 30;
       if (lowerCourse.contains('mat')) return 27; // 27 Soru Matematik
@@ -1281,11 +1297,11 @@ class PredefinedData {
       if (lowerCourse.contains('tar')) return 27; // 27 Soru Tarih
       if (lowerCourse.contains('cog')) return 18; // 18 Soru Coğrafya
       if (lowerCourse.contains('vat') || lowerCourse.contains('gunc')) return 15; // 15 Soru Vatandaşlık & Güncel (Toplam GK = 60)
-      if (lowerCourse.contains('hukuk')) return 30;
-      if (lowerCourse.contains('iktisat')) return 30;
-      if (lowerCourse.contains('maliye')) return 30;
-      if (lowerCourse.contains('muhasebe')) return 30;
-      if (lowerCourse.contains('kamu')) return 30;
+      if (lowerCourse.contains('hukuk')) return 40;
+      if (lowerCourse.contains('iktisat')) return 40;
+      if (lowerCourse.contains('maliye')) return 40;
+      if (lowerCourse.contains('muhasebe')) return 40;
+      if (lowerCourse.contains('kamu')) return 40;
       return 30;
     }
 

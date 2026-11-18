@@ -460,7 +460,9 @@ class _AddMockExamDialogState extends State<AddMockExamDialog> {
                                   border: Border.all(color: Colors.amberAccent.withValues(alpha: 0.6)),
                                 ),
                                 child: Text(
-                                  '~$_totalLiveEstimatedScore Puan',
+                                  context.read<UserProvider>().targetExam.toLowerCase().contains('alan')
+                                      ? '~$_totalLiveEstimatedScore P48'
+                                      : '~$_totalLiveEstimatedScore Puan',
                                   style: const TextStyle(
                                     color: Colors.amberAccent,
                                     fontWeight: FontWeight.bold,
