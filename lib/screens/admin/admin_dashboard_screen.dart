@@ -88,7 +88,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final premiumCount = _allStudents.where((s) => s.isPremiumActive).length;
     final kpssCount = _allStudents.where((s) => s.targetExam.contains('KPSS')).length;
-    final yksCount = _allStudents.where((s) => s.targetExam.contains('YKS')).length;
+    final yksCount = _allStudents.where((s) => s.targetExam.contains('YKS') || s.targetExam.contains('TYT')).length;
 
     return Scaffold(
       appBar: AppBar(

@@ -607,6 +607,11 @@ class MockExamModel {
     } else if (targetExam.contains('LGS')) {
       adviceBuffer.writeln('\n📌 LGS Koç Analizi:');
       adviceBuffer.writeln('• Matematik ve Fen Bilimleri katsayısı (4.0) en yüksek derslerdir.');
+    } else if (targetExam.contains('TYT')) {
+      adviceBuffer.writeln('\n📌 TYT Koç Analizi:');
+      adviceBuffer.writeln('• Türkçe (40 soru) ve Temel Matematik (40 soru) TYT puanının 2/3\'ünü oluşturur.');
+      adviceBuffer.writeln('• Özellikle Paragraf ve Problemler TYT netlerinizin temel taşıdır. Günlük paragraf ve problem rutini şart!');
+      adviceBuffer.writeln('• Fen ve Sosyal netleri standart sapmada fark yaratır, temel kavram tekrarlarını ihmal etmeyin.');
     } else if (targetExam.contains('YKS')) {
       adviceBuffer.writeln('\n📌 YKS Koç Analizi:');
       adviceBuffer.writeln('• Paragraf (22 soru) ve Problemler (12 soru) belirleyicidir. Günlük 20 paragraf rutini mutlaka korunmalı.');

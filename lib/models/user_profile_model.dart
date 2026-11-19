@@ -308,6 +308,7 @@ class ExamTypes {
     'YKS (Eşit Ağırlık)',
     'YKS (Sözel)',
     'YKS (Dil)',
+    'YKS (Sadece TYT)',
     'LGS (Lise Giriş)',
     'AGS (Milli Eğitim Akademisi Giriş Sınavı)',
     'HMGS (Hukuk Mesleklerine Giriş Sınavı)',

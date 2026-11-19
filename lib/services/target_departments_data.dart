@@ -274,6 +274,118 @@ class TargetDepartmentsData {
       targetCourseNets: {'turkce': 33.0, 'matematik': 18.0, 'ingilizce': 73.0},
     ),
 
+    // --- YKS SADECE TYT / ÖNLİSANS BÖLÜMLERİ ---
+    const TargetDepartmentModel(
+      id: 'yks_tyt_paramedik',
+      name: 'İlk ve Acil Yardım / Paramedik (2 Yıllık Önlisans)',
+      examType: 'YKS (Sadece TYT)',
+      baseScore: 350.0,
+      targetNet: 75.0,
+      recommendedHours: 4,
+      category: 'Sağlık Hizmetleri',
+      description: 'Devlet üniversiteleri Paramedik programı için yüksek Türkçe ve Temel Matematik neti hedeflenir.',
+      targetCourseNets: {'turkce': 28.0, 'matematik': 22.0, 'geometri': 5.0, 'fizik': 4.0, 'kimya': 4.0, 'biyoloji': 4.0, 'tarih': 3.0, 'cografya': 3.0, 'felsefe': 3.0, 'din_kulturu': 3.0},
+    ),
+    const TargetDepartmentModel(
+      id: 'yks_tyt_pmyo',
+      name: 'Polis Meslek Yüksekokulu (PMYO)',
+      examType: 'YKS (Sadece TYT)',
+      baseScore: 280.0,
+      targetNet: 55.0,
+      recommendedHours: 4,
+      category: 'Emniyet & Güvenlik',
+      description: 'PMYO Polis alımı TYT taban puanı ve mülakat barajı için dengeli Türkçe-Matematik başarısı hedeflenir.',
+      targetCourseNets: {'turkce': 25.0, 'matematik': 15.0, 'geometri': 3.0, 'tarih': 4.0, 'cografya': 4.0, 'felsefe': 3.0, 'din_kulturu': 3.0, 'fizik': 2.0, 'kimya': 2.0, 'biyoloji': 2.0},
+    ),
+    const TargetDepartmentModel(
+      id: 'yks_tyt_astsubay',
+      name: 'Astsubay Meslek Yüksekokulları (MSÜ - TYT)',
+      examType: 'YKS (Sadece TYT)',
+      baseScore: 295.0,
+      targetNet: 60.0,
+      recommendedHours: 4,
+      category: 'Savunma & Askeri',
+      description: 'Kara, Hava, Deniz Astsubay MYO için TYT taban puanı ve MSÜ sıralaması hedeflenir.',
+      targetCourseNets: {'turkce': 26.0, 'matematik': 17.0, 'geometri': 4.0, 'tarih': 4.0, 'cografya': 4.0, 'felsefe': 3.0, 'din_kulturu': 3.0, 'fizik': 3.0, 'kimya': 3.0, 'biyoloji': 3.0},
+    ),
+    const TargetDepartmentModel(
+      id: 'yks_tyt_bilgisayar',
+      name: 'Bilgisayar Programcılığı (2 Yıllık Önlisans)',
+      examType: 'YKS (Sadece TYT)',
+      baseScore: 330.0,
+      targetNet: 70.0,
+      recommendedHours: 4,
+      category: 'Bilişim & Yazılım',
+      description: 'Yazılım sektörüne hızlı geçiş veya DGS ile Mühendisliğe geçiş için güçlü matematik altyapısı hedeflenir.',
+      targetCourseNets: {'matematik': 25.0, 'geometri': 6.0, 'turkce': 26.0, 'fizik': 4.0, 'kimya': 3.0, 'biyoloji': 3.0, 'tarih': 3.0, 'cografya': 3.0, 'felsefe': 3.0, 'din_kulturu': 3.0},
+    ),
+    const TargetDepartmentModel(
+      id: 'yks_tyt_anestezi',
+      name: 'Anestezi (2 Yıllık Önlisans)',
+      examType: 'YKS (Sadece TYT)',
+      baseScore: 340.0,
+      targetNet: 72.0,
+      recommendedHours: 4,
+      category: 'Sağlık Hizmetleri',
+      description: 'Popüler sağlık programlarından Anestezi için yüksek TYT puanı hedeflenir.',
+      targetCourseNets: {'turkce': 28.0, 'matematik': 20.0, 'geometri': 4.0, 'fizik': 4.0, 'kimya': 4.0, 'biyoloji': 5.0, 'tarih': 3.0, 'cografya': 3.0, 'felsefe': 3.0, 'din_kulturu': 3.0},
+    ),
+    const TargetDepartmentModel(
+      id: 'yks_tyt_agiz_dis',
+      name: 'Ağız ve Diş Sağlığı (2 Yıllık Önlisans)',
+      examType: 'YKS (Sadece TYT)',
+      baseScore: 320.0,
+      targetNet: 66.0,
+      recommendedHours: 4,
+      category: 'Sağlık Hizmetleri',
+      description: 'Diş kliniklerinde teknikerlik ve istihdam olanağı için dengeli TYT netleri.',
+      targetCourseNets: {'turkce': 26.0, 'matematik': 18.0, 'geometri': 4.0, 'fizik': 3.0, 'kimya': 4.0, 'biyoloji': 4.0, 'tarih': 3.0, 'cografya': 3.0, 'felsefe': 3.0, 'din_kulturu': 3.0},
+    ),
+    const TargetDepartmentModel(
+      id: 'yks_tyt_adalet',
+      name: 'Adalet (2 Yıllık Önlisans / DGS Hukuk)',
+      examType: 'YKS (Sadece TYT)',
+      baseScore: 310.0,
+      targetNet: 62.0,
+      recommendedHours: 4,
+      category: 'Hukuk & Adalet',
+      description: 'Zabıt katipliği, ceza infaz ve DGS ile Hukuk Fakültesi geçişi hedefleyenler için.',
+      targetCourseNets: {'turkce': 30.0, 'matematik': 15.0, 'geometri': 3.0, 'tarih': 4.0, 'cografya': 4.0, 'felsefe': 3.0, 'din_kulturu': 3.0, 'fizik': 2.0, 'kimya': 2.0, 'biyoloji': 2.0},
+    ),
+    const TargetDepartmentModel(
+      id: 'yks_tyt_besyo',
+      name: 'BESYO / Spor Bilimleri (Özel Yetenek & TYT)',
+      examType: 'YKS (Sadece TYT)',
+      baseScore: 260.0,
+      targetNet: 50.0,
+      recommendedHours: 3,
+      category: 'Spor & Fiziksel Eğitim',
+      description: 'Beden Eğitimi Öğretmenliği ve Antrenörlük için TYT barajını rahatça geçip parkur sınavına odaklanma hedefi.',
+      targetCourseNets: {'turkce': 22.0, 'matematik': 12.0, 'geometri': 2.0, 'tarih': 4.0, 'cografya': 4.0, 'felsefe': 3.0, 'din_kulturu': 3.0, 'fizik': 2.0, 'kimya': 2.0, 'biyoloji': 2.0},
+    ),
+    const TargetDepartmentModel(
+      id: 'yks_tyt_kabin',
+      name: 'Sivil Havacılık Kabin Hizmetleri (2 Yıllık Önlisans)',
+      examType: 'YKS (Sadece TYT)',
+      baseScore: 315.0,
+      targetNet: 65.0,
+      recommendedHours: 4,
+      category: 'Havacılık & Ulaştırma',
+      description: 'Havayolu şirketlerinde kabin memurluğu (hosteslik) kariyeri için TYT başarısı.',
+      targetCourseNets: {'turkce': 28.0, 'matematik': 16.0, 'geometri': 3.0, 'tarih': 4.0, 'cografya': 4.0, 'felsefe': 3.0, 'din_kulturu': 3.0, 'fizik': 2.0, 'kimya': 2.0, 'biyoloji': 3.0},
+    ),
+    const TargetDepartmentModel(
+      id: 'yks_tyt_tibbi_lab',
+      name: 'Tıbbi Laboratuvar ve Görüntüleme (2 Yıllık Önlisans)',
+      examType: 'YKS (Sadece TYT)',
+      baseScore: 325.0,
+      targetNet: 68.0,
+      recommendedHours: 4,
+      category: 'Sağlık Hizmetleri',
+      description: 'Radyoloji ve biyokimya laboratuvar teknikerliği için biyoloji ve kimya ağırlıklı TYT netleri.',
+      targetCourseNets: {'turkce': 26.0, 'matematik': 18.0, 'geometri': 4.0, 'fizik': 4.0, 'kimya': 5.0, 'biyoloji': 5.0, 'tarih': 3.0, 'cografya': 3.0, 'felsefe': 3.0, 'din_kulturu': 3.0},
+    ),
+
     // --- LGS (LİSE GİRİŞ SINAVI) ---
     const TargetDepartmentModel(
       id: 'lgs_galatasaray_kabatas',
@@ -655,7 +767,8 @@ class TargetDepartmentsData {
       if (lowerExam.contains('ags') && dExam.contains('ags')) return true;
       if (lowerExam.contains('hmgs') && dExam.contains('hmgs')) return true;
       if (lowerExam.contains('kpss') && dExam.contains('kpss')) return true;
-      if (lowerExam.contains('yks') && dExam.contains('yks')) return true;
+      if (lowerExam.contains('tyt') && dExam.contains('tyt')) return true;
+      if (!lowerExam.contains('tyt') && lowerExam.contains('yks') && dExam.contains('yks') && !dExam.contains('tyt')) return true;
       if (lowerExam.contains('lgs') && dExam.contains('lgs')) return true;
       return false;
     }).toList();
