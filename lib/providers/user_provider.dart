@@ -8,6 +8,7 @@ import '../models/user_profile_model.dart';
 import '../services/firebase_service.dart';
 import '../services/storage_service.dart';
 import '../services/target_departments_data.dart';
+import '../utils/email_validator.dart';
 
 class UserProvider with ChangeNotifier {
   final StorageService _storage;
@@ -174,7 +175,10 @@ class UserProvider with ChangeNotifier {
     String? teacherCodeInput,
   }) async {
     final now = DateTime.now();
-    final cleanEmail = email.trim();
+    final cleanEmail = email.trim().toLowerCase();
+    if (!EmailValidator.isValid(cleanEmail)) {
+      throw ArgumentError('Geçersiz e-posta formatı. Lütfen gerçek bir e-posta adresi girin: $cleanEmail');
+    }
     final generatedCode = role == 'teacher' ? _generateTeacherCode() : null;
 
     String? linkedTeacherId;

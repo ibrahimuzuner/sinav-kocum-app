@@ -5,6 +5,7 @@ import '../../models/user_profile_model.dart';
 import '../../providers/settings_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../services/firebase_service.dart';
+import '../../utils/email_validator.dart';
 import '../../widgets/premium_upgrade_modal.dart';
 import '../admin/admin_dashboard_screen.dart';
 import 'widgets/teacher_student_detail_modal.dart';
@@ -157,11 +158,11 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
               onPressed: isSubmitting
                   ? null
                   : () async {
-                      final email = emailCtrl.text.trim();
-                      if (email.isEmpty || !email.contains('@')) {
+                      final email = emailCtrl.text.trim().toLowerCase();
+                      if (!EmailValidator.isValid(email)) {
                         ScaffoldMessenger.of(this.context).showSnackBar(
                           const SnackBar(
-                            content: Text('Lütfen geçerli bir e-posta adresi girin.'),
+                            content: Text('Lütfen geçerli ve gerçek bir e-posta adresi girin (örn: ogrenci@gmail.com).'),
                             behavior: SnackBarBehavior.floating,
                           ),
                         );

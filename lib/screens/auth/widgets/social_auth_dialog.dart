@@ -5,6 +5,7 @@ import '../../../models/user_profile_model.dart';
 import '../../../providers/study_provider.dart';
 import '../../../providers/user_provider.dart';
 import '../../../services/social_auth_service.dart';
+import '../../../utils/email_validator.dart';
 
 class SocialAuthHelper {
   /// Google veya Apple ile tek tıkla giriş / kayıt sürecini başlatır
@@ -208,6 +209,16 @@ class _SocialAccountPickerModalState extends State<SocialAccountPickerModal> {
   Future<void> _submitAndLogin(String email) async {
     final cleanEmail = email.trim().toLowerCase();
     if (cleanEmail.isEmpty) return;
+
+    if (!EmailValidator.isValid(cleanEmail)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Lütfen geçerli ve gerçek bir e-posta adresi girin (örn: ogrenci@gmail.com).'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
 
     if (!_formKey.currentState!.validate()) return;
 
@@ -555,15 +566,7 @@ class _SocialAccountPickerModalState extends State<SocialAccountPickerModal> {
                           )
                         : null,
                   ),
-                  validator: (val) {
-                    if (val == null || val.trim().isEmpty) {
-                      return 'Lütfen e-posta adresinizi girin';
-                    }
-                    if (!val.contains('@') || !val.contains('.')) {
-                      return 'Geçerli bir e-posta adresi girin';
-                    }
-                    return null;
-                  },
+                  validator: (val) => EmailValidator.validate(val),
                   onChanged: (text) => setState(() {}),
                 ),
                 const SizedBox(height: 8),
@@ -693,14 +696,20 @@ class _SocialAccountPickerModalState extends State<SocialAccountPickerModal> {
       label: Text(domain, style: const TextStyle(fontSize: 11)),
       onPressed: () {
         final current = _emailController.text.trim();
-        if (current.isEmpty) {
-          _emailController.text = domain;
-        } else if (current.contains('@')) {
-          final prefix = current.split('@').first;
-          _emailController.text = '$prefix$domain';
-        } else {
-          _emailController.text = '$current$domain';
+        final prefix = current.contains('@') ? current.split('@').first : current;
+        if (prefix.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Lütfen önce e-posta adınızın başını (kullanıcı adınızı) yazın.'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+          return;
         }
+        _emailController.text = '$prefix$domain';
+        _emailController.selection = TextSelection.fromPosition(
+          TextPosition(offset: _emailController.text.length),
+        );
         setState(() {});
       },
     );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../models/user_profile_model.dart';
 import '../../services/firebase_service.dart';
+import '../../utils/email_validator.dart';
 import '../../utils/url_launcher_helper.dart';
 
 class SupportFeedbackDialog extends StatefulWidget {
@@ -467,11 +468,7 @@ class _SupportFeedbackDialogState extends State<SupportFeedbackDialog> {
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                       ),
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) return 'E-posta adresinizi girin';
-                        if (!v.contains('@') || !v.contains('.')) return 'Geçerli bir e-posta girin';
-                        return null;
-                      },
+                      validator: (v) => EmailValidator.validate(v),
                     ),
                     const SizedBox(height: 12),
 

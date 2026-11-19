@@ -5,6 +5,7 @@ import '../../providers/settings_provider.dart';
 import '../../providers/study_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../services/target_departments_data.dart';
+import '../../utils/email_validator.dart';
 import '../../utils/formatters.dart';
 import 'widgets/social_auth_dialog.dart';
 
@@ -245,12 +246,7 @@ class _AuthScreenState extends State<AuthScreen> {
                 hintText: 'ornek@email.com',
                 prefixIcon: Icon(Icons.email_outlined),
               ),
-              validator: (v) {
-                if (v == null || !v.contains('@') || !v.contains('.')) {
-                  return 'Geçerli bir e-posta adresi girin';
-                }
-                return null;
-              },
+              validator: (v) => EmailValidator.validate(v),
             ),
             const SizedBox(height: 16),
 
@@ -478,12 +474,7 @@ class _AuthScreenState extends State<AuthScreen> {
                 hintText: 'ogrenci@email.com',
                 prefixIcon: Icon(Icons.email_outlined),
               ),
-              validator: (v) {
-                if (v == null || !v.contains('@') || !v.contains('.')) {
-                  return 'Geçerli bir e-posta adresi girin';
-                }
-                return null;
-              },
+              validator: (v) => EmailValidator.validate(v),
             ),
             const SizedBox(height: 14),
 
@@ -907,6 +898,17 @@ class _AuthScreenState extends State<AuthScreen> {
                                 ? _customDepartmentController.text.trim()
                                 : _selectedDepartment);
 
+                        final regEmail = _regEmailController.text.trim();
+                        if (!EmailValidator.isValid(regEmail)) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Lütfen geçerli ve gerçek bir e-posta adresi girin (örn: ogrenci@gmail.com).'),
+                              backgroundColor: Colors.redAccent,
+                            ),
+                          );
+                          return;
+                        }
+
                         final fullName = _regFullNameController.text.trim();
                         final nameParts = fullName.split(RegExp(r'\s+'));
                         final firstName = nameParts.isNotEmpty ? nameParts.first : fullName;
@@ -915,7 +917,7 @@ class _AuthScreenState extends State<AuthScreen> {
                         await userProvider.registerUser(
                           firstName: firstName,
                           lastName: lastName,
-                          email: _regEmailController.text.trim(),
+                          email: regEmail,
                           birthDate: _birthDate,
                           targetExam: isTeacher ? 'Öğretmen / Koç' : _selectedExam,
                           dailyTargetHours: isTeacher ? 0 : _dailyTargetHours,
