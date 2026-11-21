@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/study_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../services/smart_scheduler_service.dart';
+import '../../utils/formatters.dart';
 
 class SmartScheduleDialog extends StatefulWidget {
   const SmartScheduleDialog({super.key});
@@ -19,12 +20,25 @@ class _SmartScheduleDialogState extends State<SmartScheduleDialog> {
   final bool _replaceExisting = true;
   final Set<String> _excludedCourseIds = {};
   bool _addDailyParagraph = true;
+  late int _startDay;
+  int _durationDays = 7;
 
   @override
   void initState() {
     super.initState();
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     _dailyMinutes = userProvider.dailyTargetHours * 60;
+    _startDay = DateTime.now().weekday;
+  }
+
+  String _calculatePlannedDaysText() {
+    final List<String> dayNames = [];
+    for (int i = 0; i < _durationDays; i++) {
+      final d = ((_startDay - 1 + i) % 7) + 1;
+      if (d == 7 && !_includeSunday && _durationDays > 1) continue;
+      dayNames.add(Formatters.formatDayOfWeekShort(d));
+    }
+    return dayNames.join(', ');
   }
 
   @override
@@ -221,6 +235,146 @@ class _SmartScheduleDialogState extends State<SmartScheduleDialog> {
                     ),
                   ),
                 ),
+              ),
+            ),
+
+            // 🎯 BAŞLANGIÇ GÜNÜ VE PROGRAM SÜRESİ
+            Container(
+              margin: const EdgeInsets.only(bottom: 20),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF4F46E5).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.date_range_rounded, color: Color(0xFF4F46E5), size: 18),
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Başlangıç Günü & Program Süresi',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // 1. Hangi günden başlasın?
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Hangi Günden Başlasın?',
+                        style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+                      ),
+                      Text(
+                        Formatters.formatDayOfWeek(_startDay),
+                        style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: List.generate(7, (index) {
+                        final day = index + 1;
+                        final isSelected = _startDay == day;
+                        final isToday = day == DateTime.now().weekday;
+
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: ChoiceChip(
+                            label: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(Formatters.formatDayOfWeekShort(day)),
+                                if (isToday)
+                                  Text(
+                                    'Bugün',
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                      color: isSelected ? Colors.white : const Color(0xFF4F46E5),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            selected: isSelected,
+                            selectedColor: const Color(0xFF4F46E5),
+                            labelStyle: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: isSelected ? Colors.white : null,
+                            ),
+                            onSelected: (_) => setState(() => _startDay = day),
+                          ),
+                        );
+                      }),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // 2. Kaç günlük program yapılsın? (İleriye doğru)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'İleriye Doğru Kaç Günlük Yapılsın?',
+                        style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+                      ),
+                      Text(
+                        '$_durationDays Günlük',
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF10B981)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _buildDurationChip(label: '1 Günlük (Sadece Seçilen Gün)', days: 1),
+                      _buildDurationChip(label: '3 Günlük Kamp', days: 3),
+                      _buildDurationChip(label: '5 Günlük', days: 5),
+                      _buildDurationChip(label: '7 Günlük (Tam Hafta)', days: 7),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Canlı Açıklama / Önizleme
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF4F46E5).withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.info_outline_rounded, size: 16, color: Color(0xFF4F46E5)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '${Formatters.formatDayOfWeek(_startDay)} gününden başlayarak ileriye doğru $_durationDays gün için (${_calculatePlannedDaysText()}) program oluşturulacak.',
+                            style: const TextStyle(fontSize: 11.5, color: Color(0xFF4F46E5), fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
 
@@ -518,13 +672,13 @@ class _SmartScheduleDialogState extends State<SmartScheduleDialog> {
                     replaceExisting: _replaceExisting,
                     excludedCourseIds: _excludedCourseIds,
                     addDailyParagraph: _addDailyParagraph,
+                    startDayOfWeek: _startDay,
+                    planDaysCount: _durationDays,
                   );
 
                   if (context.mounted) {
                     Navigator.pop(context);
-                    final message = _excludedCourseIds.isNotEmpty
-                        ? '✨ ${_excludedCourseIds.length} ders elenerek ${userProvider.targetDepartment} için $count adet çalışma bloğu hazırlandı!'
-                        : '✨ ${userProvider.targetDepartment} (${userProvider.targetScore.toInt()} Puan) için $count adet yapay zeka hedefi hazırlandı!';
+                    final message = '✨ ${Formatters.formatDayOfWeek(_startDay)} gününden itibaren $_durationDays günlük akıllı program ($count hedef) başarıyla hazırlandı!';
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(message),
@@ -549,6 +703,20 @@ class _SmartScheduleDialogState extends State<SmartScheduleDialog> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildDurationChip({required String label, required int days}) {
+    final isSelected = _durationDays == days;
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (_) => setState(() => _durationDays = days),
+      selectedColor: const Color(0xFF10B981),
+      labelStyle: TextStyle(
+        fontWeight: FontWeight.bold,
+        color: isSelected ? Colors.white : null,
       ),
     );
   }

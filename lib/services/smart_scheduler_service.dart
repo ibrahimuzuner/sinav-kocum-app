@@ -37,12 +37,29 @@ class SmartSchedulerService {
     StudyContentMode contentMode = StudyContentMode.hybrid, // Konu/Video + Soru mu, yoksa Sadece Soru mu?
     Set<String> excludedCourseIds = const {}, // Öğrencinin elediği / çalışmak istemediği dersler
     bool addDailyParagraph = true, // Günlük 20 Paragraf Rutini (Zihin gelişimi ve net artışı)
+    int startDayOfWeek = 1, // Başlangıç günü (1=Pzt..7=Paz)
+    int planDaysCount = 7, // Kaç günlük program yapılacağı (1..7)
   }) {
     // Elenen / çalışılmak istenmeyen dersleri filtrele
     final activeCourses = courses.where((c) => !excludedCourseIds.contains(c.id)).toList();
     if (activeCourses.isEmpty) return [];
 
-    final activeDays = includeSunday ? [1, 2, 3, 4, 5, 6, 7] : [1, 2, 3, 4, 5, 6]; // 1=Pzt..7=Paz
+    final safePlanDays = planDaysCount.clamp(1, 7);
+    final safeStartDay = startDayOfWeek.clamp(1, 7);
+
+    final List<int> activeDays = [];
+    for (int i = 0; i < safePlanDays; i++) {
+      final day = ((safeStartDay - 1 + i) % 7) + 1;
+      // Eğer Pazar günü denk gelirse ve includeSunday false ise (ve tek günlük Pazar seçilmemişse) atla
+      if (day == 7 && !includeSunday && safePlanDays > 1) {
+        continue;
+      }
+      activeDays.add(day);
+    }
+
+    if (activeDays.isEmpty) {
+      activeDays.add(safeStartDay);
+    }
 
     // 1. Hedef Bölüm ve Sınav Türüne Göre Yapay Zeka Ağırlık Katsayıları
     final Map<String, double> examMultiplier = {};

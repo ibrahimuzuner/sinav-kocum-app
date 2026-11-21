@@ -895,8 +895,14 @@ class DashboardScreen extends StatelessWidget {
   }
 
   Widget _buildStudentAssignmentsCard(BuildContext context, UserProvider userProvider, bool isDark) {
-    final assignments = userProvider.studentAssignments;
-    final pending = userProvider.pendingAssignmentsCount;
+    final allAssignments = userProvider.studentAssignments;
+    final pendingAssignments = allAssignments.where((a) => !a.isCompleted).toList();
+    final completedAssignments = allAssignments.where((a) => a.isCompleted).toList();
+    final pendingCount = pendingAssignments.length;
+
+    if (pendingAssignments.isEmpty && completedAssignments.isEmpty) {
+      return const SizedBox.shrink();
+    }
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -920,92 +926,133 @@ class DashboardScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: (pending > 0 ? const Color(0xFFF59E0B) : const Color(0xFF10B981))
+                  color: (pendingCount > 0 ? const Color(0xFFF59E0B) : const Color(0xFF10B981))
                       .withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  pending > 0 ? '$pending bekliyor' : 'Tümü tamam ✓',
+                  pendingCount > 0 ? '$pendingCount bekliyor' : 'Tümü tamam ✓',
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
-                    color: pending > 0 ? const Color(0xFFF59E0B) : const Color(0xFF10B981),
+                    color: pendingCount > 0 ? const Color(0xFFF59E0B) : const Color(0xFF10B981),
                   ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 10),
-          ...assignments.take(5).map((a) {
-            return InkWell(
-              onTap: () => userProvider.toggleMyAssignmentCompleted(a.id),
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
+          if (pendingAssignments.isEmpty) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 22),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Tüm koç ödevlerini tamamladın! Çalışmaların bugünkü kayıtlarına eklendi 👏',
+                      style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF047857)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ] else ...[
+            ...pendingAssignments.map((a) {
+              return Container(
                 margin: const EdgeInsets.only(bottom: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
                 decoration: BoxDecoration(
                   color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: a.isCompleted
-                        ? const Color(0xFF10B981).withValues(alpha: 0.35)
-                        : (a.isOverdue
-                            ? Colors.redAccent.withValues(alpha: 0.4)
-                            : Colors.transparent),
+                    color: a.isOverdue
+                        ? Colors.redAccent.withValues(alpha: 0.4)
+                        : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
                   ),
                 ),
-                child: Row(
-                  children: [
-                    Icon(
-                      a.isCompleted ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
-                      color: a.isCompleted
-                          ? const Color(0xFF10B981)
-                          : (a.isOverdue ? Colors.redAccent : const Color(0xFF4F46E5)),
-                      size: 22,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${a.courseName} • ${a.title}',
-                            style: TextStyle(
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.bold,
-                              decoration: a.isCompleted ? TextDecoration.lineThrough : null,
-                            ),
+                child: InkWell(
+                  onTap: () async {
+                    final messenger = ScaffoldMessenger.of(context);
+                    final studyProv = context.read<StudyProvider>();
+                    final completed = await userProvider.toggleMyAssignmentCompleted(a.id);
+                    if (completed != null) {
+                      await studyProv.completeCoachAssignment(completed);
+                      messenger.showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            '🎉 "${completed.title}" ödevi tamamlandı! ${completed.targetQuestions > 0 ? "${completed.targetQuestions} soru ve " : ""}${completed.targetMinutes > 0 ? "${completed.targetMinutes} dk çalışma " : ""}bugünkü kayıtlarına aktarıldı.',
                           ),
-                          if (a.description.isNotEmpty)
-                            Text(
-                              a.description,
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                          behavior: SnackBarBehavior.floating,
+                          backgroundColor: const Color(0xFF10B981),
+                        ),
+                      );
+                    }
+                  },
+                  borderRadius: BorderRadius.circular(12),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.radio_button_unchecked_rounded,
+                          color: a.isOverdue ? Colors.redAccent : const Color(0xFF4F46E5),
+                          size: 22,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${a.courseName} • ${a.title}',
+                                style: const TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          const SizedBox(height: 2),
-                          Text(
-                            [
-                              if (a.targetQuestions > 0) '${a.targetQuestions} soru',
-                              if (a.targetMinutes > 0) '${a.targetMinutes} dk',
-                              'Son: ${Formatters.formatDateTurkish(a.dueDate)}',
-                            ].join(' • '),
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: a.isOverdue && !a.isCompleted ? Colors.redAccent : Colors.grey,
-                            ),
+                              if (a.description.isNotEmpty)
+                                Text(
+                                  a.description,
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              const SizedBox(height: 2),
+                              Text(
+                                [
+                                  if (a.targetQuestions > 0) '${a.targetQuestions} soru',
+                                  if (a.targetMinutes > 0) '${a.targetMinutes} dk',
+                                  'Son: ${Formatters.formatDateTurkish(a.dueDate)}',
+                                ].join(' • '),
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: a.isOverdue ? Colors.redAccent : Colors.grey,
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded, size: 18, color: Colors.grey),
+                          tooltip: 'Ödevi Kaldır',
+                          onPressed: () => userProvider.removeStudentAssignment(a.id),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
-            );
-          }),
+              );
+            }),
+          ],
         ],
       ),
     );

@@ -320,17 +320,23 @@ class UserProvider with ChangeNotifier {
   }
 
   /// Öğrenci kendisine verilen ödevi tamamlandı olarak işaretler/kaldırır
-  Future<void> toggleMyAssignmentCompleted(String assignmentId) async {
-    if (_userProfile == null) return;
+  Future<AssignmentModel?> toggleMyAssignmentCompleted(String assignmentId) async {
+    if (_userProfile == null) return null;
+    AssignmentModel? completedAssignment;
+
     // Yerel optimistik güncelleme
     final current = studentAssignments;
     final optimistic = current.map((a) {
       if (a.id == assignmentId) {
         final next = !a.isCompleted;
-        return a.copyWith(
+        final updated = a.copyWith(
           isCompleted: next,
           completedAt: next ? DateTime.now() : null,
         );
+        if (next) {
+          completedAssignment = updated;
+        }
+        return updated;
       }
       return a;
     }).toList();
@@ -353,6 +359,25 @@ class UserProvider with ChangeNotifier {
       await _storage.saveUserProfile(_userProfile!);
       notifyListeners();
     }
+
+    return completedAssignment;
+  }
+
+  /// Öğrencinin tamamladığı veya listeden kaldırmak istediği ödevi siler
+  Future<void> removeStudentAssignment(String assignmentId) async {
+    if (_userProfile == null) return;
+    final current = studentAssignments;
+    final updated = current.where((a) => a.id != assignmentId).toList();
+    _userProfile = _userProfile!.copyWith(
+      assignmentsJson: jsonEncode(updated.map((e) => e.toJson()).toList()),
+    );
+    await _storage.saveUserProfile(_userProfile!);
+    notifyListeners();
+
+    _firebaseService.deleteStudentAssignment(
+      studentId: _userProfile!.id,
+      assignmentId: assignmentId,
+    );
   }
 
   /// Öğrenci öğretmenine mesaj gönderir

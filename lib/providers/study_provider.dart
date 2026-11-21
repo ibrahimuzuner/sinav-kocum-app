@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
+import '../models/assignment_model.dart';
 import '../models/course_model.dart';
 import '../models/topic_model.dart';
 import '../models/question_log_model.dart';
@@ -634,6 +635,55 @@ class StudyProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  /// Koçun verdiği bir ödev tamamlandığında öğrencinin bugünkü çalışma kayıtlarına ekler
+  Future<void> completeCoachAssignment(AssignmentModel assignment) async {
+    final now = DateTime.now();
+    final qCount = assignment.targetQuestions;
+    final durationMins = assignment.targetMinutes > 0
+        ? assignment.targetMinutes
+        : (qCount > 0 ? (qCount * 1.5).round().clamp(15, 60) : 30);
+
+    // Dersi bul veya dinamik oluştur
+    final course = _courses.firstWhere(
+      (c) => c.name.toLowerCase().trim() == assignment.courseName.toLowerCase().trim(),
+      orElse: () => CourseModel(
+        id: assignment.courseName.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '_'),
+        name: assignment.courseName,
+        colorValue: 0xFF4F46E5,
+      ),
+    );
+
+    // 1. Hedef soru 0'dan büyükse gerçek soru kaydı ekle
+    if (qCount > 0) {
+      final correctCount = (qCount * 0.9).round().clamp(1, qCount);
+      final wrongCount = qCount - correctCount;
+
+      await addQuestionLog(
+        courseId: course.id,
+        courseName: assignment.courseName,
+        topicName: assignment.title,
+        correct: correctCount,
+        wrong: wrongCount,
+        empty: 0,
+        date: now,
+        durationMinutes: durationMins,
+        notes: '👨‍🏫 Koç Ödevi Tamamlandı: ${assignment.title} (Koç: ${assignment.teacherName})',
+      );
+    }
+
+    // 2. Çalışma süresi seansını ekle
+    await addStudySession(
+      courseId: course.id,
+      courseName: assignment.courseName,
+      topicName: assignment.title,
+      durationSeconds: durationMins * 60,
+      notes: '👨‍🏫 Koç Ödevi: ${assignment.title}',
+    );
+
+    _recordActivity();
+    notifyListeners();
+  }
+
   /// Akıllı çalışma programı oluştur ve uygula
   Future<int> applySmartSchedule({
     required int dailyMinutes,
@@ -647,6 +697,8 @@ class StudyProvider with ChangeNotifier {
     bool replaceExisting = true,
     Set<String> excludedCourseIds = const {},
     bool addDailyParagraph = true,
+    int startDayOfWeek = 1,
+    int planDaysCount = 7,
   }) async {
     final userProfile = _storage.loadUserProfile();
     final dep = targetDepartment ?? userProfile?.targetDepartment ?? 'Genel Başarı Hedefi';
@@ -666,10 +718,18 @@ class StudyProvider with ChangeNotifier {
       contentMode: contentMode,
       excludedCourseIds: excludedCourseIds,
       addDailyParagraph: addDailyParagraph,
+      startDayOfWeek: startDayOfWeek,
+      planDaysCount: planDaysCount,
     );
 
     if (replaceExisting) {
-      _scheduleItems = generated;
+      if (planDaysCount >= 7) {
+        _scheduleItems = generated;
+      } else {
+        final generatedDays = generated.map((g) => g.dayOfWeek).toSet();
+        _scheduleItems.removeWhere((item) => generatedDays.contains(item.dayOfWeek));
+        _scheduleItems.addAll(generated);
+      }
     } else {
       _scheduleItems.addAll(generated);
     }
