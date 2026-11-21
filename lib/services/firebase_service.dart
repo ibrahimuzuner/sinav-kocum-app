@@ -1479,4 +1479,100 @@ class AppFirebaseService {
     }
     return false;
   }
+
+  /// Kullanıcıyı ve e-posta kaydını Firestore'dan siler (Süper Yönetici)
+  Future<bool> deleteUser(String userId, {String? email}) async {
+    if (userId.isEmpty) return false;
+
+    // 1. Önce Firestore SDK ile dene
+    if (_isInitialized && _firestore != null) {
+      try {
+        await _firestore!.collection('users').doc(userId).delete();
+        if (email != null && email.isNotEmpty) {
+          final emailDocId = email.toLowerCase().trim().replaceAll('.', '_');
+          try {
+            final emailDoc = await _firestore!.collection('user_emails').doc(emailDocId).get();
+            if (emailDoc.exists && emailDoc.data()?['userId'] == userId) {
+              await _firestore!.collection('user_emails').doc(emailDocId).delete();
+            }
+          } catch (_) {}
+        }
+        debugPrint('deleteUser: Kullanıcı SDK ile silindi ($userId)');
+        return true;
+      } catch (e) {
+        debugPrint('deleteUser SDK hatası: $e');
+      }
+    }
+
+    // 2. REST API ile sil
+    try {
+      final userUri = Uri.parse('$_restBaseUrl/users/$userId?key=$_apiKey');
+      final resp = await http.delete(userUri);
+
+      if (email != null && email.isNotEmpty) {
+        final emailDocId = email.toLowerCase().trim().replaceAll('.', '_');
+        final emailUri = Uri.parse('$_restBaseUrl/user_emails/$emailDocId?key=$_apiKey');
+        await http.delete(emailUri);
+      }
+
+      return resp.statusCode == 200 || resp.statusCode == 404;
+    } catch (e) {
+      debugPrint('deleteUser REST hatası: $e');
+    }
+    return false;
+  }
+
+  /// Kullanıcının rolünü değiştirir (Öğrenci ⇋ Öğretmen / Koç)
+  Future<bool> updateUserRole({
+    required String userId,
+    required String newRole,
+    String? newTeacherCode,
+    String? email,
+  }) async {
+    if (userId.isEmpty) return false;
+    final isNowTeacher = newRole == 'teacher';
+    final fields = <String, dynamic>{
+      'role': newRole,
+      'targetExam': isNowTeacher ? 'Öğretmen / Koç' : 'YKS (Sayısal)',
+    };
+    if (isNowTeacher) {
+      fields['teacherCode'] = newTeacherCode ?? 'KOC-${1000 + Random().nextInt(9000)}';
+      fields['targetDepartment'] = 'Öğretmen / Eğitim Koçu';
+      fields['dailyTargetHours'] = 0;
+    } else {
+      fields['teacherCode'] = '';
+      fields['targetDepartment'] = 'Genel Başarı Hedefi';
+      fields['dailyTargetHours'] = 3;
+    }
+
+    final ok = await _patchUserFields(userId, fields);
+    if (ok && email != null && email.isNotEmpty) {
+      final emailDocId = email.toLowerCase().trim().replaceAll('.', '_');
+      try {
+        if (_isInitialized && _firestore != null) {
+          await _firestore!.collection('user_emails').doc(emailDocId).set({
+            'role': newRole,
+            if (fields.containsKey('teacherCode')) 'teacherCode': fields['teacherCode'],
+          }, SetOptions(merge: true));
+        } else {
+          final uri = Uri.parse(
+            '$_restBaseUrl/user_emails/$emailDocId?updateMask.fieldPaths=role&updateMask.fieldPaths=teacherCode&key=$_apiKey',
+          );
+          await http.patch(
+            uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'fields': {
+                'role': {'stringValue': newRole},
+                'teacherCode': {'stringValue': fields['teacherCode'] ?? ''},
+              },
+            }),
+          );
+        }
+      } catch (e) {
+        debugPrint('updateUserRole email sync hatası: $e');
+      }
+    }
+    return ok;
+  }
 }

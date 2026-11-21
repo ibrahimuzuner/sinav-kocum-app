@@ -111,6 +111,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   void _openStudentDetail(UserProfileModel student) {
+    final cleanEmail = student.email.toLowerCase().trim();
+    final duplicateCount = cleanEmail.isNotEmpty
+        ? _allStudents.where((u) => u.email.toLowerCase().trim() == cleanEmail).length
+        : 1;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -118,6 +123,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       builder: (ctx) => StudentDetailModal(
         student: student,
         onStudentUpdated: _loadStudents,
+        duplicateCount: duplicateCount,
       ),
     );
   }
@@ -942,6 +948,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final isApple = student.email.toLowerCase().contains('icloud') ||
         student.email.toLowerCase().contains('apple');
     final examColor = _getExamColor(student.targetExam);
+    final cleanEmail = student.email.toLowerCase().trim();
+    final duplicateCount = cleanEmail.isNotEmpty
+        ? _allStudents.where((u) => u.email.toLowerCase().trim() == cleanEmail).length
+        : 1;
 
     return InkWell(
       onTap: () => _openStudentDetail(student),
@@ -1044,6 +1054,33 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         const Padding(
                           padding: EdgeInsets.only(left: 4),
                           child: Icon(Icons.apple_rounded, size: 14, color: Colors.grey),
+                        ),
+                      if (duplicateCount > 1)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 6),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                            decoration: BoxDecoration(
+                              color: Colors.amber.withValues(alpha: 0.18),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: Colors.amber.withValues(alpha: 0.5)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.warning_amber_rounded, size: 11, color: Colors.amber),
+                                const SizedBox(width: 2),
+                                Text(
+                                  'Mükerrer ($duplicateCount)',
+                                  style: const TextStyle(
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.amber,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                     ],
                   ),

@@ -7,11 +7,13 @@ import '../../../utils/formatters.dart';
 class StudentDetailModal extends StatefulWidget {
   final UserProfileModel student;
   final VoidCallback onStudentUpdated;
+  final int duplicateCount;
 
   const StudentDetailModal({
     super.key,
     required this.student,
     required this.onStudentUpdated,
+    this.duplicateCount = 1,
   });
 
   @override
@@ -147,6 +149,142 @@ class _StudentDetailModalState extends State<StudentDetailModal> {
           ),
         );
       }
+    }
+  }
+
+  Future<void> _deleteUser() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.delete_forever_rounded, color: Color(0xFFDC2626), size: 28),
+            SizedBox(width: 8),
+            Text('Kullanıcıyı Sil'),
+          ],
+        ),
+        content: Text(
+          '${widget.student.fullName} (${widget.student.email}) adlı kullanıcının hesabını ve tüm verilerini kalıcı olarak silmek istediğinize emin misiniz?\n\nBu işlem geri alınamaz.',
+          style: const TextStyle(height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('İptal'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Evet, Sil'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !mounted) return;
+
+    setState(() => _isToggling = true);
+    final messenger = ScaffoldMessenger.of(context);
+    final success = await AppFirebaseService().deleteUser(
+      widget.student.id,
+      email: widget.student.email,
+    );
+
+    if (!mounted) return;
+    setState(() => _isToggling = false);
+
+    if (success) {
+      widget.onStudentUpdated();
+      Navigator.pop(context);
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('🗑️ Kullanıcı hesabı başarıyla silindi.'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Color(0xFFDC2626),
+        ),
+      );
+    } else {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Kullanıcı silinirken bir hata oluştu.'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
+  }
+
+  Future<void> _changeUserRole() async {
+    final newRole = widget.student.isTeacher ? 'student' : 'teacher';
+    final newRoleName = widget.student.isTeacher ? 'Öğrenci' : 'Öğretmen / Koç';
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.swap_horiz_rounded, color: Color(0xFF4F46E5), size: 28),
+            SizedBox(width: 8),
+            Text('Rol Değiştir'),
+          ],
+        ),
+        content: Text(
+          '${widget.student.fullName} (${widget.student.email}) kullanıcısının rolünü "$newRoleName" olarak değiştirmek istiyor musunuz?',
+          style: const TextStyle(height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('İptal'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF4F46E5),
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Evet, $newRoleName Yap'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !mounted) return;
+
+    setState(() => _isToggling = true);
+    final messenger = ScaffoldMessenger.of(context);
+    final success = await AppFirebaseService().updateUserRole(
+      userId: widget.student.id,
+      newRole: newRole,
+      email: widget.student.email,
+    );
+
+    if (!mounted) return;
+    setState(() => _isToggling = false);
+
+    if (success) {
+      widget.onStudentUpdated();
+      Navigator.pop(context);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('🔄 Kullanıcı rolü "$newRoleName" olarak güncellendi.'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: const Color(0xFF10B981),
+        ),
+      );
+    } else {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Rol güncellenirken bir hata oluştu.'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.redAccent,
+        ),
+      );
     }
   }
 
@@ -554,7 +692,85 @@ class _StudentDetailModalState extends State<StudentDetailModal> {
                 ),
               ),
             ],
-            const SizedBox(height: 10),
+            const SizedBox(height: 14),
+
+            // Mükerrer E-posta Uyarısı
+            if (widget.duplicateCount > 1) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(bottom: 14),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.warning_amber_rounded, color: Colors.amber, size: 24),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '⚠️ Mükerrer E-posta Kaydı (${widget.duplicateCount} Farklı Hesap)',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.amber),
+                          ),
+                          const SizedBox(height: 2),
+                          const Text(
+                            'Bu e-posta adresiyle sistemde birden fazla hesap açılmış. İhtiyaç duymadığınız mükerrer hesabı aşağıdaki "Hesabı Sil" butonuyla kaldırabilirsiniz.',
+                            style: TextStyle(fontSize: 11.5, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            // 6. HESAP VE ROL YÖNETİMİ (ROL DEĞİŞTİRME & KULLANICI SİLME)
+            Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 46,
+                    child: OutlinedButton.icon(
+                      onPressed: _isToggling ? null : _changeUserRole,
+                      icon: const Icon(Icons.swap_horiz_rounded, size: 18, color: Color(0xFF4F46E5)),
+                      label: Text(
+                        widget.student.isTeacher ? 'Öğrenci Yap' : 'Koç / Öğretmen Yap',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF4F46E5)),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Color(0xFF4F46E5)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: SizedBox(
+                    height: 46,
+                    child: OutlinedButton.icon(
+                      onPressed: _isToggling ? null : _deleteUser,
+                      icon: const Icon(Icons.delete_forever_rounded, size: 18, color: Color(0xFFDC2626)),
+                      label: const Text(
+                        'Hesabı Sil',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFFDC2626)),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Color(0xFFDC2626)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
 
             // Kapat Butonu
             SizedBox(

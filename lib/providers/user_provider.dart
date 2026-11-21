@@ -170,7 +170,7 @@ class UserProvider with ChangeNotifier {
     return 'KOC-$numPart';
   }
 
-  Future<void> registerUser({
+  Future<String?> registerUser({
     required String firstName,
     required String lastName,
     required String email,
@@ -187,8 +187,29 @@ class UserProvider with ChangeNotifier {
     final now = DateTime.now();
     final cleanEmail = email.trim().toLowerCase();
     if (!EmailValidator.isValid(cleanEmail)) {
-      throw ArgumentError('Geçersiz e-posta formatı. Lütfen gerçek bir e-posta adresi girin: $cleanEmail');
+      return 'Geçersiz e-posta formatı. Lütfen gerçek bir e-posta adresi girin.';
     }
+
+    // 1. E-posta adresi sistemde zaten kayıtlı mı kontrol et (Önce yerel, sonra Cloud Firestore)
+    UserProfileModel? existing = _storage.findProfileByEmail(cleanEmail);
+    if (existing == null) {
+      try {
+        existing = await _firebaseService.fetchProfileByEmail(cleanEmail);
+      } catch (e) {
+        debugPrint('registerUser e-posta mevcudiyet kontrolü hatası: $e');
+      }
+    }
+
+    if (existing != null) {
+      if (existing.role != role) {
+        final existingRoleText = existing.isTeacher ? 'Öğretmen / Koç' : 'Öğrenci';
+        final attemptedRoleText = role == 'teacher' ? 'Öğretmen / Koç' : 'Öğrenci';
+        return 'Bu e-posta adresi ($cleanEmail) ile sistemde zaten bir $existingRoleText hesabı bulunmaktadır.\n\nAynı e-posta adresi ile ikinci bir $attemptedRoleText hesabı açılamaz. Lütfen "Giriş Yap" sekmesinden mevcut hesabınıza giriş yapın.';
+      } else {
+        return 'Bu e-posta adresi ($cleanEmail) ile zaten kayıtlı bir hesabınız bulunmaktadır.\n\nLütfen "Giriş Yap" sekmesinden e-posta ve şifrenizle giriş yapın.';
+      }
+    }
+
     final generatedCode = role == 'teacher' ? _generateTeacherCode() : null;
 
     String? linkedTeacherId;
@@ -257,6 +278,7 @@ class UserProvider with ChangeNotifier {
         password: password,
       );
     }
+    return null;
   }
 
   /// Öğrenci Koç Kodu ile bir öğretmene bağlanır
@@ -518,6 +540,15 @@ class UserProvider with ChangeNotifier {
     final cleanEmail = email.trim().toLowerCase();
     await _storage.setLastSocialEmail(cleanEmail);
 
+    // Zaten kayıtlıysa yeni kopya oluşturma, mevcut olanı aktifleştir
+    final existing = _storage.findProfileByEmail(cleanEmail) ?? await _firebaseService.fetchProfileByEmail(cleanEmail);
+    if (existing != null) {
+      _userProfile = existing;
+      await _storage.saveUserProfile(existing);
+      notifyListeners();
+      return existing;
+    }
+
     // Ad ve soyadı varsa displayName'den, yoksa e-posta başlığından temiz şekilde türet
     String firstName = '';
     String lastName = '';
@@ -579,6 +610,30 @@ class UserProvider with ChangeNotifier {
     if (_userProfile == null) return;
     final updated = _userProfile!.copyWith(isEmailVerified: verified);
     await updateProfile(updated);
+  }
+
+  /// Süper Yönetici için bir kullanıcının hesabını siler
+  Future<bool> deleteUserAccount(String userId, {String? email}) async {
+    final success = await _firebaseService.deleteUser(userId, email: email);
+    if (success && _userProfile != null && _userProfile!.id == userId) {
+      await logout();
+    }
+    return success;
+  }
+
+  /// Süper Yönetici için kullanıcının rolünü değiştirir
+  Future<bool> changeUserRole(String userId, String newRole, {String? email}) async {
+    final success = await _firebaseService.updateUserRole(
+      userId: userId,
+      newRole: newRole,
+      email: email,
+    );
+    if (success && _userProfile != null && _userProfile!.id == userId) {
+      _userProfile = _userProfile!.copyWith(role: newRole);
+      await _storage.saveUserProfile(_userProfile!);
+      notifyListeners();
+    }
+    return success;
   }
 
   Future<void> logout() async {

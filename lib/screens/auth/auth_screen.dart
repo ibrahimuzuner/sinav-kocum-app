@@ -900,6 +900,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
                         final regEmail = _regEmailController.text.trim();
                         if (!EmailValidator.isValid(regEmail)) {
+                          setState(() => _isRegistering = false);
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text('Lütfen geçerli ve gerçek bir e-posta adresi girin (örn: ogrenci@gmail.com).'),
@@ -914,7 +915,7 @@ class _AuthScreenState extends State<AuthScreen> {
                         final firstName = nameParts.isNotEmpty ? nameParts.first : fullName;
                         final lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
 
-                        await userProvider.registerUser(
+                        final registerError = await userProvider.registerUser(
                           firstName: firstName,
                           lastName: lastName,
                           email: regEmail,
@@ -929,6 +930,56 @@ class _AuthScreenState extends State<AuthScreen> {
                           teacherCodeInput: isTeacher ? null : _regTeacherCodeController.text.trim(),
                         );
 
+                        if (!mounted) return;
+                        setState(() => _isRegistering = false);
+
+                        if (registerError != null) {
+                          showDialog(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                              title: const Row(
+                                children: [
+                                  Icon(Icons.warning_amber_rounded, color: Color(0xFFF59E0B), size: 28),
+                                  SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      'Hesap Zaten Mevcut',
+                                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              content: Text(
+                                registerError,
+                                style: const TextStyle(fontSize: 14, height: 1.4),
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx),
+                                  child: const Text('Kapat'),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    Navigator.pop(ctx);
+                                    setState(() {
+                                      _tabIndex = 0;
+                                      _loginEmailController.text = regEmail;
+                                    });
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF4F46E5),
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  ),
+                                  child: const Text('Giriş Yap Sekmesine Git'),
+                                ),
+                              ],
+                            ),
+                          );
+                          return;
+                        }
+
                         if (!isTeacher) {
                           await settingsProvider.setTargetMinutes(_dailyTargetHours * 60);
                         }
@@ -940,7 +991,6 @@ class _AuthScreenState extends State<AuthScreen> {
                         }
 
                         if (mounted) {
-                          setState(() => _isRegistering = false);
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
