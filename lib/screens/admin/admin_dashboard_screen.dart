@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/user_profile_model.dart';
 import '../../services/firebase_service.dart';
 import 'support_messages_modal.dart';
+import 'widgets/admin_institutions_view.dart';
 import 'widgets/student_detail_modal.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
@@ -17,6 +18,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   List<UserProfileModel> _filteredStudents = [];
   bool _isLoading = true;
   String _selectedFilter = 'Tümü';
+  int _selectedMainTab = 0; // 0: Kullanıcılar & Sınavlar, 1: Kurum Yönetimi (B2B)
 
   @override
   void initState() {
@@ -228,8 +230,87 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             onPressed: _loadStudents,
           ),
         ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48),
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    onTap: () => setState(() => _selectedMainTab = 0),
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        color: _selectedMainTab == 0 ? const Color(0xFF4F46E5) : Colors.transparent,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.people_alt_rounded, size: 16, color: Colors.white),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Kullanıcılar (${_allStudents.length})',
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: _selectedMainTab == 0 ? FontWeight.bold : FontWeight.normal,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: InkWell(
+                    onTap: () => setState(() => _selectedMainTab = 1),
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        color: _selectedMainTab == 1 ? const Color(0xFF4F46E5) : Colors.transparent,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.account_balance_rounded, size: 16, color: Colors.white),
+                          SizedBox(width: 6),
+                          Text(
+                            'Kurum Yönetimi (B2B)',
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
-      body: RefreshIndicator(
+      body: _selectedMainTab == 1
+          ? Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: AdminInstitutionsView(
+                allUsers: _allStudents,
+                onRefreshNeeded: _loadStudents,
+              ),
+            )
+          : RefreshIndicator(
         onRefresh: _loadStudents,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),

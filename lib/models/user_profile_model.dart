@@ -33,6 +33,13 @@ class UserProfileModel {
   final String? assignmentsJson; // Öğretmenin verdiği ödevler JSON listesi
   final String? messagesJson; // Öğretmen-Öğrenci mesajları JSON listesi
 
+  // Kurum / Organizasyon Sistemi Alanları
+  final String? institutionId; // Bağlı olduğu kurum ID
+  final String? institutionName; // Kurum Adı (örn: Kuzey Akademi)
+  final String? institutionRole; // 'owner' (kurucu), 'coach' (üye koç), 'student' (öğrenci)
+  final String? institutionStatus; // 'pending' (onay bekliyor), 'approved' (aktif)
+  final String? institutionLogoBase64; // Kurum Logosu
+
   const UserProfileModel({
     required this.id,
     required this.firstName,
@@ -60,12 +67,22 @@ class UserProfileModel {
     this.studyStatsJson,
     this.assignmentsJson,
     this.messagesJson,
+    this.institutionId,
+    this.institutionName,
+    this.institutionRole,
+    this.institutionStatus,
+    this.institutionLogoBase64,
   });
 
   String get fullName => '$firstName $lastName'.trim();
 
   bool get isTeacher => role == 'teacher';
   bool get isStudent => role != 'teacher';
+
+  /// Kurum aidiyeti ve yetkileri
+  bool get hasInstitution => institutionId != null && institutionId!.isNotEmpty;
+  bool get isInstitutionApproved => institutionStatus == 'approved';
+  bool get isInstitutionOwner => isTeacher && institutionRole == 'owner';
 
   /// Öğretmen branşı veya uzmanlık alanı
   String get teacherSpecialty =>
@@ -193,6 +210,11 @@ class UserProfileModel {
       'studyStatsJson': studyStatsJson,
       'assignmentsJson': assignmentsJson,
       'messagesJson': messagesJson,
+      'institutionId': institutionId,
+      'institutionName': institutionName,
+      'institutionRole': institutionRole,
+      'institutionStatus': institutionStatus,
+      'institutionLogoBase64': institutionLogoBase64,
     };
   }
 
@@ -236,6 +258,11 @@ class UserProfileModel {
       studyStatsJson: json['studyStatsJson'] as String?,
       assignmentsJson: json['assignmentsJson'] as String?,
       messagesJson: json['messagesJson'] as String?,
+      institutionId: json['institutionId'] as String?,
+      institutionName: json['institutionName'] as String?,
+      institutionRole: json['institutionRole'] as String?,
+      institutionStatus: json['institutionStatus'] as String?,
+      institutionLogoBase64: json['institutionLogoBase64'] as String?,
     );
   }
 
@@ -268,6 +295,12 @@ class UserProfileModel {
     String? studyStatsJson,
     String? assignmentsJson,
     String? messagesJson,
+    String? institutionId,
+    String? institutionName,
+    String? institutionRole,
+    String? institutionStatus,
+    String? institutionLogoBase64,
+    bool clearInstitution = false,
   }) {
     return UserProfileModel(
       id: id ?? this.id,
@@ -298,6 +331,11 @@ class UserProfileModel {
       studyStatsJson: studyStatsJson ?? this.studyStatsJson,
       assignmentsJson: assignmentsJson ?? this.assignmentsJson,
       messagesJson: messagesJson ?? this.messagesJson,
+      institutionId: clearInstitution ? null : (institutionId ?? this.institutionId),
+      institutionName: clearInstitution ? null : (institutionName ?? this.institutionName),
+      institutionRole: clearInstitution ? null : (institutionRole ?? this.institutionRole),
+      institutionStatus: clearInstitution ? null : (institutionStatus ?? this.institutionStatus),
+      institutionLogoBase64: clearInstitution ? null : (institutionLogoBase64 ?? this.institutionLogoBase64),
     );
   }
 }

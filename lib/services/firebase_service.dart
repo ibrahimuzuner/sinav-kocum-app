@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
@@ -6,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/assignment_model.dart';
 import '../models/coach_message_model.dart';
+import '../models/institution_model.dart';
 import '../models/student_study_stats_model.dart';
 import '../models/user_profile_model.dart';
 import '../utils/form_submit_helper.dart';
@@ -110,6 +112,11 @@ class AppFirebaseService {
       if (profile.studyStatsJson != null) 'studyStatsJson': profile.studyStatsJson,
       if (profile.assignmentsJson != null) 'assignmentsJson': profile.assignmentsJson,
       if (profile.messagesJson != null) 'messagesJson': profile.messagesJson,
+      if (profile.institutionId != null) 'institutionId': profile.institutionId,
+      if (profile.institutionName != null) 'institutionName': profile.institutionName,
+      if (profile.institutionRole != null) 'institutionRole': profile.institutionRole,
+      if (profile.institutionStatus != null) 'institutionStatus': profile.institutionStatus,
+      if (profile.institutionLogoBase64 != null) 'institutionLogoBase64': profile.institutionLogoBase64,
       'platform': kIsWeb ? 'web' : 'mobile',
     };
 
@@ -805,6 +812,16 @@ class AppFirebaseService {
           result[key] = (val['doubleValue'] as num).toDouble();
         } else if (val.containsKey('timestampValue')) {
           result[key] = val['timestampValue'];
+        } else if (val.containsKey('arrayValue')) {
+          final arr = val['arrayValue'] as Map?;
+          final vals = arr?['values'] as List? ?? [];
+          result[key] = vals.map((item) {
+            if (item is Map) {
+              if (item.containsKey('stringValue')) return item['stringValue'];
+              if (item.containsKey('integerValue')) return int.tryParse(item['integerValue'].toString()) ?? 0;
+            }
+            return item.toString();
+          }).toList();
         }
       } else {
         result[key] = val;
@@ -1000,8 +1017,466 @@ class AppFirebaseService {
         fields[key] = {'integerValue': val.toString()};
       } else if (val is double) {
         fields[key] = {'doubleValue': val};
+      } else if (val is List) {
+        fields[key] = {
+          'arrayValue': {
+            'values': val
+                .map((item) => {'stringValue': item.toString()})
+                .toList(),
+          }
+        };
       }
     });
     return fields;
+  }
+
+  // ==========================================
+  // KURUM / ORGANİZASYON YÖNETİMİ (B2B SaaS)
+  // ==========================================
+
+  /// Yeni kurum başvurusu oluşturur (Varsayılan olarak 'pending' / onay bekliyor)
+  Future<Map<String, dynamic>> createInstitutionRequest({
+    required String name,
+    required UserProfileModel ownerCoach,
+    String? logoBase64,
+    String? city,
+    String? phone,
+    String? description,
+  }) async {
+    final rand = Random();
+    final code = 'KRM-${100000 + rand.nextInt(900000)}';
+    final instId = 'inst_${DateTime.now().millisecondsSinceEpoch}_${rand.nextInt(1000)}';
+
+    final inst = InstitutionModel(
+      id: instId,
+      name: name.trim(),
+      code: code,
+      ownerCoachId: ownerCoach.id,
+      ownerCoachName: ownerCoach.fullName,
+      ownerCoachEmail: ownerCoach.email,
+      status: 'pending', // Süper yönetici onayı gerektirir
+      logoBase64: logoBase64,
+      city: city?.trim(),
+      phone: phone?.trim(),
+      description: description?.trim(),
+      createdAt: DateTime.now(),
+      coachIds: [ownerCoach.id],
+      studentIds: const [],
+    );
+
+    bool saved = false;
+    if (_isInitialized && _firestore != null) {
+      try {
+        await _firestore!.collection('institutions').doc(instId).set(inst.toJson());
+        saved = true;
+      } catch (e) {
+        debugPrint('createInstitutionRequest SDK hatası: $e');
+      }
+    }
+
+    if (!saved) {
+      try {
+        final docUri = Uri.parse('$_restBaseUrl/institutions/$instId?key=$_apiKey');
+        final restFields = _toFirestoreRestFields(inst.toJson());
+        final resp = await http.patch(
+          docUri,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'fields': restFields}),
+        );
+        if (resp.statusCode == 200 || resp.statusCode == 201) {
+          saved = true;
+        }
+      } catch (e) {
+        debugPrint('createInstitutionRequest REST hatası: $e');
+      }
+    }
+
+    if (saved) {
+      // Kurucu koçun profilini güncelle
+      await _patchUserFields(ownerCoach.id, {
+        'institutionId': instId,
+        'institutionName': name.trim(),
+        'institutionRole': 'owner',
+        'institutionStatus': 'pending',
+        if (logoBase64 != null) 'institutionLogoBase64': logoBase64,
+      });
+      return {'success': true, 'institution': inst};
+    }
+    return {'success': false, 'message': 'Kurum başvurusu sunucuya kaydedilemedi.'};
+  }
+
+  /// Tüm kurumları Firestore'dan çeker (Yönetici Paneli için)
+  Future<List<InstitutionModel>> fetchAllInstitutions() async {
+    final List<InstitutionModel> list = [];
+    if (_isInitialized && _firestore != null) {
+      try {
+        final snap = await _firestore!.collection('institutions').get();
+        for (final doc in snap.docs) {
+          list.add(InstitutionModel.fromJson(doc.data(), docId: doc.id));
+        }
+        if (list.isNotEmpty) {
+          list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          return list;
+        }
+      } catch (e) {
+        debugPrint('fetchAllInstitutions SDK hatası: $e');
+      }
+    }
+
+    try {
+      final uri = Uri.parse('$_restBaseUrl/institutions?pageSize=100&key=$_apiKey');
+      final resp = await http.get(uri);
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body) as Map<String, dynamic>;
+        final docs = data['documents'] as List? ?? [];
+        for (final doc in docs) {
+          if (doc is Map && doc.containsKey('fields')) {
+            final flat = _flattenFirestoreFields(doc['fields'] as Map<String, dynamic>);
+            final docName = doc['name'] as String? ?? '';
+            final docId = docName.split('/').last;
+            list.add(InstitutionModel.fromJson(flat, docId: docId));
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('fetchAllInstitutions REST hatası: $e');
+    }
+
+    list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return list;
+  }
+
+  /// Tekil kurum bilgisini getirir
+  Future<InstitutionModel?> fetchInstitution(String institutionId) async {
+    if (institutionId.isEmpty) return null;
+    if (_isInitialized && _firestore != null) {
+      try {
+        final doc = await _firestore!.collection('institutions').doc(institutionId).get();
+        if (doc.exists && doc.data() != null) {
+          return InstitutionModel.fromJson(doc.data()!, docId: doc.id);
+        }
+      } catch (e) {
+        debugPrint('fetchInstitution SDK hatası: $e');
+      }
+    }
+
+    try {
+      final uri = Uri.parse('$_restBaseUrl/institutions/$institutionId?key=$_apiKey');
+      final resp = await http.get(uri);
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body) as Map<String, dynamic>;
+        final flat = _flattenFirestoreFields(data['fields'] as Map<String, dynamic>? ?? {});
+        return InstitutionModel.fromJson(flat, docId: institutionId);
+      }
+    } catch (e) {
+      debugPrint('fetchInstitution REST hatası: $e');
+    }
+    return null;
+  }
+
+  /// Kurum Katılım Koduna (`code`) göre kurumu bulur
+  Future<InstitutionModel?> fetchInstitutionByCode(String code) async {
+    final cleanCode = code.trim().toUpperCase();
+    if (cleanCode.isEmpty) return null;
+    final all = await fetchAllInstitutions();
+    for (final inst in all) {
+      if (inst.code.trim().toUpperCase() == cleanCode) {
+        return inst;
+      }
+    }
+    return null;
+  }
+
+  /// Kurum onay durumunu günceller ('approved', 'rejected', 'suspended')
+  Future<bool> updateInstitutionStatus({
+    required String institutionId,
+    required String status,
+    String? adminNote,
+  }) async {
+    final inst = await fetchInstitution(institutionId);
+    if (inst == null) return false;
+
+    final updateData = <String, dynamic>{
+      'status': status,
+      if (status == 'approved') 'approvedAt': DateTime.now().toIso8601String(),
+      if (adminNote != null) 'adminNote': adminNote,
+    };
+
+    bool saved = false;
+    if (_isInitialized && _firestore != null) {
+      try {
+        await _firestore!.collection('institutions').doc(institutionId).update(updateData);
+        saved = true;
+      } catch (e) {
+        debugPrint('updateInstitutionStatus SDK hatası: $e');
+      }
+    }
+
+    if (!saved) {
+      try {
+        final fieldMasks = updateData.keys.map((k) => 'updateMask.fieldPaths=$k').join('&');
+        final docUri = Uri.parse('$_restBaseUrl/institutions/$institutionId?$fieldMasks&key=$_apiKey');
+        final restFields = _toFirestoreRestFields(updateData);
+        final resp = await http.patch(
+          docUri,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'fields': restFields}),
+        );
+        if (resp.statusCode == 200 || resp.statusCode == 201) {
+          saved = true;
+        }
+      } catch (e) {
+        debugPrint('updateInstitutionStatus REST hatası: $e');
+      }
+    }
+
+    if (saved) {
+      // Kuruma bağlı tüm koçların durumunu da güncelle
+      for (final coachId in inst.coachIds) {
+        await _patchUserFields(coachId, {
+          'institutionStatus': status,
+          if (inst.logoBase64 != null) 'institutionLogoBase64': inst.logoBase64,
+        });
+      }
+    }
+    return saved;
+  }
+
+  /// Kurum Kurucusunu Değiştirir (Süper Yönetici Yetkisi)
+  Future<bool> updateInstitutionOwner({
+    required String institutionId,
+    required UserProfileModel newOwnerCoach,
+  }) async {
+    final inst = await fetchInstitution(institutionId);
+    if (inst == null) return false;
+
+    final currentCoachIds = List<String>.from(inst.coachIds);
+    if (!currentCoachIds.contains(newOwnerCoach.id)) {
+      currentCoachIds.add(newOwnerCoach.id);
+    }
+
+    final updateData = <String, dynamic>{
+      'ownerCoachId': newOwnerCoach.id,
+      'ownerCoachName': newOwnerCoach.fullName,
+      'ownerCoachEmail': newOwnerCoach.email,
+      'coachIds': currentCoachIds,
+    };
+
+    bool saved = false;
+    if (_isInitialized && _firestore != null) {
+      try {
+        await _firestore!.collection('institutions').doc(institutionId).update(updateData);
+        saved = true;
+      } catch (e) {
+        debugPrint('updateInstitutionOwner SDK hatası: $e');
+      }
+    }
+
+    if (!saved) {
+      try {
+        final docUri = Uri.parse(
+          '$_restBaseUrl/institutions/$institutionId?updateMask.fieldPaths=ownerCoachId&updateMask.fieldPaths=ownerCoachName&updateMask.fieldPaths=ownerCoachEmail&updateMask.fieldPaths=coachIds&key=$_apiKey',
+        );
+        final restFields = _toFirestoreRestFields(updateData);
+        final resp = await http.patch(
+          docUri,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'fields': restFields}),
+        );
+        if (resp.statusCode == 200 || resp.statusCode == 201) {
+          saved = true;
+        }
+      } catch (e) {
+        debugPrint('updateInstitutionOwner REST hatası: $e');
+      }
+    }
+
+    if (saved) {
+      // Eski kurucu koçun rolünü 'coach' yap
+      if (inst.ownerCoachId != newOwnerCoach.id) {
+        await _patchUserFields(inst.ownerCoachId, {
+          'institutionRole': 'coach',
+        });
+      }
+      // Yeni kurucu koçun rolünü 'owner' yap
+      await _patchUserFields(newOwnerCoach.id, {
+        'institutionId': institutionId,
+        'institutionName': inst.name,
+        'institutionRole': 'owner',
+        'institutionStatus': inst.status,
+        if (inst.logoBase64 != null) 'institutionLogoBase64': inst.logoBase64,
+      });
+    }
+    return saved;
+  }
+
+  /// Kurum Bilgilerini Günceller (Ad, Logo, Telefon, Şehir, Açıklama)
+  Future<bool> updateInstitutionDetails({
+    required String institutionId,
+    required Map<String, dynamic> data,
+  }) async {
+    bool saved = false;
+    if (_isInitialized && _firestore != null) {
+      try {
+        await _firestore!.collection('institutions').doc(institutionId).update(data);
+        saved = true;
+      } catch (e) {
+        debugPrint('updateInstitutionDetails SDK hatası: $e');
+      }
+    }
+
+    if (!saved) {
+      try {
+        final fieldMasks = data.keys.map((k) => 'updateMask.fieldPaths=$k').join('&');
+        final docUri = Uri.parse('$_restBaseUrl/institutions/$institutionId?$fieldMasks&key=$_apiKey');
+        final restFields = _toFirestoreRestFields(data);
+        final resp = await http.patch(
+          docUri,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'fields': restFields}),
+        );
+        if (resp.statusCode == 200 || resp.statusCode == 201) {
+          saved = true;
+        }
+      } catch (e) {
+        debugPrint('updateInstitutionDetails REST hatası: $e');
+      }
+    }
+
+    if (saved) {
+      // Eğer kurum adı veya logo değiştiyse bağlı koçların profillerine de yansıt
+      final inst = await fetchInstitution(institutionId);
+      if (inst != null) {
+        final patchData = <String, dynamic>{};
+        if (data.containsKey('name')) patchData['institutionName'] = data['name'];
+        if (data.containsKey('logoBase64')) patchData['institutionLogoBase64'] = data['logoBase64'];
+        if (patchData.isNotEmpty) {
+          for (final coachId in inst.coachIds) {
+            await _patchUserFields(coachId, patchData);
+          }
+        }
+      }
+    }
+    return saved;
+  }
+
+  /// Kurumdan bir koçu çıkarır veya koçun kurumdan ayrılmasını sağlar
+  Future<bool> leaveInstitution({
+    required String institutionId,
+    required UserProfileModel coach,
+  }) async {
+    final inst = await fetchInstitution(institutionId);
+    if (inst == null) return false;
+
+    final updatedCoaches = List<String>.from(inst.coachIds)..remove(coach.id);
+    await updateInstitutionDetails(
+      institutionId: institutionId,
+      data: {'coachIds': updatedCoaches},
+    );
+
+    // Koçun kurum bilgilerini temizle
+    await _patchUserFields(coach.id, {
+      'institutionId': '',
+      'institutionName': '',
+      'institutionRole': '',
+      'institutionStatus': '',
+      'institutionLogoBase64': '',
+    });
+    return true;
+  }
+
+  /// Bir koçun kurum katılım kodu (`KRM-XXXXXX`) ile kuruma katılması
+  Future<Map<String, dynamic>> joinInstitutionByCode({
+    required String code,
+    required UserProfileModel coach,
+  }) async {
+    final inst = await fetchInstitutionByCode(code);
+    if (inst == null) {
+      return {'success': false, 'message': 'Belirtilen kod ile eşleşen bir kurum bulunamadı.'};
+    }
+
+    if (!inst.isApproved) {
+      return {
+        'success': false,
+        'message': 'Bu kurum henüz yönetici onayından geçmemiş veya askıya alınmış.',
+      };
+    }
+
+    if (inst.coachIds.contains(coach.id)) {
+      return {'success': false, 'message': 'Zaten bu kurumun kadrosundasınız.'};
+    }
+
+    final updatedCoaches = List<String>.from(inst.coachIds)..add(coach.id);
+    await updateInstitutionDetails(
+      institutionId: inst.id,
+      data: {'coachIds': updatedCoaches},
+    );
+
+    await _patchUserFields(coach.id, {
+      'institutionId': inst.id,
+      'institutionName': inst.name,
+      'institutionRole': 'coach',
+      'institutionStatus': 'approved',
+      if (inst.logoBase64 != null) 'institutionLogoBase64': inst.logoBase64,
+    });
+
+    return {'success': true, 'institution': inst};
+  }
+
+  /// Kuruma bağlı tüm koçları getirir
+  Future<List<UserProfileModel>> fetchInstitutionCoaches(String institutionId) async {
+    if (institutionId.isEmpty) return [];
+    final all = await fetchAllUsers();
+    return all.where((u) => u.isTeacher && u.institutionId == institutionId).toList();
+  }
+
+  /// Kuruma bağlı tüm öğrencileri getirir (Kurumdaki herhangi bir koça bağlı olan veya doğrudan kurum havuzundaki tüm öğrenciler)
+  Future<List<UserProfileModel>> fetchInstitutionStudents(String institutionId) async {
+    if (institutionId.isEmpty) return [];
+    final coaches = await fetchInstitutionCoaches(institutionId);
+    final coachIds = coaches.map((c) => c.id).toSet();
+
+    final all = await fetchAllUsers();
+    return all.where((u) {
+      if (u.isTeacher) return false;
+      // Ya doğrudan institutionId ile bağlıdır, ya da kurumun koçlarından birine bağlıdır
+      if (u.institutionId == institutionId) return true;
+      if (u.teacherId != null && coachIds.contains(u.teacherId)) return true;
+      return false;
+    }).toList();
+  }
+
+  /// Kurumu ve ilişkili bağları siler (Süper Yönetici)
+  Future<bool> deleteInstitution(String institutionId) async {
+    final inst = await fetchInstitution(institutionId);
+    if (inst != null) {
+      for (final coachId in inst.coachIds) {
+        await _patchUserFields(coachId, {
+          'institutionId': '',
+          'institutionName': '',
+          'institutionRole': '',
+          'institutionStatus': '',
+          'institutionLogoBase64': '',
+        });
+      }
+    }
+
+    if (_isInitialized && _firestore != null) {
+      try {
+        await _firestore!.collection('institutions').doc(institutionId).delete();
+        return true;
+      } catch (e) {
+        debugPrint('deleteInstitution SDK hatası: $e');
+      }
+    }
+
+    try {
+      final docUri = Uri.parse('$_restBaseUrl/institutions/$institutionId?key=$_apiKey');
+      final resp = await http.delete(docUri);
+      return resp.statusCode == 200;
+    } catch (e) {
+      debugPrint('deleteInstitution REST hatası: $e');
+    }
+    return false;
   }
 }

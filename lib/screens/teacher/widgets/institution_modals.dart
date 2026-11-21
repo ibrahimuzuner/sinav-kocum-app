@@ -1,0 +1,456 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../../models/institution_model.dart';
+import '../../../models/user_profile_model.dart';
+import '../../../providers/user_provider.dart';
+import '../../../services/firebase_service.dart';
+
+class InstitutionModals {
+  /// Yeni Kurum Başvurusu Yapma Modalı
+  static Future<void> showCreateModal(
+    BuildContext context, {
+    required UserProfileModel teacher,
+    required VoidCallback onSuccess,
+  }) async {
+    final nameCtrl = TextEditingController();
+    final cityCtrl = TextEditingController();
+    final phoneCtrl = TextEditingController();
+    final descCtrl = TextEditingController();
+    final logoCtrl = TextEditingController();
+    bool isSubmitting = false;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+          title: const Row(
+            children: [
+              Icon(Icons.add_business_rounded, color: Color(0xFF4F46E5)),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text('Kurum / Merkez Başvurusu', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Dershane, etüt merkezi veya özel koçluk ofisinizi sisteme kaydedin. Başvurunuz süper yönetici tarafından onaylandığında kurum kodunuz aktifleşecektir.',
+                  style: TextStyle(fontSize: 12, height: 1.4, color: Colors.grey),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Kurum / Merkez Adı *',
+                    hintText: 'Örn: Hedef Derece Akademi',
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: cityCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Şehir',
+                    hintText: 'Örn: Ankara',
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: phoneCtrl,
+                  keyboardType: TextInputType.phone,
+                  decoration: const InputDecoration(
+                    labelText: 'İletişim Numarası',
+                    hintText: 'Örn: 0555 123 4567',
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: logoCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Logo URL veya Base64 Kodu',
+                    hintText: 'https://... (veya boş bırakılabilir)',
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: descCtrl,
+                  maxLines: 2,
+                  decoration: const InputDecoration(
+                    labelText: 'Kurum Sloganı / Açıklama',
+                    hintText: 'Örn: Başarıya giden yolda profesyonel rehberlik',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
+              child: const Text('Vazgeç'),
+            ),
+            ElevatedButton(
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      final name = nameCtrl.text.trim();
+                      if (name.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Lütfen kurum adını girin.')),
+                        );
+                        return;
+                      }
+
+                      setModalState(() => isSubmitting = true);
+                      final res = await AppFirebaseService().createInstitutionRequest(
+                        name: name,
+                        ownerCoach: teacher,
+                        city: cityCtrl.text.trim(),
+                        phone: phoneCtrl.text.trim(),
+                        description: descCtrl.text.trim(),
+                        logoBase64: logoCtrl.text.trim().isEmpty ? null : logoCtrl.text.trim(),
+                      );
+                      setModalState(() => isSubmitting = false);
+
+                      if (!context.mounted) return;
+                      if (res['success'] == true) {
+                        final userProvider = Provider.of<UserProvider>(context, listen: false);
+                        final updatedUser = teacher.copyWith(
+                          institutionId: (res['institution'] as InstitutionModel).id,
+                          institutionName: name,
+                          institutionRole: 'owner',
+                          institutionStatus: 'pending',
+                          institutionLogoBase64: logoCtrl.text.trim().isEmpty ? null : logoCtrl.text.trim(),
+                        );
+                        await userProvider.updateProfile(updatedUser);
+
+                        if (ctx.mounted) Navigator.pop(ctx);
+                        onSuccess();
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Kurum başvurunuz başarıyla alındı! ⏳ Süper yönetici onayından sonra kurum kodunuz aktifleşecektir.',
+                            ),
+                            behavior: SnackBarBehavior.floating,
+                            backgroundColor: Color(0xFF10B981),
+                          ),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(res['message']?.toString() ?? 'Başvuru gönderilemedi.'),
+                            backgroundColor: Colors.redAccent,
+                          ),
+                        );
+                      }
+                    },
+              child: isSubmitting
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Text('Başvuruyu Gönder'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Kurum Kodu ile Kuruma Katılma Modalı
+  static Future<void> showJoinModal(
+    BuildContext context, {
+    required UserProfileModel teacher,
+    required VoidCallback onSuccess,
+  }) async {
+    final codeCtrl = TextEditingController();
+    bool isSubmitting = false;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+          title: const Row(
+            children: [
+              Icon(Icons.key_rounded, color: Color(0xFF4F46E5)),
+              SizedBox(width: 8),
+              Text('Bir Kuruma Katıl', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Çalıştığınız kurumun veya koçluk merkezinin size verdiği "KRM-XXXXXX" formatındaki katılım kodunu girin.',
+                style: TextStyle(fontSize: 12.5, height: 1.4),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: codeCtrl,
+                textCapitalization: TextCapitalization.characters,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  labelText: 'Kurum Katılım Kodu',
+                  hintText: 'Örn: KRM-841920',
+                  prefixIcon: Icon(Icons.qr_code_rounded),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
+              child: const Text('Vazgeç'),
+            ),
+            ElevatedButton(
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      final code = codeCtrl.text.trim();
+                      if (code.isEmpty) return;
+
+                      setModalState(() => isSubmitting = true);
+                      final res = await AppFirebaseService().joinInstitutionByCode(
+                        code: code,
+                        coach: teacher,
+                      );
+                      setModalState(() => isSubmitting = false);
+
+                      if (!context.mounted) return;
+                      if (res['success'] == true) {
+                        final inst = res['institution'] as InstitutionModel;
+                        final userProvider = Provider.of<UserProvider>(context, listen: false);
+                        final updatedUser = teacher.copyWith(
+                          institutionId: inst.id,
+                          institutionName: inst.name,
+                          institutionRole: 'coach',
+                          institutionStatus: 'approved',
+                          institutionLogoBase64: inst.logoBase64,
+                        );
+                        await userProvider.updateProfile(updatedUser);
+
+                        if (ctx.mounted) Navigator.pop(ctx);
+                        onSuccess();
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('${inst.name} kadrosuna başarıyla katıldınız! 🎓'),
+                            behavior: SnackBarBehavior.floating,
+                            backgroundColor: const Color(0xFF10B981),
+                          ),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(res['message']?.toString() ?? 'Kuruma katılınamadı.'),
+                            backgroundColor: Colors.redAccent,
+                          ),
+                        );
+                      }
+                    },
+              child: isSubmitting
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Text('Kuruma Bağlan'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Kurum Bilgilerini & Logoyu Düzenleme Modalı (Kurum Kurucusu için)
+  static Future<void> showEditModal(
+    BuildContext context, {
+    required InstitutionModel inst,
+    required VoidCallback onSuccess,
+  }) async {
+    final nameCtrl = TextEditingController(text: inst.name);
+    final cityCtrl = TextEditingController(text: inst.city ?? '');
+    final phoneCtrl = TextEditingController(text: inst.phone ?? '');
+    final descCtrl = TextEditingController(text: inst.description ?? '');
+    final logoCtrl = TextEditingController(text: inst.logoBase64 ?? '');
+    bool isSubmitting = false;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+          title: const Row(
+            children: [
+              Icon(Icons.tune_rounded, color: Color(0xFF4F46E5)),
+              SizedBox(width: 8),
+              Text('Kurum Bilgilerini Düzenle', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(labelText: 'Kurum Adı'),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: cityCtrl,
+                  decoration: const InputDecoration(labelText: 'Şehir'),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: phoneCtrl,
+                  keyboardType: TextInputType.phone,
+                  decoration: const InputDecoration(labelText: 'İletişim Telefonu'),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: logoCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Kurum Logosu (URL veya Base64)',
+                    hintText: 'https://... veya base64 kodu',
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: descCtrl,
+                  maxLines: 2,
+                  decoration: const InputDecoration(labelText: 'Açıklama / Slogan'),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
+              child: const Text('Vazgeç'),
+            ),
+            ElevatedButton(
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      final name = nameCtrl.text.trim();
+                      if (name.isEmpty) return;
+
+                      setModalState(() => isSubmitting = true);
+                      await AppFirebaseService().updateInstitutionDetails(
+                        institutionId: inst.id,
+                        data: {
+                          'name': name,
+                          'city': cityCtrl.text.trim(),
+                          'phone': phoneCtrl.text.trim(),
+                          'description': descCtrl.text.trim(),
+                          'logoBase64': logoCtrl.text.trim().isEmpty ? null : logoCtrl.text.trim(),
+                        },
+                      );
+                      setModalState(() => isSubmitting = false);
+
+                      if (ctx.mounted) Navigator.pop(ctx);
+                      onSuccess();
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Kurum bilgileri güncellendi! 🏢'),
+                          behavior: SnackBarBehavior.floating,
+                          backgroundColor: Color(0xFF10B981),
+                        ),
+                      );
+                    },
+              child: isSubmitting
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Text('Kaydet'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Kurumdaki Diğer Koçları Görüntüleme Modalı
+  static Future<void> showCoachesListModal(
+    BuildContext context, {
+    required List<UserProfileModel> coaches,
+    required String institutionName,
+  }) async {
+    await showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                const Icon(Icons.badge_outlined, color: Color(0xFF10B981)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '$institutionName • Koç Kadrosu',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (coaches.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 20),
+                child: Center(child: Text('Kuruma kayıtlı başka koç bulunmuyor.')),
+              )
+            else
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 300),
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: coaches.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (context, idx) {
+                    final coach = coaches[idx];
+                    final isOwner = coach.isInstitutionOwner;
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: CircleAvatar(
+                        backgroundColor: const Color(0xFF10B981).withValues(alpha: 0.14),
+                        child: Text(
+                          coach.firstName.isNotEmpty ? coach.firstName[0].toUpperCase() : '?',
+                          style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF10B981)),
+                        ),
+                      ),
+                      title: Row(
+                        children: [
+                          Text(coach.fullName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                          if (isOwner) ...[
+                            const SizedBox(width: 6),
+                            const Text('👑 Kurucu', style: TextStyle(fontSize: 10, color: Color(0xFFF59E0B), fontWeight: FontWeight.bold)),
+                          ],
+                        ],
+                      ),
+                      subtitle: Text(coach.teacherSpecialty, style: const TextStyle(fontSize: 12)),
+                    );
+                  },
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}

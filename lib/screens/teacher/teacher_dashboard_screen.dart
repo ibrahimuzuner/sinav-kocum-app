@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import '../../models/institution_model.dart';
 import '../../models/user_profile_model.dart';
 import '../../providers/settings_provider.dart';
 import '../../providers/user_provider.dart';
@@ -8,6 +9,8 @@ import '../../services/firebase_service.dart';
 import '../../utils/email_validator.dart';
 import '../../widgets/premium_upgrade_modal.dart';
 import '../admin/admin_dashboard_screen.dart';
+import 'widgets/institution_modals.dart';
+import 'widgets/teacher_institution_card.dart';
 import 'widgets/teacher_student_detail_modal.dart';
 
 class TeacherDashboardScreen extends StatefulWidget {
@@ -29,6 +32,11 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
   final TextEditingController _searchController = TextEditingController();
 
   List<UserProfileModel> _students = [];
+  InstitutionModel? _institution;
+  List<UserProfileModel> _institutionStudents = [];
+  List<UserProfileModel> _institutionCoaches = [];
+  bool _showAllInstitutionStudents = false;
+
   bool _isLoading = true;
   String _selectedFilter = 'Tümü';
 
@@ -62,9 +70,25 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
 
     if (mounted) setState(() => _isLoading = true);
     final list = await _firebaseService.fetchStudentsForTeacher(teacher.id);
+
+    InstitutionModel? inst;
+    List<UserProfileModel> instStudents = [];
+    List<UserProfileModel> instCoaches = [];
+
+    if (teacher.hasInstitution) {
+      inst = await _firebaseService.fetchInstitution(teacher.institutionId!);
+      if (inst != null && inst.isApproved) {
+        instStudents = await _firebaseService.fetchInstitutionStudents(teacher.institutionId!);
+        instCoaches = await _firebaseService.fetchInstitutionCoaches(teacher.institutionId!);
+      }
+    }
+
     if (mounted) {
       setState(() {
         _students = list;
+        _institution = inst;
+        _institutionStudents = instStudents;
+        _institutionCoaches = instCoaches;
         _isLoading = false;
       });
     }
@@ -245,13 +269,17 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
     );
   }
 
+  List<UserProfileModel> get _currentSourceList =>
+      _showAllInstitutionStudents ? _institutionStudents : _students;
+
   List<UserProfileModel> get _filteredStudents {
     final query = _searchController.text.trim().toLowerCase();
-    return _students.where((s) {
+    return _currentSourceList.where((s) {
       if (query.isNotEmpty) {
         final match = s.fullName.toLowerCase().contains(query) ||
             s.email.toLowerCase().contains(query) ||
-            s.targetExam.toLowerCase().contains(query);
+            s.targetExam.toLowerCase().contains(query) ||
+            (s.teacherName ?? '').toLowerCase().contains(query);
         if (!match) return false;
       }
       if (_selectedFilter == 'Bugün Çalışanlar') {
@@ -263,6 +291,68 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
       }
       return true;
     }).toList();
+  }
+
+  void _handleCreateInstitution(UserProfileModel teacher) {
+    InstitutionModals.showCreateModal(
+      context,
+      teacher: teacher,
+      onSuccess: _loadStudents,
+    );
+  }
+
+  void _handleJoinInstitution(UserProfileModel teacher) {
+    InstitutionModals.showJoinModal(
+      context,
+      teacher: teacher,
+      onSuccess: _loadStudents,
+    );
+  }
+
+  void _handleManageInstitution(InstitutionModel inst) {
+    InstitutionModals.showEditModal(
+      context,
+      inst: inst,
+      onSuccess: _loadStudents,
+    );
+  }
+
+  void _handleViewCoaches(InstitutionModel inst) {
+    InstitutionModals.showCoachesListModal(
+      context,
+      coaches: _institutionCoaches,
+      institutionName: inst.name,
+    );
+  }
+
+  Future<void> _handleLeaveInstitution(UserProfileModel teacher, InstitutionModel inst) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Kurumdan Ayrıl'),
+        content: Text('${inst.name} kurumundan ayrılmak istediğinize emin misiniz?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Vazgeç')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Ayrıl', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await _firebaseService.leaveInstitution(
+        institutionId: inst.id,
+        coach: teacher,
+      );
+      if (!mounted) return;
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final updatedUser = teacher.copyWith(clearInstitution: true);
+      await userProvider.updateProfile(updatedUser);
+      _loadStudents();
+    }
   }
 
   @override
@@ -470,6 +560,25 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
             ),
             const SizedBox(height: 14),
 
+            // KURUM & KOÇLUK MERKEZİ KARTI (B2B SaaS)
+            if (teacher != null)
+              TeacherInstitutionCard(
+                institution: _institution,
+                teacher: teacher,
+                isDark: isDark,
+                onCreateRequested: () => _handleCreateInstitution(teacher),
+                onJoinRequested: () => _handleJoinInstitution(teacher),
+                onManageRequested: () {
+                  if (_institution != null) _handleManageInstitution(_institution!);
+                },
+                onViewCoachesRequested: () {
+                  if (_institution != null) _handleViewCoaches(_institution!);
+                },
+                onLeaveRequested: () {
+                  if (_institution != null) _handleLeaveInstitution(teacher, _institution!);
+                },
+              ),
+
             // 3 Özet Metrik Kutusu
             Row(
               children: [
@@ -505,6 +614,86 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
               ],
             ),
             const SizedBox(height: 14),
+
+            // ÖĞRENCİ LİSTESİ KAYNAK SEÇİCİ (BENİM ÖĞRENCİLERİM vs TÜM KURUM)
+            if (_institution != null && _institution!.isApproved) ...[
+              Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => setState(() => _showAllInstitutionStudents = false),
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          decoration: BoxDecoration(
+                            color: !_showAllInstitutionStudents ? const Color(0xFF4F46E5) : Colors.transparent,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.person_outline_rounded,
+                                size: 16,
+                                color: !_showAllInstitutionStudents ? Colors.white : (isDark ? Colors.grey : Colors.black87),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Öğrencilerim (${_students.length})',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: !_showAllInstitutionStudents ? FontWeight.bold : FontWeight.normal,
+                                  color: !_showAllInstitutionStudents ? Colors.white : (isDark ? Colors.grey : Colors.black87),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => setState(() => _showAllInstitutionStudents = true),
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          decoration: BoxDecoration(
+                            color: _showAllInstitutionStudents ? const Color(0xFF10B981) : Colors.transparent,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.domain_rounded,
+                                size: 16,
+                                color: _showAllInstitutionStudents ? Colors.white : (isDark ? Colors.grey : Colors.black87),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Tüm Kurum (${_institutionStudents.length})',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: _showAllInstitutionStudents ? FontWeight.bold : FontWeight.normal,
+                                  color: _showAllInstitutionStudents ? Colors.white : (isDark ? Colors.grey : Colors.black87),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
 
             // Arama ve Filtre Çubuğu
             TextField(
@@ -739,6 +928,23 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
+                        if (_showAllInstitutionStudents && student.teacherName != null && student.teacherName!.isNotEmpty) ...[
+                          const SizedBox(height: 3),
+                          Row(
+                            children: [
+                              const Icon(Icons.school_rounded, size: 12, color: Color(0xFF10B981)),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Sorumlu Koç: ${student.teacherName!}',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF10B981),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ],
                     ),
                   ),

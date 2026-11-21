@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../../models/assignment_model.dart';
 import '../../../models/coach_message_model.dart';
 import '../../../models/user_profile_model.dart';
 import '../../../providers/user_provider.dart';
 import '../../../services/firebase_service.dart';
+import '../../../services/pdf_report_service.dart';
 import '../../../utils/formatters.dart';
+import '../../statistics/pdf_preview_screen.dart';
 
 class TeacherStudentDetailModal extends StatefulWidget {
   final UserProfileModel student;
@@ -277,6 +280,47 @@ class _TeacherStudentDetailModalState extends State<TeacherStudentDetailModal>
     }
   }
 
+  Future<void> _exportPdfReport() async {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final teacher = userProvider.userProfile;
+    if (teacher == null) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Kurumsal PDF raporu hazırlanıyor... 📄'),
+        duration: Duration(seconds: 1),
+      ),
+    );
+
+    try {
+      final pdfBytes = await PdfReportService.generateCoachStudentReportPdf(
+        student: widget.student,
+        coach: teacher,
+        institutionName: teacher.institutionName,
+        institutionLogoBase64: teacher.institutionLogoBase64,
+      );
+
+      if (!mounted) return;
+      final fileName = 'Kocluk_Raporu_${widget.student.firstName}_${DateFormat('yyyyMMdd').format(DateTime.now())}.pdf';
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PdfPreviewScreen(
+            pdfBytes: pdfBytes,
+            fileName: fileName,
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('PDF oluşturma hatası: $e'), backgroundColor: Colors.redAccent),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -342,6 +386,11 @@ class _TeacherStudentDetailModalState extends State<TeacherStudentDetailModal>
                           ),
                         ],
                       ),
+                    ),
+                    IconButton(
+                      tooltip: 'Kurumsal PDF Raporu Oluştur',
+                      icon: const Icon(Icons.picture_as_pdf_rounded, color: Color(0xFF4F46E5)),
+                      onPressed: _exportPdfReport,
                     ),
                     if (_isUnlinking)
                       const SizedBox(

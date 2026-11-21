@@ -72,6 +72,16 @@ class UserProvider with ChangeNotifier {
   int get unreadTeacherMessagesCount =>
       studentMessages.where((m) => m.senderRole == 'teacher' && !m.isRead).length;
 
+  // Kurum / Organizasyon Getters
+  String? get institutionId => _userProfile?.institutionId;
+  String? get institutionName => _userProfile?.institutionName;
+  String? get institutionRole => _userProfile?.institutionRole;
+  String? get institutionStatus => _userProfile?.institutionStatus;
+  String? get institutionLogoBase64 => _userProfile?.institutionLogoBase64;
+  bool get hasInstitution => _userProfile?.hasInstitution ?? false;
+  bool get isInstitutionApproved => _userProfile?.isInstitutionApproved ?? false;
+  bool get isInstitutionOwner => _userProfile?.isInstitutionOwner ?? false;
+
   static const List<String> _adminEmails = [
     'ibrahimuzumer@hotmail.com',
     'ibrahimuzuner@hotmail.com',
