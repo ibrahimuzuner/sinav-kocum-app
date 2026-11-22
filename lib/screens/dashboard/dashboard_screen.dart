@@ -520,9 +520,11 @@ class DashboardScreen extends StatelessWidget {
     final note = userProvider.coachNote;
     final hasNote = note != null && note.trim().isNotEmpty;
     final updated = userProvider.coachNoteUpdatedAt;
+    final hasInst = userProvider.hasInstitution;
+    final instName = userProvider.institutionName;
     final teacherName = (userProvider.teacherName != null && userProvider.teacherName!.trim().isNotEmpty)
-        ? userProvider.teacherName!.trim()
-        : 'Eğitim Koçun';
+        ? (hasInst && instName != null ? '${userProvider.teacherName!.trim()} ($instName)' : userProvider.teacherName!.trim())
+        : (hasInst && instName != null ? '$instName Koçluk Ekibi' : 'Eğitim Koçun');
 
     return Container(
       width: double.infinity,
@@ -732,7 +734,8 @@ class DashboardScreen extends StatelessWidget {
   }
 
   Widget _buildTeacherConnectionCard(BuildContext context, UserProvider userProvider, bool isDark) {
-    final hasTeacher = userProvider.teacherId != null && userProvider.teacherId!.isNotEmpty;
+    final hasTeacher = (userProvider.teacherId != null && userProvider.teacherId!.isNotEmpty) ||
+        userProvider.hasInstitution;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -766,15 +769,17 @@ class DashboardScreen extends StatelessWidget {
               children: [
                 Text(
                   hasTeacher
-                      ? 'Öğretmenim: ${userProvider.teacherName ?? "Eğitim Koçu"}'
+                      ? 'Koçum: ${userProvider.teacherName ?? "Eğitim Koçu"}${userProvider.hasInstitution ? " • ${userProvider.institutionName}" : ""}'
                       : 'Öğretmen / Koç Bağlantısı',
                   style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  hasTeacher
-                      ? 'Çalışma durumun öğretmeninle otomatik paylaşılıyor.'
-                      : 'Öğretmeninin KOC-XXXX kodunu girerek ödev ve mesaj al.',
+                  userProvider.hasInstitution
+                      ? '${userProvider.institutionName ?? "Kurum"} koç kadrosu ile ortak takip ediliyorsunuz.'
+                      : (hasTeacher
+                          ? 'Çalışma durumun öğretmeninle otomatik paylaşılıyor.'
+                          : 'Öğretmeninin KOC-XXXX kodunu girerek ödev ve mesaj al.'),
                   style: TextStyle(
                     fontSize: 11.5,
                     color: isDark ? Colors.white60 : const Color(0xFF64748B),

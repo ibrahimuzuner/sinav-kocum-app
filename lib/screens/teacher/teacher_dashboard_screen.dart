@@ -35,7 +35,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
   InstitutionModel? _institution;
   List<UserProfileModel> _institutionStudents = [];
   List<UserProfileModel> _institutionCoaches = [];
-  bool _showAllInstitutionStudents = false;
+  bool _showAllInstitutionStudents = true; // Kurum koçları için varsayılan olarak ortak kurum havuzu gösterilir
 
   bool _isLoading = true;
   String _selectedFilter = 'Tümü';
@@ -100,6 +100,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
       instCoaches = await _firebaseService.fetchInstitutionCoaches(inst.id);
       // Arka planda koçların ve öğrencilerin eksik bağlarını senkronize et
       _firebaseService.syncInstitutionMembersAndStudents(inst.id);
+      _showAllInstitutionStudents = true;
     }
 
     if (mounted) {
@@ -288,8 +289,14 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
     );
   }
 
-  List<UserProfileModel> get _currentSourceList =>
-      _showAllInstitutionStudents ? _institutionStudents : _students;
+  List<UserProfileModel> get _currentSourceList {
+    if (_institution != null && _institution!.isApproved) {
+      if (_showAllInstitutionStudents || _students.isEmpty) {
+        return _institutionStudents;
+      }
+    }
+    return _students;
+  }
 
   List<UserProfileModel> get _filteredStudents {
     final query = _searchController.text.trim().toLowerCase();
@@ -382,8 +389,9 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
     final teacher = userProvider.userProfile;
     final coachCode = teacher?.teacherCode ?? 'KOC-0000';
 
-    final studiedTodayCount = _students.where((s) => s.studyStats.studiedToday).length;
-    final pendingHomeworkCount = _students.fold<int>(
+    final currentList = _currentSourceList;
+    final studiedTodayCount = currentList.where((s) => s.studyStats.studiedToday).length;
+    final pendingHomeworkCount = currentList.fold<int>(
       0,
       (sum, s) => sum + s.pendingAssignmentsCount,
     );
@@ -604,8 +612,8 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                 Expanded(
                   child: _summaryBox(
                     isDark,
-                    'Öğrencilerim',
-                    '${_students.length}',
+                    _institution != null ? 'Kurum Öğrencileri' : 'Öğrencilerim',
+                    '${currentList.length}',
                     Icons.groups_rounded,
                     const Color(0xFF4F46E5),
                   ),
@@ -634,7 +642,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
             ),
             const SizedBox(height: 14),
 
-            // ÖĞRENCİ LİSTESİ KAYNAK SEÇİCİ (BENİM ÖĞRENCİLERİM vs TÜM KURUM)
+            // ÖĞRENCİ LİSTESİ KAYNAK SEÇİCİ (TÜM KURUM / ORTAK HAVUZ vs BİREBİR ÖĞRENCİLERİM)
             if (_institution != null && _institution!.isApproved) ...[
               Container(
                 margin: const EdgeInsets.only(bottom: 12),
@@ -645,6 +653,38 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                 ),
                 child: Row(
                   children: [
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => setState(() => _showAllInstitutionStudents = true),
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          decoration: BoxDecoration(
+                            color: _showAllInstitutionStudents ? const Color(0xFF10B981) : Colors.transparent,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.groups_rounded,
+                                size: 16,
+                                color: _showAllInstitutionStudents ? Colors.white : (isDark ? Colors.grey : Colors.black87),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Tüm Kurum (Ortak ${_institutionStudents.length})',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: _showAllInstitutionStudents ? FontWeight.bold : FontWeight.normal,
+                                  color: _showAllInstitutionStudents ? Colors.white : (isDark ? Colors.grey : Colors.black87),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                     Expanded(
                       child: InkWell(
                         onTap: () => setState(() => _showAllInstitutionStudents = false),
@@ -665,43 +705,11 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                               ),
                               const SizedBox(width: 6),
                               Text(
-                                'Öğrencilerim (${_students.length})',
+                                'Birebir Eklediklerim (${_students.length})',
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: !_showAllInstitutionStudents ? FontWeight.bold : FontWeight.normal,
                                   color: !_showAllInstitutionStudents ? Colors.white : (isDark ? Colors.grey : Colors.black87),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: InkWell(
-                        onTap: () => setState(() => _showAllInstitutionStudents = true),
-                        borderRadius: BorderRadius.circular(10),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          decoration: BoxDecoration(
-                            color: _showAllInstitutionStudents ? const Color(0xFF10B981) : Colors.transparent,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.domain_rounded,
-                                size: 16,
-                                color: _showAllInstitutionStudents ? Colors.white : (isDark ? Colors.grey : Colors.black87),
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                'Tüm Kurum (${_institutionStudents.length})',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: _showAllInstitutionStudents ? FontWeight.bold : FontWeight.normal,
-                                  color: _showAllInstitutionStudents ? Colors.white : (isDark ? Colors.grey : Colors.black87),
                                 ),
                               ),
                             ],

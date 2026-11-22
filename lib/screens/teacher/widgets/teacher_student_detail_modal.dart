@@ -869,6 +869,11 @@ class _TeacherStudentDetailModalState extends State<TeacherStudentDetailModal>
                         '📅 Son: ${Formatters.formatDateTurkish(a.dueDate)}',
                         style: const TextStyle(fontSize: 11.5),
                       ),
+                      if (a.teacherName.isNotEmpty)
+                        Text(
+                          '👨‍🏫 Koç: ${a.teacherName}',
+                          style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF4F46E5)),
+                        ),
                     ],
                   ),
                 ],
@@ -920,6 +925,17 @@ class _TeacherStudentDetailModalState extends State<TeacherStudentDetailModal>
                           crossAxisAlignment:
                               isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                           children: [
+                            if (msg.isFromTeacher && msg.senderName.isNotEmpty) ...[
+                              Text(
+                                msg.senderName,
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: isMine ? Colors.white70 : const Color(0xFF4F46E5),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                            ],
                             Text(
                               msg.message,
                               style: TextStyle(
