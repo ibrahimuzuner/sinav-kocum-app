@@ -135,6 +135,14 @@ class UserProvider with ChangeNotifier {
         final cloudStudyStats = cloudData['studyStatsJson'] as String?;
         final cloudEmailVerified = cloudData['isEmailVerified'] as bool? ?? _userProfile!.isEmailVerified;
 
+        final cloudInstId = cloudData['institutionId'] as String?;
+        final cloudInstName = cloudData['institutionName'] as String?;
+        final cloudInstRole = cloudData['institutionRole'] as String?;
+        final cloudInstStatus = cloudData['institutionStatus'] as String?;
+        final cloudInstLogo = cloudData['institutionLogoBase64'] as String?;
+        final hasCloudInst = cloudInstId != null && cloudInstId.isNotEmpty;
+        final clearInst = cloudData.containsKey('institutionId') && !hasCloudInst;
+
         _userProfile = _userProfile!.copyWith(
           isPremium: cloudPremium,
           membershipPlan: cloudPlan,
@@ -155,7 +163,28 @@ class UserProvider with ChangeNotifier {
           messagesJson: cloudMessages ?? _userProfile!.messagesJson,
           studyStatsJson: cloudStudyStats ?? _userProfile!.studyStatsJson,
           isEmailVerified: cloudEmailVerified,
+          clearInstitution: clearInst,
+          institutionId: hasCloudInst ? cloudInstId : (clearInst ? null : _userProfile!.institutionId),
+          institutionName: hasCloudInst ? cloudInstName : (clearInst ? null : _userProfile!.institutionName),
+          institutionRole: hasCloudInst ? cloudInstRole : (clearInst ? null : _userProfile!.institutionRole),
+          institutionStatus: hasCloudInst ? cloudInstStatus : (clearInst ? null : _userProfile!.institutionStatus),
+          institutionLogoBase64: hasCloudInst ? cloudInstLogo : (clearInst ? null : _userProfile!.institutionLogoBase64),
         );
+
+        // Eğer öğretmen ise ve henüz yerel profilde kurum görünmüyorsa sunucuda kurumunu ara
+        if (_userProfile!.isTeacher && !_userProfile!.hasInstitution) {
+          final foundInst = await _firebaseService.fetchInstitutionForCoach(_userProfile!.id);
+          if (foundInst != null) {
+            _userProfile = _userProfile!.copyWith(
+              institutionId: foundInst.id,
+              institutionName: foundInst.name,
+              institutionRole: foundInst.ownerCoachId == _userProfile!.id ? 'owner' : 'coach',
+              institutionStatus: foundInst.status,
+              institutionLogoBase64: foundInst.logoBase64,
+            );
+          }
+        }
+
         await _storage.saveUserProfile(_userProfile!);
         notifyListeners();
       }

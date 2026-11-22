@@ -41,8 +41,40 @@ class TeacherInstitutionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final hasInst = teacher.hasInstitution;
 
-    // 1. KURUMA BAĞLI DEĞİLSE -> BAŞVURU VEYA KATILIM KARTI
-    if (!hasInst || institution == null) {
+    // 1. KURUMA BAĞLI AMA KURUM BİLGİSİ YÜKLENİYORSA -> YÜKLENİYOR KARTI (ASLA KATIL GÖSTERİLMEZ)
+    if (hasInst && institution == null) {
+      return Container(
+        margin: const EdgeInsets.only(bottom: 14),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E293B) : Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: const Color(0xFF4F46E5).withValues(alpha: 0.25),
+            width: 1.2,
+          ),
+        ),
+        child: Row(
+          children: [
+            const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF4F46E5)),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                '${teacher.institutionName ?? "Kurum"} bilgileri yükleniyor...',
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // 2. KURUMA HİÇ BAĞLI DEĞİLSE -> BAŞVURU VEYA KATILIM KARTI
+    if (!hasInst) {
       return Container(
         margin: const EdgeInsets.only(bottom: 14),
         padding: const EdgeInsets.all(16),
@@ -80,7 +112,7 @@ class TeacherInstitutionCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Eğitim Kurumu & Koçluk Merkezi (B2B)',
+                        'Eğitim Kurumu & Koçluk Merkezi',
                         style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                       ),
                       SizedBox(height: 2),

@@ -75,12 +75,31 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
     List<UserProfileModel> instStudents = [];
     List<UserProfileModel> instCoaches = [];
 
+    // Önce profile'daki institutionId'ye bak
     if (teacher.hasInstitution) {
       inst = await _firebaseService.fetchInstitution(teacher.institutionId!);
-      if (inst != null && inst.isApproved) {
-        instStudents = await _firebaseService.fetchInstitutionStudents(teacher.institutionId!);
-        instCoaches = await _firebaseService.fetchInstitutionCoaches(teacher.institutionId!);
+    }
+
+    // Eğer profile'da henüz görünmüyorsa sunucuda koçun kurumunu bul ve profili eşitle
+    if (inst == null) {
+      inst = await _firebaseService.fetchInstitutionForCoach(teacher.id);
+      if (inst != null && mounted) {
+        final updatedUser = teacher.copyWith(
+          institutionId: inst.id,
+          institutionName: inst.name,
+          institutionRole: inst.ownerCoachId == teacher.id ? 'owner' : 'coach',
+          institutionStatus: inst.status,
+          institutionLogoBase64: inst.logoBase64,
+        );
+        await userProvider.updateProfile(updatedUser);
       }
+    }
+
+    if (inst != null && inst.isApproved) {
+      instStudents = await _firebaseService.fetchInstitutionStudents(inst.id);
+      instCoaches = await _firebaseService.fetchInstitutionCoaches(inst.id);
+      // Arka planda koçların ve öğrencilerin eksik bağlarını senkronize et
+      _firebaseService.syncInstitutionMembersAndStudents(inst.id);
     }
 
     if (mounted) {

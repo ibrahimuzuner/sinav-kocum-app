@@ -363,6 +363,213 @@ class _AdminInstitutionsViewState extends State<AdminInstitutionsView> {
     );
   }
 
+  Future<void> _showInstitutionMembersDialog(InstitutionModel inst) async {
+    bool isSyncing = false;
+    List<UserProfileModel> coaches = [];
+    List<UserProfileModel> students = [];
+    bool isLoadingMembers = true;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) {
+          if (isLoadingMembers) {
+            Future.microtask(() async {
+              final c = await _firebaseService.fetchInstitutionCoaches(inst.id);
+              final s = await _firebaseService.fetchInstitutionStudents(inst.id);
+              if (ctx.mounted) {
+                setModalState(() {
+                  coaches = c;
+                  students = s;
+                  isLoadingMembers = false;
+                });
+              }
+            });
+          }
+
+          final availableTeachers = _allTeachers
+              .where((t) => !coaches.any((c) => c.id == t.id))
+              .toList();
+
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+            title: Row(
+              children: [
+                const Icon(Icons.domain_rounded, color: Color(0xFF4F46E5)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '${inst.name} • Kadro & Öğrenciler',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: isLoadingMembers
+                  ? const Center(child: Padding(padding: EdgeInsets.all(30), child: CircularProgressIndicator()))
+                  : DefaultTabController(
+                      length: 2,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          TabBar(
+                            labelColor: const Color(0xFF4F46E5),
+                            unselectedLabelColor: Colors.grey,
+                            indicatorColor: const Color(0xFF4F46E5),
+                            tabs: [
+                              Tab(text: 'Koçlar (${coaches.length})'),
+                              Tab(text: 'Öğrenciler (${students.length})'),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            height: 320,
+                            child: TabBarView(
+                              children: [
+                                // TAB 1: KOÇLAR
+                                Column(
+                                  children: [
+                                    if (availableTeachers.isNotEmpty)
+                                      Padding(
+                                        padding: const EdgeInsets.only(bottom: 8),
+                                        child: OutlinedButton.icon(
+                                          onPressed: () async {
+                                            UserProfileModel? chosen;
+                                            await showDialog(
+                                              context: context,
+                                              builder: (chooseCtx) => AlertDialog(
+                                                title: const Text('Kuruma Koç Ekle'),
+                                                content: DropdownButtonFormField<UserProfileModel>(
+                                                  items: availableTeachers.map((t) => DropdownMenuItem(value: t, child: Text(t.fullName))).toList(),
+                                                  onChanged: (val) => chosen = val,
+                                                  decoration: const InputDecoration(labelText: 'Öğretmen Seçin'),
+                                                ),
+                                                actions: [
+                                                  TextButton(onPressed: () => Navigator.pop(chooseCtx), child: const Text('Vazgeç')),
+                                                  ElevatedButton(
+                                                    onPressed: () => Navigator.pop(chooseCtx, true),
+                                                    child: const Text('Ekle'),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                            if (chosen != null) {
+                                              await _firebaseService.addCoachToInstitution(institutionId: inst.id, coach: chosen!);
+                                              setModalState(() => isLoadingMembers = true);
+                                              _loadInstitutions();
+                                              widget.onRefreshNeeded();
+                                            }
+                                          },
+                                          icon: const Icon(Icons.person_add_rounded, size: 16),
+                                          label: const Text('Kuruma Yeni Koç Ekle', style: TextStyle(fontSize: 12)),
+                                        ),
+                                      ),
+                                    Expanded(
+                                      child: coaches.isEmpty
+                                          ? const Center(child: Text('Kayıtlı koç yok.'))
+                                          : ListView.separated(
+                                              itemCount: coaches.length,
+                                              separatorBuilder: (_, __) => const Divider(height: 1),
+                                              itemBuilder: (ctx, i) {
+                                                final c = coaches[i];
+                                                final isOwner = c.id == inst.ownerCoachId;
+                                                return ListTile(
+                                                  dense: true,
+                                                  leading: CircleAvatar(
+                                                    radius: 16,
+                                                    backgroundColor: const Color(0xFF4F46E5).withValues(alpha: 0.1),
+                                                    child: Text(c.firstName.isNotEmpty ? c.firstName[0].toUpperCase() : '?', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF4F46E5))),
+                                                  ),
+                                                  title: Text(c.fullName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                                                  subtitle: Text(c.email, style: const TextStyle(fontSize: 11)),
+                                                  trailing: isOwner
+                                                      ? const Text('👑 Kurucu', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFF59E0B)))
+                                                      : IconButton(
+                                                          icon: const Icon(Icons.remove_circle_outline_rounded, color: Colors.redAccent, size: 18),
+                                                          tooltip: 'Kurumdan Çıkar',
+                                                          onPressed: () async {
+                                                            await _firebaseService.leaveInstitution(institutionId: inst.id, coach: c);
+                                                            setModalState(() => isLoadingMembers = true);
+                                                            _loadInstitutions();
+                                                            widget.onRefreshNeeded();
+                                                          },
+                                                        ),
+                                                );
+                                              },
+                                            ),
+                                    ),
+                                  ],
+                                ),
+                                // TAB 2: ÖĞRENCİLER
+                                students.isEmpty
+                                    ? const Center(child: Text('Kuruma bağlı öğrenci bulunamadı.'))
+                                    : ListView.separated(
+                                        itemCount: students.length,
+                                        separatorBuilder: (_, __) => const Divider(height: 1),
+                                        itemBuilder: (ctx, i) {
+                                          final s = students[i];
+                                          return ListTile(
+                                            dense: true,
+                                            leading: CircleAvatar(
+                                              radius: 16,
+                                              backgroundColor: const Color(0xFF10B981).withValues(alpha: 0.1),
+                                              child: Text(s.firstName.isNotEmpty ? s.firstName[0].toUpperCase() : '?', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF10B981))),
+                                            ),
+                                            title: Text(s.fullName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                                            subtitle: Text('Koçu: ${s.teacherName?.isNotEmpty == true ? s.teacherName : "Belirtilmemiş"} • ${s.targetExam}', style: const TextStyle(fontSize: 11)),
+                                          );
+                                        },
+                                      ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+            ),
+            actions: [
+              TextButton.icon(
+                onPressed: isSyncing
+                    ? null
+                    : () async {
+                        setModalState(() => isSyncing = true);
+                        final res = await _firebaseService.syncInstitutionMembersAndStudents(inst.id);
+                        setModalState(() {
+                          isSyncing = false;
+                          isLoadingMembers = true;
+                        });
+                        _loadInstitutions();
+                        widget.onRefreshNeeded();
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Senkronizasyon tamamlandı: ${res["studentCount"]} öğrenci ve ${res["coachCount"]} koç eşitlendi! 🚀',
+                              ),
+                              behavior: SnackBarBehavior.floating,
+                              backgroundColor: const Color(0xFF10B981),
+                            ),
+                          );
+                        }
+                      },
+                icon: isSyncing
+                    ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.sync_rounded, size: 16),
+                label: const Text('Öğrencileri Eşitle (Sync)'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Kapat'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   Future<void> _deleteInstitution(InstitutionModel inst) async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -810,16 +1017,24 @@ class _AdminInstitutionsViewState extends State<AdminInstitutionsView> {
             // KADRO ÖZETİ
             Row(
               children: [
-                _buildMiniBadge(
-                  icon: Icons.school_rounded,
-                  label: '${inst.coachCount} Koç',
-                  color: const Color(0xFF0EA5E9),
+                InkWell(
+                  onTap: () => _showInstitutionMembersDialog(inst),
+                  borderRadius: BorderRadius.circular(8),
+                  child: _buildMiniBadge(
+                    icon: Icons.school_rounded,
+                    label: '${inst.coachCount} Koç',
+                    color: const Color(0xFF0EA5E9),
+                  ),
                 ),
                 const SizedBox(width: 8),
-                _buildMiniBadge(
-                  icon: Icons.people_alt_rounded,
-                  label: '${inst.studentCount} Kayıtlı Öğrenci',
-                  color: const Color(0xFF10B981),
+                InkWell(
+                  onTap: () => _showInstitutionMembersDialog(inst),
+                  borderRadius: BorderRadius.circular(8),
+                  child: _buildMiniBadge(
+                    icon: Icons.people_alt_rounded,
+                    label: '${inst.studentCount} Kayıtlı Öğrenci',
+                    color: const Color(0xFF10B981),
+                  ),
                 ),
                 if (inst.phone != null && inst.phone!.isNotEmpty) ...[
                   const SizedBox(width: 8),
@@ -888,6 +1103,11 @@ class _AdminInstitutionsViewState extends State<AdminInstitutionsView> {
                   ),
                 ],
                 const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.groups_rounded, size: 22, color: Color(0xFF10B981)),
+                  tooltip: 'Kadro & Öğrencileri Yönet',
+                  onPressed: () => _showInstitutionMembersDialog(inst),
+                ),
                 IconButton(
                   icon: const Icon(Icons.edit_note_rounded, size: 20, color: Color(0xFF4F46E5)),
                   tooltip: 'Kurum Bilgilerini Düzenle',

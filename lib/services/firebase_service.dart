@@ -383,17 +383,32 @@ class AppFirebaseService {
         return {'status': 'already_linked', 'student': student};
       }
 
-      final ok = await _patchUserFields(student.id, {
+      final patchData = <String, dynamic>{
         'teacherId': teacher.id,
         'teacherName': teacher.fullName,
         'teacherEmail': teacher.email,
-      });
+        if (teacher.hasInstitution) ...{
+          'institutionId': teacher.institutionId,
+          'institutionName': teacher.institutionName,
+          'institutionRole': 'student',
+          'institutionStatus': teacher.institutionStatus ?? 'approved',
+        },
+      };
+
+      final ok = await _patchUserFields(student.id, patchData);
 
       if (ok) {
+        if (teacher.hasInstitution) {
+          syncInstitutionMembersAndStudents(teacher.institutionId!);
+        }
         final updated = student.copyWith(
           teacherId: teacher.id,
           teacherName: teacher.fullName,
           teacherEmail: teacher.email,
+          institutionId: teacher.hasInstitution ? teacher.institutionId : null,
+          institutionName: teacher.hasInstitution ? teacher.institutionName : null,
+          institutionRole: teacher.hasInstitution ? 'student' : null,
+          institutionStatus: teacher.hasInstitution ? (teacher.institutionStatus ?? 'approved') : null,
         );
         return {'status': 'linked', 'student': updated};
       }
@@ -494,11 +509,21 @@ class AppFirebaseService {
     required String studentId,
     required UserProfileModel teacher,
   }) async {
-    return _patchUserFields(studentId, {
+    final ok = await _patchUserFields(studentId, {
       'teacherId': teacher.id,
       'teacherName': teacher.fullName,
       'teacherEmail': teacher.email,
+      if (teacher.hasInstitution) ...{
+        'institutionId': teacher.institutionId,
+        'institutionName': teacher.institutionName,
+        'institutionRole': 'student',
+        'institutionStatus': teacher.institutionStatus ?? 'approved',
+      },
     });
+    if (ok && teacher.hasInstitution) {
+      syncInstitutionMembersAndStudents(teacher.institutionId!);
+    }
+    return ok;
   }
 
   // --- ÖDEV SİSTEMİ ---
@@ -1382,6 +1407,9 @@ class AppFirebaseService {
       'institutionStatus': '',
       'institutionLogoBase64': '',
     });
+
+    // Kurum üye ve öğrencilerini yeniden senkronize et
+    syncInstitutionMembersAndStudents(institutionId);
     return true;
   }
 
@@ -1420,14 +1448,146 @@ class AppFirebaseService {
       if (inst.logoBase64 != null) 'institutionLogoBase64': inst.logoBase64,
     });
 
+    // Koçun altındaki tüm öğrencileri de bu kurumla senkronize et
+    await syncInstitutionMembersAndStudents(inst.id);
+
     return {'success': true, 'institution': inst};
   }
 
-  /// Kuruma bağlı tüm koçları getirir
+  /// Yönetici veya Kurum Kurucusu tarafından kuruma doğrudan bir koç ekleme
+  Future<bool> addCoachToInstitution({
+    required String institutionId,
+    required UserProfileModel coach,
+  }) async {
+    final inst = await fetchInstitution(institutionId);
+    if (inst == null) return false;
+
+    final updatedCoaches = List<String>.from(inst.coachIds);
+    if (!updatedCoaches.contains(coach.id)) {
+      updatedCoaches.add(coach.id);
+    }
+
+    await updateInstitutionDetails(
+      institutionId: institutionId,
+      data: {'coachIds': updatedCoaches},
+    );
+
+    await _patchUserFields(coach.id, {
+      'institutionId': inst.id,
+      'institutionName': inst.name,
+      'institutionRole': 'coach',
+      'institutionStatus': inst.status,
+      if (inst.logoBase64 != null) 'institutionLogoBase64': inst.logoBase64,
+    });
+
+    // Koçun tüm öğrencilerini de kuruma bağla
+    await syncInstitutionMembersAndStudents(institutionId);
+    return true;
+  }
+
+  /// Belirli bir koçun bağlı olduğu veya kurucusu olduğu kurumu bulur
+  Future<InstitutionModel?> fetchInstitutionForCoach(String coachId) async {
+    if (coachId.isEmpty) return null;
+    final all = await fetchAllInstitutions();
+    for (final inst in all) {
+      if (inst.ownerCoachId == coachId || inst.coachIds.contains(coachId)) {
+        return inst;
+      }
+    }
+    return null;
+  }
+
+  /// Kuruma bağlı tüm koçları getirir (institutionId veya kurum coachIds listesi üzerinden)
   Future<List<UserProfileModel>> fetchInstitutionCoaches(String institutionId) async {
     if (institutionId.isEmpty) return [];
+    final inst = await fetchInstitution(institutionId);
+    final coachIdSet = <String>{};
+    if (inst != null) {
+      if (inst.ownerCoachId.isNotEmpty) coachIdSet.add(inst.ownerCoachId);
+      coachIdSet.addAll(inst.coachIds);
+    }
     final all = await fetchAllUsers();
-    return all.where((u) => u.isTeacher && u.institutionId == institutionId).toList();
+    return all.where((u) {
+      if (!u.isTeacher) return false;
+      if (u.institutionId == institutionId) return true;
+      if (coachIdSet.contains(u.id)) return true;
+      return false;
+    }).toList();
+  }
+
+  /// Kurumun koçlarını ve bu koçlara bağlı TÜM öğrencileri kurumla tam senkronize eder.
+  /// Öğrencilerin ve koçların profillerine institutionId ve institutionName işler,
+  /// Kurum dokümanındaki coachIds ve studentIds listesini tam olarak günceller.
+  Future<Map<String, dynamic>> syncInstitutionMembersAndStudents(String institutionId) async {
+    if (institutionId.isEmpty) return {'success': false, 'message': 'Geçersiz kurum ID'};
+    final inst = await fetchInstitution(institutionId);
+    if (inst == null) return {'success': false, 'message': 'Kurum bulunamadı'};
+
+    final allUsers = await fetchAllUsers();
+
+    // 1. Kurumun koçlarını topla
+    final coachIdSet = <String>{};
+    if (inst.ownerCoachId.isNotEmpty) coachIdSet.add(inst.ownerCoachId);
+    coachIdSet.addAll(inst.coachIds);
+
+    for (final u in allUsers) {
+      if (u.isTeacher && u.institutionId == inst.id) {
+        coachIdSet.add(u.id);
+      }
+    }
+
+    // Koçların profillerini doğrula/güncelle
+    for (final coachId in coachIdSet) {
+      await _patchUserFields(coachId, {
+        'institutionId': inst.id,
+        'institutionName': inst.name,
+        'institutionRole': coachId == inst.ownerCoachId ? 'owner' : 'coach',
+        'institutionStatus': inst.status,
+        if (inst.logoBase64 != null) 'institutionLogoBase64': inst.logoBase64,
+      });
+    }
+
+    // 2. Bu koçlara bağlı TÜM öğrencileri bul
+    final studentIdSet = <String>{};
+    final List<UserProfileModel> syncedStudents = [];
+
+    for (final u in allUsers) {
+      if (u.isTeacher) continue;
+      bool belongs = false;
+      if (u.institutionId == inst.id) belongs = true;
+      if (u.teacherId != null && coachIdSet.contains(u.teacherId)) belongs = true;
+
+      if (belongs) {
+        studentIdSet.add(u.id);
+        syncedStudents.add(u);
+
+        // Öğrencinin profilini kuruma bağla
+        if (u.institutionId != inst.id || u.institutionName != inst.name) {
+          await _patchUserFields(u.id, {
+            'institutionId': inst.id,
+            'institutionName': inst.name,
+            'institutionRole': 'student',
+            'institutionStatus': inst.status,
+          });
+        }
+      }
+    }
+
+    // 3. Kurum dokümanını güncelle (coachIds & studentIds)
+    await updateInstitutionDetails(
+      institutionId: inst.id,
+      data: {
+        'coachIds': coachIdSet.toList(),
+        'studentIds': studentIdSet.toList(),
+      },
+    );
+
+    return {
+      'success': true,
+      'coachCount': coachIdSet.length,
+      'studentCount': studentIdSet.length,
+      'students': syncedStudents,
+    };
   }
 
   /// Kuruma bağlı tüm öğrencileri getirir (Kurumdaki herhangi bir koça bağlı olan veya doğrudan kurum havuzundaki tüm öğrenciler)
@@ -1437,13 +1597,33 @@ class AppFirebaseService {
     final coachIds = coaches.map((c) => c.id).toSet();
 
     final all = await fetchAllUsers();
-    return all.where((u) {
-      if (u.isTeacher) return false;
-      // Ya doğrudan institutionId ile bağlıdır, ya da kurumun koçlarından birine bağlıdır
-      if (u.institutionId == institutionId) return true;
-      if (u.teacherId != null && coachIds.contains(u.teacherId)) return true;
-      return false;
-    }).toList();
+    final List<UserProfileModel> matchedStudents = [];
+    final List<String> studentIdsToSync = [];
+
+    for (final u in all) {
+      if (u.isTeacher) continue;
+      if (u.institutionId == institutionId || (u.teacherId != null && coachIds.contains(u.teacherId))) {
+        matchedStudents.add(u);
+        studentIdsToSync.add(u.id);
+        if (u.institutionId != institutionId) {
+          _patchUserFields(u.id, {
+            'institutionId': institutionId,
+            'institutionName': u.institutionName ?? '',
+            'institutionRole': 'student',
+            'institutionStatus': 'approved',
+          });
+        }
+      }
+    }
+
+    if (studentIdsToSync.isNotEmpty) {
+      updateInstitutionDetails(
+        institutionId: institutionId,
+        data: {'studentIds': studentIdsToSync},
+      );
+    }
+
+    return matchedStudents;
   }
 
   /// Kurumu ve ilişkili bağları siler (Süper Yönetici)
