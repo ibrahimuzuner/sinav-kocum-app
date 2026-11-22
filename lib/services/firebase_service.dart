@@ -210,6 +210,18 @@ class AppFirebaseService {
     // 1. Önce Firestore SDK ile dene
     if (_isInitialized && _firestore != null) {
       try {
+        final emailDocId = cleanEmail.replaceAll('.', '_');
+        final emailDoc = await _firestore!.collection('user_emails').doc(emailDocId).get();
+        if (emailDoc.exists && emailDoc.data()?['userId'] != null) {
+          final targetUserId = emailDoc.data()!['userId'] as String;
+          if (targetUserId.isNotEmpty) {
+            final userDoc = await _firestore!.collection('users').doc(targetUserId).get();
+            if (userDoc.exists && userDoc.data() != null) {
+              return UserProfileModel.fromJson(userDoc.data()!);
+            }
+          }
+        }
+
         final querySnapshot = await _firestore!
             .collection('users')
             .where('email', isEqualTo: cleanEmail)

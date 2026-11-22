@@ -520,7 +520,7 @@ class UserProvider with ChangeNotifier {
     syncCloudUserData();
   }
 
-  /// E-posta ile giriş yap (Önce yerel hafıza, yoksa Firestore bulutundan getir)
+  /// E-posta ile giriş yap (Önce Firestore bulutundan en güncel profili getir, çevrimdışıysa yerel hafıza)
   Future<bool> loginWithEmail({
     required String email,
     required String password,
@@ -529,7 +529,22 @@ class UserProvider with ChangeNotifier {
     if (password.isNotEmpty) {
       await _storage.setLastAuthPassword(password);
     }
-    // 1. Önce yerelde kayıtlı mı kontrol et
+
+    // 1. Önce Firestore bulutundan en güncel profili sorgula
+    try {
+      final cloudProfile = await _firebaseService.fetchProfileByEmail(cleanEmail);
+      if (cloudProfile != null) {
+        _userProfile = cloudProfile;
+        await _storage.saveUserProfile(cloudProfile);
+        notifyListeners();
+        syncCloudUserData();
+        return true;
+      }
+    } catch (e) {
+      debugPrint('Cloud profil getirme hatası (yerel deneniyor): $e');
+    }
+
+    // 2. Buluta ulaşılamazsa (çevrimdışı vb.) yerel hafızadan kontrol et
     final existing = _storage.findProfileByEmail(cleanEmail);
     if (existing != null) {
       _userProfile = existing;
@@ -537,19 +552,6 @@ class UserProvider with ChangeNotifier {
       notifyListeners();
       syncCloudUserData();
       return true;
-    }
-
-    // 2. Yerelde yoksa Firestore bulutundan sorgula
-    try {
-      final cloudProfile = await _firebaseService.fetchProfileByEmail(cleanEmail);
-      if (cloudProfile != null) {
-        _userProfile = cloudProfile;
-        await _storage.saveUserProfile(cloudProfile);
-        notifyListeners();
-        return true;
-      }
-    } catch (e) {
-      debugPrint('Cloud profil getirme hatası: $e');
     }
 
     return false;
@@ -560,7 +562,21 @@ class UserProvider with ChangeNotifier {
     final cleanEmail = email.trim().toLowerCase();
     await _storage.setLastSocialEmail(cleanEmail);
 
-    // 1. Yerelde ara
+    // 1. Önce Firestore bulutundan ara
+    try {
+      final cloudProfile = await _firebaseService.fetchProfileByEmail(cleanEmail);
+      if (cloudProfile != null) {
+        _userProfile = cloudProfile;
+        await _storage.saveUserProfile(cloudProfile);
+        notifyListeners();
+        syncCloudUserData();
+        return true;
+      }
+    } catch (e) {
+      debugPrint('Sosyal giriş bulut sorgulama hatası: $e');
+    }
+
+    // 2. Çevrimdışı fallback: Yerelde ara
     final existing = _storage.findProfileByEmail(cleanEmail);
     if (existing != null) {
       _userProfile = existing;
@@ -568,19 +584,6 @@ class UserProvider with ChangeNotifier {
       notifyListeners();
       syncCloudUserData();
       return true;
-    }
-
-    // 2. Cloud Firestore'dan ara
-    try {
-      final cloudProfile = await _firebaseService.fetchProfileByEmail(cleanEmail);
-      if (cloudProfile != null) {
-        _userProfile = cloudProfile;
-        await _storage.saveUserProfile(cloudProfile);
-        notifyListeners();
-        return true;
-      }
-    } catch (e) {
-      debugPrint('Sosyal giriş bulut sorgulama hatası: $e');
     }
 
     return false;
