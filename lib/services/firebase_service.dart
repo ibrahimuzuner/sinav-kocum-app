@@ -388,7 +388,7 @@ class AppFirebaseService {
         'teacherId': teacher.id,
         'teacherName': teacher.fullName,
         'teacherEmail': teacher.email,
-        if (teacher.hasInstitution) ...{
+        if (teacher.hasInstitution && teacher.isInstitutionApproved) ...{
           'institutionId': teacher.institutionId,
           'institutionName': teacher.institutionName,
           'institutionRole': 'student',
@@ -399,17 +399,17 @@ class AppFirebaseService {
       final ok = await _patchUserFields(student.id, patchData);
 
       if (ok) {
-        if (teacher.hasInstitution) {
+        if (teacher.hasInstitution && teacher.isInstitutionApproved) {
           syncInstitutionMembersAndStudents(teacher.institutionId!);
         }
         final updated = student.copyWith(
           teacherId: teacher.id,
           teacherName: teacher.fullName,
           teacherEmail: teacher.email,
-          institutionId: teacher.hasInstitution ? teacher.institutionId : null,
-          institutionName: teacher.hasInstitution ? teacher.institutionName : null,
-          institutionRole: teacher.hasInstitution ? 'student' : null,
-          institutionStatus: teacher.hasInstitution ? (teacher.institutionStatus ?? 'approved') : null,
+          institutionId: (teacher.hasInstitution && teacher.isInstitutionApproved) ? teacher.institutionId : null,
+          institutionName: (teacher.hasInstitution && teacher.isInstitutionApproved) ? teacher.institutionName : null,
+          institutionRole: (teacher.hasInstitution && teacher.isInstitutionApproved) ? 'student' : null,
+          institutionStatus: (teacher.hasInstitution && teacher.isInstitutionApproved) ? (teacher.institutionStatus ?? 'approved') : null,
         );
         return {'status': 'linked', 'student': updated};
       }
@@ -514,14 +514,14 @@ class AppFirebaseService {
       'teacherId': teacher.id,
       'teacherName': teacher.fullName,
       'teacherEmail': teacher.email,
-      if (teacher.hasInstitution) ...{
+      if (teacher.hasInstitution && teacher.isInstitutionApproved) ...{
         'institutionId': teacher.institutionId,
         'institutionName': teacher.institutionName,
         'institutionRole': 'student',
         'institutionStatus': teacher.institutionStatus ?? 'approved',
       },
     });
-    if (ok && teacher.hasInstitution) {
+    if (ok && teacher.hasInstitution && teacher.isInstitutionApproved) {
       syncInstitutionMembersAndStudents(teacher.institutionId!);
     }
     return ok;
@@ -1596,7 +1596,7 @@ class AppFirebaseService {
     return true;
   }
 
-  /// Bir koçun kurum katılım kodu (`KRM-XXXXXX`) ile kuruma katılması
+  /// Bir koçun kurum katılım kodu (`KRM-XXXXXX`) ile kuruma katılım isteği göndermesi
   Future<Map<String, dynamic>> joinInstitutionByCode({
     required String code,
     required UserProfileModel coach,
@@ -1613,28 +1613,41 @@ class AppFirebaseService {
       };
     }
 
-    if (inst.coachIds.contains(coach.id)) {
-      return {'success': false, 'message': 'Zaten bu kurumun kadrosundasınız.'};
+    if (inst.ownerCoachId == coach.id) {
+      return {'success': false, 'message': 'Zaten bu kurumun kurucususunuz.'};
     }
 
-    final updatedCoaches = List<String>.from(inst.coachIds)..add(coach.id);
+    if (inst.coachIds.contains(coach.id)) {
+      return {'success': false, 'message': 'Zaten bu kurumun onaylı kadrosundasınız.'};
+    }
+
+    if (inst.pendingCoachIds.contains(coach.id)) {
+      return {'success': false, 'message': 'Bu kuruma katılım talebiniz zaten onay bekliyor.'};
+    }
+
+    final updatedPending = List<String>.from(inst.pendingCoachIds);
+    if (!updatedPending.contains(coach.id)) {
+      updatedPending.add(coach.id);
+    }
     await updateInstitutionDetails(
       institutionId: inst.id,
-      data: {'coachIds': updatedCoaches},
+      data: {'pendingCoachIds': updatedPending},
     );
 
     await _patchUserFields(coach.id, {
       'institutionId': inst.id,
       'institutionName': inst.name,
       'institutionRole': 'coach',
-      'institutionStatus': 'approved',
+      'institutionStatus': 'pending', // Kurucu onayı bekliyor
       if (inst.logoBase64 != null) 'institutionLogoBase64': inst.logoBase64,
     });
 
-    // Koçun altındaki tüm öğrencileri de bu kurumla senkronize et
-    await syncInstitutionMembersAndStudents(inst.id);
-
-    return {'success': true, 'institution': inst};
+    return {
+      'success': true,
+      'pending': true,
+      'institution': inst,
+      'message': 'Katılım talebiniz kurum kurucusuna iletildi. Kurucu onayından sonra kadroya dahil edileceksiniz.',
+    };
   }
 
   /// Yönetici veya Kurum Kurucusu tarafından kuruma doğrudan bir koç ekleme
@@ -1668,16 +1681,97 @@ class AppFirebaseService {
     return true;
   }
 
-  /// Belirli bir koçun bağlı olduğu veya kurucusu olduğu kurumu bulur
+  /// Belirli bir koçun bağlı olduğu, kurucusu olduğu veya onay beklediği kurumu bulur
   Future<InstitutionModel?> fetchInstitutionForCoach(String coachId) async {
     if (coachId.isEmpty) return null;
     final all = await fetchAllInstitutions();
     for (final inst in all) {
-      if (inst.ownerCoachId == coachId || inst.coachIds.contains(coachId)) {
+      if (inst.ownerCoachId == coachId ||
+          inst.coachIds.contains(coachId) ||
+          inst.pendingCoachIds.contains(coachId)) {
         return inst;
       }
     }
     return null;
+  }
+
+  /// Kuruma katılım onayı bekleyen koçların listesini getirir
+  Future<List<UserProfileModel>> fetchPendingInstitutionCoaches(String institutionId) async {
+    if (institutionId.isEmpty) return [];
+    final inst = await fetchInstitution(institutionId);
+    if (inst == null || inst.pendingCoachIds.isEmpty) return [];
+
+    final all = await fetchAllUsers();
+    final pendingSet = inst.pendingCoachIds.toSet();
+    return all.where((u) => u.isTeacher && pendingSet.contains(u.id)).toList();
+  }
+
+  /// Kurum Kurucusu: Koçun kuruma katılım isteğini onaylar
+  Future<bool> approveCoachJoinRequest({
+    required String institutionId,
+    required String coachId,
+  }) async {
+    final inst = await fetchInstitution(institutionId);
+    if (inst == null) return false;
+
+    final updatedPending = List<String>.from(inst.pendingCoachIds)..remove(coachId);
+    final updatedCoaches = List<String>.from(inst.coachIds);
+    if (!updatedCoaches.contains(coachId)) {
+      updatedCoaches.add(coachId);
+    }
+
+    await updateInstitutionDetails(
+      institutionId: institutionId,
+      data: {
+        'coachIds': updatedCoaches,
+        'pendingCoachIds': updatedPending,
+      },
+    );
+
+    await _patchUserFields(coachId, {
+      'institutionId': inst.id,
+      'institutionName': inst.name,
+      'institutionRole': 'coach',
+      'institutionStatus': 'approved',
+      if (inst.logoBase64 != null) 'institutionLogoBase64': inst.logoBase64,
+    });
+
+    // Koçun altındaki öğrencileri de kurum havuzuna bağla
+    await syncInstitutionMembersAndStudents(institutionId);
+    return true;
+  }
+
+  /// Kurum Kurucusu: Koçun kuruma katılım isteğini reddeder
+  Future<bool> rejectCoachJoinRequest({
+    required String institutionId,
+    required String coachId,
+  }) async {
+    final inst = await fetchInstitution(institutionId);
+    if (inst == null) return false;
+
+    final updatedPending = List<String>.from(inst.pendingCoachIds)..remove(coachId);
+    await updateInstitutionDetails(
+      institutionId: institutionId,
+      data: {'pendingCoachIds': updatedPending},
+    );
+
+    await _patchUserFields(coachId, {
+      'institutionId': null,
+      'institutionName': null,
+      'institutionRole': null,
+      'institutionStatus': null,
+      'institutionLogoBase64': null,
+    });
+
+    return true;
+  }
+
+  /// Koç: Bekleyen katılım isteğini iptal eder
+  Future<bool> cancelCoachJoinRequest({
+    required String institutionId,
+    required String coachId,
+  }) async {
+    return rejectCoachJoinRequest(institutionId: institutionId, coachId: coachId);
   }
 
   /// Kuruma bağlı tüm koçları getirir (institutionId veya kurum coachIds listesi üzerinden)
@@ -1692,7 +1786,7 @@ class AppFirebaseService {
     final all = await fetchAllUsers();
     return all.where((u) {
       if (!u.isTeacher) return false;
-      if (u.institutionId == institutionId) return true;
+      if (u.institutionId == institutionId && u.institutionStatus == 'approved') return true;
       if (coachIdSet.contains(u.id)) return true;
       return false;
     }).toList();
@@ -1714,7 +1808,7 @@ class AppFirebaseService {
     coachIdSet.addAll(inst.coachIds);
 
     for (final u in allUsers) {
-      if (u.isTeacher && u.institutionId == inst.id) {
+      if (u.isTeacher && u.institutionId == inst.id && u.institutionStatus == 'approved') {
         coachIdSet.add(u.id);
       }
     }

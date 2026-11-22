@@ -181,7 +181,9 @@ class UserProvider with ChangeNotifier {
               institutionId: foundInst.id,
               institutionName: foundInst.name,
               institutionRole: foundInst.ownerCoachId == _userProfile!.id ? 'owner' : 'coach',
-              institutionStatus: foundInst.status,
+              institutionStatus: foundInst.ownerCoachId == _userProfile!.id
+                  ? foundInst.status
+                  : (foundInst.coachIds.contains(_userProfile!.id) ? 'approved' : 'pending'),
               institutionLogoBase64: foundInst.logoBase64,
             );
           }

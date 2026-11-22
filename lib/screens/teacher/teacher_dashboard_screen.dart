@@ -84,23 +84,49 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
     if (inst == null) {
       inst = await _firebaseService.fetchInstitutionForCoach(teacher.id);
       if (inst != null && mounted) {
+        final expectedStatus = inst.ownerCoachId == teacher.id
+            ? inst.status
+            : (inst.coachIds.contains(teacher.id) ? 'approved' : 'pending');
         final updatedUser = teacher.copyWith(
           institutionId: inst.id,
           institutionName: inst.name,
           institutionRole: inst.ownerCoachId == teacher.id ? 'owner' : 'coach',
-          institutionStatus: inst.status,
+          institutionStatus: expectedStatus,
           institutionLogoBase64: inst.logoBase64,
         );
         await userProvider.updateProfile(updatedUser);
       }
+    } else {
+      // Kurum bulundu, koçun güncel onay durumunu senkronize et
+      final isOwner = inst.ownerCoachId == teacher.id;
+      final isApprovedMember = inst.coachIds.contains(teacher.id);
+      final isPendingMember = inst.pendingCoachIds.contains(teacher.id);
+
+      if (!isOwner && !isApprovedMember && !isPendingMember) {
+        // Kurucu tarafından reddedilmiş veya çıkarılmış
+        final updatedUser = teacher.copyWith(clearInstitution: true);
+        await userProvider.updateProfile(updatedUser);
+        inst = null;
+      } else if (!isOwner && isApprovedMember && teacher.institutionStatus != 'approved') {
+        // Kurucu onaylamış! Koçun yerel profilini 'approved' yap
+        final updatedUser = teacher.copyWith(institutionStatus: 'approved');
+        await userProvider.updateProfile(updatedUser);
+      }
     }
 
-    if (inst != null && inst.isApproved) {
+    final isCoachApprovedOrOwner = inst != null &&
+        inst.isApproved &&
+        (inst.ownerCoachId == teacher.id || inst.coachIds.contains(teacher.id));
+
+    if (isCoachApprovedOrOwner) {
       instStudents = await _firebaseService.fetchInstitutionStudents(inst.id);
       instCoaches = await _firebaseService.fetchInstitutionCoaches(inst.id);
       // Arka planda koçların ve öğrencilerin eksik bağlarını senkronize et
       _firebaseService.syncInstitutionMembersAndStudents(inst.id);
       _showAllInstitutionStudents = true;
+    } else if (inst != null) {
+      // Onay bekleyen koç sadece kendi öğrencilerini görür
+      _showAllInstitutionStudents = false;
     }
 
     if (mounted) {
@@ -348,7 +374,52 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
       context,
       coaches: _institutionCoaches,
       institutionName: inst.name,
+      inst: inst,
+      onActionComplete: _loadStudents,
     );
+  }
+
+  void _handleManagePendingCoaches(InstitutionModel inst) {
+    InstitutionModals.showPendingCoachesModal(
+      context,
+      inst: inst,
+      onActionComplete: _loadStudents,
+    );
+  }
+
+  Future<void> _handleCancelJoinRequest(UserProfileModel teacher, InstitutionModel inst) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Katılım Talebini İptal Et'),
+        content: Text('${inst.name} kurumuna gönderdiğiniz katılım talebini iptal etmek istediğinize emin misiniz?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Vazgeç')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Talebi İptal Et', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !mounted) return;
+
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    await _firebaseService.cancelCoachJoinRequest(institutionId: inst.id, coachId: teacher.id);
+    final updated = teacher.copyWith(clearInstitution: true);
+    await userProvider.updateProfile(updated);
+    await _loadStudents();
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Katılım talebiniz iptal edildi.'),
+          backgroundColor: Colors.grey,
+        ),
+      );
+    }
   }
 
   Future<void> _handleLeaveInstitution(UserProfileModel teacher, InstitutionModel inst) async {
@@ -603,6 +674,12 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                 },
                 onLeaveRequested: () {
                   if (_institution != null) _handleLeaveInstitution(teacher, _institution!);
+                },
+                onManagePendingCoachesRequested: () {
+                  if (_institution != null) _handleManagePendingCoaches(_institution!);
+                },
+                onCancelJoinRequested: () {
+                  if (_institution != null) _handleCancelJoinRequest(teacher, _institution!);
                 },
               ),
 

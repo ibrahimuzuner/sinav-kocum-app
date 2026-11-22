@@ -63,6 +63,7 @@ class _AddMockExamDialogState extends State<AddMockExamDialog> {
 
   late DateTime _selectedDate;
   String _examType = 'Genel Deneme';
+  String? _selectedBranchCourseId;
   final List<_CourseInputData> _courseInputs = [];
   bool _isLgs = false;
   bool _isSaving = false;
@@ -88,6 +89,24 @@ class _AddMockExamDialogState extends State<AddMockExamDialog> {
   double get _effectiveTargetNet =>
       widget.student?.targetNet ?? context.read<UserProvider>().targetNet;
 
+  bool get _isBranchExam => _examType == 'Branş Denemesi';
+
+  _CourseInputData? get _selectedBranchCourse {
+    if (_courseInputs.isEmpty) return null;
+    return _courseInputs.firstWhere(
+      (c) => c.courseId == _selectedBranchCourseId,
+      orElse: () => _courseInputs.first,
+    );
+  }
+
+  List<_CourseInputData> get _activeCourseInputs {
+    if (_isBranchExam) {
+      final sc = _selectedBranchCourse;
+      return sc != null ? [sc] : [];
+    }
+    return _courseInputs;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -95,6 +114,12 @@ class _AddMockExamDialogState extends State<AddMockExamDialog> {
     final targetExam = widget.student?.targetExam ?? context.read<UserProvider>().targetExam;
     _isLgs = targetExam.toLowerCase().contains('lgs');
 
+    // Her zaman bu sınavın tüm derslerini eksiksiz hazırla
+    final availableCourses = widget.student != null
+        ? PredefinedData.getCoursesForExam(targetExam)
+        : (studyProvider.courses.isNotEmpty ? studyProvider.courses : PredefinedData.getCoursesForExam(targetExam));
+
+    final Map<String, MockExamCourseScore> initialScoreMap = {};
     if (widget.initialExam != null) {
       final exam = widget.initialExam!;
       _titleController.text = exam.title;
@@ -106,55 +131,43 @@ class _AddMockExamDialogState extends State<AddMockExamDialog> {
       if (exam.notes != null) {
         _notesController.text = exam.notes!;
       }
-
-      // Populate courses from initial exam
-      for (final score in exam.courseScores) {
-        final courseMatch = studyProvider.allCourses.firstWhere(
-          (c) => c.id == score.courseId,
-          orElse: () => studyProvider.courses.isNotEmpty
-              ? studyProvider.courses.first
-              : PredefinedData.courseMatematik,
-        );
-        final maxQ = PredefinedData.getMaxQuestionsForCourse(targetExam, score.courseId);
-        final input = _CourseInputData(
-          courseId: score.courseId,
-          courseName: score.courseName,
-          colorValue: courseMatch.colorValue,
-          maxQuestions: maxQ,
-          correctCtrl: TextEditingController(text: score.correctCount > 0 ? score.correctCount.toString() : ''),
-          wrongCtrl: TextEditingController(text: score.wrongCount > 0 ? score.wrongCount.toString() : ''),
-          emptyCtrl: TextEditingController(text: score.emptyCount > 0 ? score.emptyCount.toString() : ''),
-        );
-        input.correctCtrl.addListener(_onFieldChanged);
-        input.wrongCtrl.addListener(_onFieldChanged);
-        input.emptyCtrl.addListener(_onFieldChanged);
-        _courseInputs.add(input);
+      for (final s in exam.courseScores) {
+        initialScoreMap[s.courseId] = s;
       }
     } else {
       _selectedDate = DateTime.now();
       _durationController.text = _getDefaultDuration(targetExam);
+    }
 
-      // Populate courses from active exam's courses or student's predefined courses
-      final availableCourses = widget.student != null
-          ? PredefinedData.getCoursesForExam(targetExam)
-          : studyProvider.courses;
+    for (final course in availableCourses) {
+      final maxQ = PredefinedData.getMaxQuestionsForCourse(targetExam, course.id);
+      final prevScore = initialScoreMap[course.id];
+      final input = _CourseInputData(
+        courseId: course.id,
+        courseName: course.name,
+        colorValue: course.colorValue,
+        maxQuestions: maxQ,
+        correctCtrl: TextEditingController(
+          text: (prevScore != null && prevScore.correctCount > 0) ? prevScore.correctCount.toString() : '',
+        ),
+        wrongCtrl: TextEditingController(
+          text: (prevScore != null && prevScore.wrongCount > 0) ? prevScore.wrongCount.toString() : '',
+        ),
+        emptyCtrl: TextEditingController(
+          text: (prevScore != null && prevScore.emptyCount > 0) ? prevScore.emptyCount.toString() : '',
+        ),
+      );
+      input.correctCtrl.addListener(_onFieldChanged);
+      input.wrongCtrl.addListener(_onFieldChanged);
+      input.emptyCtrl.addListener(_onFieldChanged);
+      _courseInputs.add(input);
+    }
 
-      for (final course in availableCourses) {
-        final maxQ = PredefinedData.getMaxQuestionsForCourse(targetExam, course.id);
-        final input = _CourseInputData(
-          courseId: course.id,
-          courseName: course.name,
-          colorValue: course.colorValue,
-          maxQuestions: maxQ,
-          correctCtrl: TextEditingController(),
-          wrongCtrl: TextEditingController(),
-          emptyCtrl: TextEditingController(),
-        );
-        input.correctCtrl.addListener(_onFieldChanged);
-        input.wrongCtrl.addListener(_onFieldChanged);
-        input.emptyCtrl.addListener(_onFieldChanged);
-        _courseInputs.add(input);
-      }
+    // Branş denemesi için seçili dersi belirle
+    if (widget.initialExam != null && widget.initialExam!.courseScores.isNotEmpty) {
+      _selectedBranchCourseId = widget.initialExam!.courseScores.first.courseId;
+    } else if (_courseInputs.isNotEmpty) {
+      _selectedBranchCourseId = _courseInputs.first.courseId;
     }
   }
 
@@ -200,14 +213,14 @@ class _AddMockExamDialogState extends State<AddMockExamDialog> {
 
   double get _totalLiveNet {
     double sum = 0.0;
-    for (final c in _courseInputs) {
+    for (final c in _activeCourseInputs) {
       sum += c.calculateNet(_isLgs);
     }
     return double.parse(sum.toStringAsFixed(2));
   }
 
   double get _totalLiveEstimatedScore {
-    final courseScores = _courseInputs.map((c) {
+    final courseScores = _activeCourseInputs.map((c) {
       return MockExamCourseScore(
         courseId: c.courseId,
         courseName: c.courseName,
@@ -221,7 +234,7 @@ class _AddMockExamDialogState extends State<AddMockExamDialog> {
   }
 
   String get _liveCoachAdvice {
-    final courseScores = _courseInputs.map((c) {
+    final courseScores = _activeCourseInputs.map((c) {
       return MockExamCourseScore(
         courseId: c.courseId,
         courseName: c.courseName,
@@ -239,9 +252,9 @@ class _AddMockExamDialogState extends State<AddMockExamDialog> {
     );
   }
 
-  int get _totalLiveCorrect => _courseInputs.fold(0, (sum, c) => sum + c.correct);
-  int get _totalLiveWrong => _courseInputs.fold(0, (sum, c) => sum + c.wrong);
-  int get _totalLiveEmpty => _courseInputs.fold(0, (sum, c) => sum + c.empty);
+  int get _totalLiveCorrect => _activeCourseInputs.fold(0, (sum, c) => sum + c.correct);
+  int get _totalLiveWrong => _activeCourseInputs.fold(0, (sum, c) => sum + c.wrong);
+  int get _totalLiveEmpty => _activeCourseInputs.fold(0, (sum, c) => sum + c.empty);
   int get _totalLiveQuestions => _totalLiveCorrect + _totalLiveWrong + _totalLiveEmpty;
 
   Future<void> _pickDate() async {
@@ -271,19 +284,34 @@ class _AddMockExamDialogState extends State<AddMockExamDialog> {
     }
 
     final targetExam = _effectiveTargetExam;
-    final totalExamLimit = PredefinedData.getTotalQuestionsForExam(targetExam);
-    if (_totalLiveQuestions > totalExamLimit) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Toplam soru sayısı ($_totalLiveQuestions), $targetExam sınavının resmi soru sınırını ($totalExamLimit) aşamaz!'),
-          backgroundColor: Colors.redAccent,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
+    if (_isBranchExam) {
+      final sc = _selectedBranchCourse;
+      final branchLimit = (sc != null && sc.maxQuestions > 0) ? sc.maxQuestions : 80;
+      if (_totalLiveQuestions > branchLimit) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${sc?.courseName ?? "Branş"} denemesi için girilen toplam soru ($_totalLiveQuestions), resmi ders sınırını ($branchLimit) aşamaz!'),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+    } else {
+      final totalExamLimit = PredefinedData.getTotalQuestionsForExam(targetExam);
+      if (_totalLiveQuestions > totalExamLimit) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Toplam soru sayısı ($_totalLiveQuestions), $targetExam sınavının resmi soru sınırını ($totalExamLimit) aşamaz!'),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
     }
 
-    for (final c in _courseInputs) {
+    for (final c in _activeCourseInputs) {
       if (c.isOverLimit) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -296,7 +324,7 @@ class _AddMockExamDialogState extends State<AddMockExamDialog> {
       }
     }
 
-    final courseScores = _courseInputs.map((c) {
+    final courseScores = _activeCourseInputs.map((c) {
       return MockExamCourseScore(
         courseId: c.courseId,
         courseName: c.courseName,
@@ -670,10 +698,21 @@ class _AddMockExamDialogState extends State<AddMockExamDialog> {
                             ),
                             items: const [
                               DropdownMenuItem(value: 'Genel Deneme', child: Text('Genel Deneme')),
-                              DropdownMenuItem(value: 'Branş Denemesi', child: Text('Branş')),
+                              DropdownMenuItem(value: 'Branş Denemesi', child: Text('Branş Denemesi')),
                             ],
                             onChanged: (val) {
-                              if (val != null) setState(() => _examType = val);
+                              if (val != null) {
+                                setState(() {
+                                  _examType = val;
+                                  if (_isBranchExam) {
+                                    _selectedBranchCourseId ??= _courseInputs.firstOrNull?.courseId;
+                                    final sc = _selectedBranchCourse;
+                                    if (sc != null && (_titleController.text.trim().isEmpty || _titleController.text.contains('Deneme'))) {
+                                      _titleController.text = '${sc.courseName} Branş Denemesi';
+                                    }
+                                  }
+                                });
+                              }
                             },
                           ),
                         ),
@@ -719,15 +758,71 @@ class _AddMockExamDialogState extends State<AddMockExamDialog> {
                         ),
                       ],
                     ),
+
+                    // BRANŞ DENEMESİ İÇİN DERS SEÇİMİ
+                    if (_isBranchExam) ...[
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        value: _selectedBranchCourseId,
+                        decoration: InputDecoration(
+                          labelText: 'Branş Dersi Seçin *',
+                          prefixIcon: const Icon(Icons.category_rounded, color: Color(0xFF4F46E5)),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                          filled: true,
+                          fillColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        ),
+                        items: _courseInputs.map((c) {
+                          return DropdownMenuItem<String>(
+                            value: c.courseId,
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 10,
+                                  height: 10,
+                                  decoration: BoxDecoration(
+                                    color: Color(c.colorValue),
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(c.courseName, style: const TextStyle(fontWeight: FontWeight.w600)),
+                                if (c.maxQuestions > 0)
+                                  Text(
+                                    ' (${c.maxQuestions} Soru)',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          if (val != null) {
+                            setState(() {
+                              _selectedBranchCourseId = val;
+                              final course = _courseInputs.firstWhere((x) => x.courseId == val);
+                              if (_titleController.text.trim().isEmpty || _titleController.text.contains('Branş')) {
+                                _titleController.text = '${course.courseName} Branş Denemesi';
+                              }
+                            });
+                          }
+                        },
+                      ),
+                    ],
                     const SizedBox(height: 18),
 
                     // 3. DERS BAZLI GİRİŞ BÖLÜMÜ
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'Ders Bazlı Sonuçlar (Doğru / Yanlış / Boş)',
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                        Text(
+                          _isBranchExam
+                              ? 'Branş Sonucu (Doğru / Yanlış / Boş)'
+                              : 'Ders Bazlı Sonuçlar (Doğru / Yanlış / Boş)',
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                         ),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
@@ -736,7 +831,9 @@ class _AddMockExamDialogState extends State<AddMockExamDialog> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            'Sınav Sınırı: ${PredefinedData.getTotalQuestionsForExam(context.read<UserProvider>().targetExam)} Soru',
+                            _isBranchExam
+                                ? 'Ders Sınırı: ${(_selectedBranchCourse?.maxQuestions ?? 0) > 0 ? _selectedBranchCourse!.maxQuestions : 40} Soru'
+                                : 'Sınav Sınırı: ${PredefinedData.getTotalQuestionsForExam(_effectiveTargetExam)} Soru',
                             style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5)),
                           ),
                         ),
@@ -744,7 +841,7 @@ class _AddMockExamDialogState extends State<AddMockExamDialog> {
                     ),
                     const SizedBox(height: 8),
 
-                    ..._courseInputs.map((c) {
+                    ..._activeCourseInputs.map((c) {
                       final net = c.calculateNet(_isLgs);
                       return Container(
                         margin: const EdgeInsets.only(bottom: 8),

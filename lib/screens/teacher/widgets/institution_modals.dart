@@ -222,12 +222,13 @@ class InstitutionModals {
                       if (!context.mounted) return;
                       if (res['success'] == true) {
                         final inst = res['institution'] as InstitutionModel;
+                        final isPending = res['pending'] == true;
                         final userProvider = Provider.of<UserProvider>(context, listen: false);
                         final updatedUser = teacher.copyWith(
                           institutionId: inst.id,
                           institutionName: inst.name,
                           institutionRole: 'coach',
-                          institutionStatus: 'approved',
+                          institutionStatus: isPending ? 'pending' : 'approved',
                           institutionLogoBase64: inst.logoBase64,
                         );
                         await userProvider.updateProfile(updatedUser);
@@ -237,9 +238,11 @@ class InstitutionModals {
                         if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text('${inst.name} kadrosuna başarıyla katıldınız! 🎓'),
+                            content: Text(isPending
+                                ? '${inst.name} kurumuna katılım talebiniz iletildi. Kurucu onayından sonra kadroya dahil edileceksiniz! ⏳'
+                                : '${inst.name} kadrosuna başarıyla katıldınız! 🎓'),
                             behavior: SnackBarBehavior.floating,
-                            backgroundColor: const Color(0xFF10B981),
+                            backgroundColor: isPending ? const Color(0xFFF59E0B) : const Color(0xFF10B981),
                           ),
                         );
                       } else {
@@ -369,12 +372,231 @@ class InstitutionModals {
     );
   }
 
+  /// Kurum Kurucusunun onay bekleyen koç taleplerini yönettiği modal
+  static Future<void> showPendingCoachesModal(
+    BuildContext context, {
+    required InstitutionModel inst,
+    required VoidCallback onActionComplete,
+  }) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return FutureBuilder<List<UserProfileModel>>(
+            future: AppFirebaseService().fetchPendingInstitutionCoaches(inst.id),
+            builder: (context, snapshot) {
+              final pendingList = snapshot.data ?? [];
+              final isLoading = snapshot.connectionState == ConnectionState.waiting;
+
+              return Padding(
+                padding: EdgeInsets.fromLTRB(
+                  20,
+                  16,
+                  20,
+                  MediaQuery.of(context).viewInsets.bottom + 24,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.person_add_rounded, color: Color(0xFFF59E0B), size: 22),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${inst.name} • Katılım Talepleri',
+                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                'Kuruma katılmak isteyen koçları onaylayın veya reddedin.',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    if (isLoading)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 30),
+                        child: Center(
+                          child: CircularProgressIndicator(color: Color(0xFF4F46E5)),
+                        ),
+                      )
+                    else if (pendingList.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 30),
+                        child: Center(
+                          child: Column(
+                            children: [
+                              Icon(Icons.check_circle_outline_rounded, size: 48, color: Colors.grey.shade400),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Onay bekleyen koç talebi bulunmuyor.',
+                                style: TextStyle(fontSize: 13, color: Colors.grey),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    else
+                      ConstrainedBox(
+                        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.5),
+                        child: ListView.separated(
+                          shrinkWrap: true,
+                          itemCount: pendingList.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 10),
+                          itemBuilder: (context, idx) {
+                            final coach = pendingList[idx];
+                            return Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: const Color(0xFFF59E0B).withValues(alpha: 0.3),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  CircleAvatar(
+                                    backgroundColor: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                                    child: Text(
+                                      coach.firstName.isNotEmpty ? coach.firstName[0].toUpperCase() : '?',
+                                      style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFF59E0B)),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          coach.fullName,
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                        ),
+                                        Text(
+                                          coach.teacherSpecialty,
+                                          style: const TextStyle(fontSize: 11.5, color: Colors.grey),
+                                        ),
+                                        if (coach.email.isNotEmpty)
+                                          Text(
+                                            coach.email,
+                                            style: const TextStyle(fontSize: 10.5, color: Colors.grey),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  // Reddet Butonu
+                                  IconButton(
+                                    icon: const Icon(Icons.close_rounded, color: Colors.redAccent),
+                                    tooltip: 'Talebi Reddet',
+                                    onPressed: () async {
+                                      final ok = await AppFirebaseService().rejectCoachJoinRequest(
+                                        institutionId: inst.id,
+                                        coachId: coach.id,
+                                      );
+                                      if (ok) {
+                                        setModalState(() {});
+                                        onActionComplete();
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text('${coach.fullName} talebi reddedildi.'),
+                                              backgroundColor: Colors.redAccent,
+                                            ),
+                                          );
+                                        }
+                                      }
+                                    },
+                                  ),
+                                  // Onayla Butonu
+                                  ElevatedButton.icon(
+                                    icon: const Icon(Icons.check_rounded, size: 16),
+                                    label: const Text('Onayla', style: TextStyle(fontSize: 12)),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF10B981),
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    ),
+                                    onPressed: () async {
+                                      final ok = await AppFirebaseService().approveCoachJoinRequest(
+                                        institutionId: inst.id,
+                                        coachId: coach.id,
+                                      );
+                                      if (ok) {
+                                        setModalState(() {});
+                                        onActionComplete();
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text('${coach.fullName} kuruma başarıyla eklendi! 🎓'),
+                                              backgroundColor: const Color(0xFF10B981),
+                                            ),
+                                          );
+                                        }
+                                      }
+                                    },
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+
   /// Kurumdaki Diğer Koçları Görüntüleme Modalı
   static Future<void> showCoachesListModal(
     BuildContext context, {
     required List<UserProfileModel> coaches,
     required String institutionName,
+    InstitutionModel? inst,
+    VoidCallback? onActionComplete,
   }) async {
+    final hasPending = inst != null && inst.pendingCoachIds.isNotEmpty;
+
     await showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -410,6 +632,41 @@ class InstitutionModals {
               ],
             ),
             const SizedBox(height: 12),
+            if (hasPending) ...[
+              InkWell(
+                onTap: () {
+                  Navigator.pop(ctx);
+                  showPendingCoachesModal(
+                    context,
+                    inst: inst,
+                    onActionComplete: onActionComplete ?? () {},
+                  );
+                },
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.notification_important_rounded, size: 16, color: Color(0xFFF59E0B)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '${inst.pendingCoachIds.length} Koç Katılım Onayı Bekliyor',
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFFF59E0B)),
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right_rounded, size: 18, color: Color(0xFFF59E0B)),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
             if (coaches.isEmpty)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 20),

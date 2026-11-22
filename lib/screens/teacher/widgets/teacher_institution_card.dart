@@ -13,6 +13,8 @@ class TeacherInstitutionCard extends StatelessWidget {
   final VoidCallback onManageRequested;
   final VoidCallback onViewCoachesRequested;
   final VoidCallback onLeaveRequested;
+  final VoidCallback? onManagePendingCoachesRequested;
+  final VoidCallback? onCancelJoinRequested;
 
   const TeacherInstitutionCard({
     super.key,
@@ -24,6 +26,8 @@ class TeacherInstitutionCard extends StatelessWidget {
     required this.onManageRequested,
     required this.onViewCoachesRequested,
     required this.onLeaveRequested,
+    this.onManagePendingCoachesRequested,
+    this.onCancelJoinRequested,
   });
 
   void _copyCode(BuildContext context, String code) {
@@ -162,9 +166,111 @@ class TeacherInstitutionCard extends StatelessWidget {
       );
     }
 
-    // 2. KURUMA BAĞLIYSA -> AKTİF KURUM KARTI
+    // 2. KURUMA BAĞLIYSA -> AKTİF KURUM KARTI VEYA BEKLEYEN TALEP KARTI
     final inst = institution!;
     final isOwner = inst.ownerCoachId == teacher.id;
+
+    // Koç kuruma katılım isteği göndermiş ve kurucu onayı bekliyorsa
+    final isCoachPendingApproval =
+        teacher.institutionRole == 'coach' &&
+        teacher.institutionStatus == 'pending' &&
+        !inst.coachIds.contains(teacher.id);
+
+    if (isCoachPendingApproval) {
+      return Container(
+        margin: const EdgeInsets.only(bottom: 14),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E293B) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: const Color(0xFFF59E0B).withValues(alpha: 0.5),
+            width: 1.2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFF59E0B).withValues(alpha: 0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.hourglass_top_rounded, color: Color(0xFFF59E0B), size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              inst.name,
+                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text(
+                              '⏳ Onay Bekleniyor',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFFF59E0B),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      const Text(
+                        'Katılım talebiniz kurum kurucusuna iletildi. Onaylandıktan sonra kadroya ve ortak öğrenci havuzuna bağlanacaksınız.',
+                        style: TextStyle(fontSize: 11.5, color: Colors.grey, height: 1.3),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: onCancelJoinRequested,
+                  icon: const Icon(Icons.close_rounded, size: 15),
+                  label: const Text('Katılım Talebini İptal Et', style: TextStyle(fontSize: 11.5)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.redAccent,
+                    side: const BorderSide(color: Colors.redAccent),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
 
     Color statusColor;
     String statusText;
@@ -318,6 +424,46 @@ class TeacherInstitutionCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 10),
+
+            // KURUCU: ONAY BEKLEYEN KOÇ TALEPLERİ BANNERI
+            if (isOwner && inst.pendingCoachIds.isNotEmpty) ...[
+              InkWell(
+                onTap: onManagePendingCoachesRequested,
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.35)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.notification_important_rounded, size: 18, color: Color(0xFFF59E0B)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '${inst.pendingCoachIds.length} Koç Katılım Onayı Bekliyor',
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFFF59E0B)),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF59E0B),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          'İncele / Onayla',
+                          style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
 
             // KURUM KODU & KADRO ROZETLERİ
             Container(

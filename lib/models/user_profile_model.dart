@@ -85,6 +85,7 @@ class UserProfileModel {
   /// Kurum aidiyeti ve yetkileri
   bool get hasInstitution => institutionId != null && institutionId!.isNotEmpty;
   bool get isInstitutionApproved => institutionStatus == 'approved';
+  bool get isInstitutionPending => institutionStatus == 'pending';
   bool get isInstitutionOwner => isTeacher && institutionRole == 'owner';
 
   /// Öğretmen branşı veya uzmanlık alanı

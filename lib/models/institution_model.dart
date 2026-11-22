@@ -14,6 +14,7 @@ class InstitutionModel {
   final DateTime createdAt;
   final DateTime? approvedAt;
   final List<String> coachIds; // Kuruma bağlı koçların ID listesi
+  final List<String> pendingCoachIds; // Kuruma katılmak için onay bekleyen koç ID listesi
   final List<String> studentIds; // Kuruma bağlı öğrencilerin ID listesi
   final String? adminNote; // Süper yöneticinin notu
 
@@ -32,6 +33,7 @@ class InstitutionModel {
     required this.createdAt,
     this.approvedAt,
     this.coachIds = const [],
+    this.pendingCoachIds = const [],
     this.studentIds = const [],
     this.adminNote,
   });
@@ -42,10 +44,12 @@ class InstitutionModel {
   bool get isRejected => status == 'rejected';
 
   int get coachCount => coachIds.length;
+  int get pendingCoachCount => pendingCoachIds.length;
   int get studentCount => studentIds.length;
 
   bool isOwner(String coachId) => ownerCoachId == coachId;
   bool isMember(String coachId) => coachIds.contains(coachId);
+  bool isPendingCoach(String coachId) => pendingCoachIds.contains(coachId);
 
   Map<String, dynamic> toJson() {
     return {
@@ -63,6 +67,7 @@ class InstitutionModel {
       'createdAt': createdAt.toIso8601String(),
       'approvedAt': approvedAt?.toIso8601String(),
       'coachIds': coachIds,
+      'pendingCoachIds': pendingCoachIds,
       'studentIds': studentIds,
       'adminNote': adminNote,
     };
@@ -97,6 +102,7 @@ class InstitutionModel {
           ? DateTime.tryParse(json['approvedAt'] as String)
           : null,
       coachIds: parseStringList(json['coachIds']),
+      pendingCoachIds: parseStringList(json['pendingCoachIds']),
       studentIds: parseStringList(json['studentIds']),
       adminNote: json['adminNote'] as String?,
     );
@@ -118,6 +124,7 @@ class InstitutionModel {
     DateTime? createdAt,
     DateTime? approvedAt,
     List<String>? coachIds,
+    List<String>? pendingCoachIds,
     List<String>? studentIds,
     String? adminNote,
   }) {
@@ -136,6 +143,7 @@ class InstitutionModel {
       createdAt: createdAt ?? this.createdAt,
       approvedAt: approvedAt ?? this.approvedAt,
       coachIds: coachIds ?? this.coachIds,
+      pendingCoachIds: pendingCoachIds ?? this.pendingCoachIds,
       studentIds: studentIds ?? this.studentIds,
       adminNote: adminNote ?? this.adminNote,
     );

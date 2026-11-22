@@ -333,6 +333,23 @@ class PredefinedData {
     targetDailyQuestions: 25,
   );
 
+  // --- TUS & DUS Tıp Dersleri ---
+  static const CourseModel courseTemelTip = CourseModel(
+    id: 'tus_temel',
+    name: 'Temel Tıp / Sağlık Bilimleri',
+    colorValue: 0xFF0284C7,
+    iconName: 'biotech',
+    targetDailyQuestions: 40,
+  );
+
+  static const CourseModel courseKlinikTip = CourseModel(
+    id: 'tus_klinik',
+    name: 'Klinik Tıp / Sağlık Bilimleri',
+    colorValue: 0xFFDC2626,
+    iconName: 'medical_services',
+    targetDailyQuestions: 40,
+  );
+
   /// Tüm tanımlı derslerin eksiksiz listesi
   static List<CourseModel> getAllAvailableCourses() {
     return [
@@ -377,6 +394,8 @@ class PredefinedData {
       courseOlcme,
       courseProgramGelistirme,
       courseRehberlik,
+      courseTemelTip,
+      courseKlinikTip,
     ];
   }
 
@@ -480,7 +499,83 @@ class PredefinedData {
       ];
     }
 
-    if (examName.contains('MSÜ') || examName.contains('TYT')) {
+    if (examName.contains('MSÜ') || examName.contains('MSU')) {
+      return [
+        courseTurkce,
+        courseMatematik,
+        courseGeometri,
+        courseFizik,
+        courseKimya,
+        courseBiyoloji,
+        courseTarih,
+        courseCografya,
+        courseFelsefe,
+        courseDinKulturu,
+      ];
+    }
+
+    // YKS Ailesi (TYT ve Alan/AYT Dersleri Tamamı)
+    if (examName.contains('YKS') || examName.contains('TYT') || examName.contains('AYT')) {
+      if (examName.contains('Sayısal') || examName.contains('Sayisal')) {
+        return [
+          courseTurkce,
+          courseMatematik,
+          courseGeometri,
+          courseFizik,
+          courseKimya,
+          courseBiyoloji,
+          courseTarih,
+          courseCografya,
+          courseFelsefe,
+          courseDinKulturu,
+        ];
+      }
+      if (examName.contains('Eşit Ağırlık') || examName.contains('Esit') || examName.contains('EA')) {
+        return [
+          courseTurkce,
+          courseEdebiyat,
+          courseMatematik,
+          courseGeometri,
+          courseTarih,
+          courseCografya,
+          courseFelsefe,
+          courseDinKulturu,
+          courseFizik,
+          courseKimya,
+          courseBiyoloji,
+        ];
+      }
+      if (examName.contains('Sözel') || examName.contains('Sozel')) {
+        return [
+          courseTurkce,
+          courseEdebiyat,
+          courseTarih,
+          courseCografya,
+          courseFelsefe,
+          courseDinKulturu,
+          courseMatematik,
+          courseGeometri,
+          courseFizik,
+          courseKimya,
+          courseBiyoloji,
+        ];
+      }
+      if (examName.contains('Dil') || examName.contains('YDT')) {
+        return [
+          courseTurkce,
+          courseMatematik,
+          courseGeometri,
+          courseIngilizce,
+          courseTarih,
+          courseCografya,
+          courseFelsefe,
+          courseDinKulturu,
+          courseFizik,
+          courseKimya,
+          courseBiyoloji,
+        ];
+      }
+      // TYT Sadece
       return [
         courseTurkce,
         courseMatematik,
@@ -512,74 +607,20 @@ class PredefinedData {
       ];
     }
 
-    if (examName.contains('AYT')) {
-      if (examName.contains('Eşit Ağırlık') || examName.contains('EA')) {
-        return [
-          courseMatematik,
-          courseGeometri,
-          courseEdebiyat,
-          courseTarih,
-          courseCografya,
-        ];
-      }
-      if (examName.contains('Sözel')) {
-        return [
-          courseEdebiyat,
-          courseTarih,
-          courseCografya,
-          courseFelsefe,
-        ];
-      }
-      // Sayısal
-      return [
-        courseMatematik,
-        courseGeometri,
-        courseFizik,
-        courseKimya,
-        courseBiyoloji,
-      ];
-    }
-
-    if (examName.contains('Sayısal')) {
-      return [
-        courseMatematik,
-        courseGeometri,
-        courseFizik,
-        courseKimya,
-        courseBiyoloji,
-      ];
-    }
-
-    if (examName.contains('Eşit Ağırlık')) {
-      return [
-        courseMatematik,
-        courseGeometri,
-        courseEdebiyat,
-        courseTarih,
-        courseCografya,
-      ];
-    }
-
-    if (examName.contains('Sözel')) {
-      return [
-        courseEdebiyat,
-        courseTarih,
-        courseCografya,
-        courseFelsefe,
-      ];
-    }
-
-    if (examName.contains('Dil') || examName.contains('YDT')) {
-      return [
-        courseIngilizce,
-      ];
-    }
-
     if (examName.contains('DGS') || examName.contains('ALES')) {
       return [
         courseSayisalMantik,
+        courseMatematik,
         courseGeometri,
         courseSozelMantik,
+        courseTurkce,
+      ];
+    }
+
+    if (examName.contains('TUS') || examName.contains('DUS')) {
+      return [
+        courseTemelTip,
+        courseKlinikTip,
       ];
     }
 
@@ -1305,45 +1346,21 @@ class PredefinedData {
       return 30;
     }
 
-    // 5. YKS - TYT / MSÜ (120 Soru)
-    if (lowerExam.contains('tyt') || lowerExam.contains('msü') || (lowerExam.contains('yks') && !lowerExam.contains('ayt'))) {
+    // 5. YKS (TYT, AYT, YDT, Branş Denemeleri) & MSÜ
+    if (lowerExam.contains('yks') || lowerExam.contains('tyt') || lowerExam.contains('ayt') || lowerExam.contains('msü')) {
       if (lowerCourse.contains('turk')) return 40;
-      if (lowerCourse.contains('mat')) return 30;
-      if (lowerCourse.contains('geo')) return 10;
-      if (lowerCourse.contains('fiz')) return 7;
-      if (lowerCourse.contains('kim')) return 7;
-      if (lowerCourse.contains('biyo')) return 6;
-      if (lowerCourse.contains('tar')) return 5;
-      if (lowerCourse.contains('cog')) return 5;
-      if (lowerCourse.contains('fel')) return 5;
-      if (lowerCourse.contains('din')) return 5;
-      return 40;
-    }
-
-    // 6. YKS - AYT (80 Soru)
-    if (lowerExam.contains('ayt')) {
-      if (lowerExam.contains('sözel') || lowerExam.contains('sozel')) {
-        if (lowerCourse.contains('edebiyat')) return 24;
-        if (lowerCourse.contains('tar')) return 21;
-        if (lowerCourse.contains('cog')) return 17;
-        if (lowerCourse.contains('fel') || lowerCourse.contains('din')) return 18;
-        return 20;
-      }
-      if (lowerExam.contains('eşit') || lowerExam.contains('esit') || lowerExam.contains('ea')) {
-        if (lowerCourse.contains('mat')) return 30;
-        if (lowerCourse.contains('geo')) return 10;
-        if (lowerCourse.contains('edebiyat')) return 24;
-        if (lowerCourse.contains('tar')) return 10;
-        if (lowerCourse.contains('cog')) return 6;
-        return 20;
-      }
-      // AYT Sayısal (30 Mat + 10 Geo + 14 Fiz + 13 Kim + 13 Biyo = 80 Soru)
-      if (lowerCourse.contains('mat')) return 30;
-      if (lowerCourse.contains('geo')) return 10;
+      if (lowerCourse.contains('mat')) return 40; // TYT 40 veya AYT 40
+      if (lowerCourse.contains('geo')) return 15;
+      if (lowerCourse.contains('edebiyat')) return 24;
       if (lowerCourse.contains('fiz')) return 14;
       if (lowerCourse.contains('kim')) return 13;
       if (lowerCourse.contains('biyo')) return 13;
-      return 20;
+      if (lowerCourse.contains('tar')) return 21;
+      if (lowerCourse.contains('cog')) return 17;
+      if (lowerCourse.contains('fel')) return 15;
+      if (lowerCourse.contains('din')) return 6;
+      if (lowerCourse.contains('ing') || lowerCourse.contains('dil')) return 80;
+      return 40;
     }
 
     // 7. LGS (90 Soru: Sözel 50 + Sayısal 40)
@@ -1433,13 +1450,7 @@ class PredefinedData {
     if (lower.contains('tyt') || lower.contains('msü')) return 120;
     if (lower.contains('ayt')) return 80; // Sayısal, Sözel, EA
     if (lower.contains('yks')) {
-      if (lower.contains('dil') || lower.contains('ydt')) return 80;
-      if (lower.contains('sayısal') || lower.contains('sayisal') ||
-          lower.contains('eşit') || lower.contains('esit') ||
-          lower.contains('sözel') || lower.contains('sozel')) {
-        return 80;
-      }
-      return 120; // TYT default
+      return 200; // TYT (120), AYT (80) veya karma denemeler için tam kapasite
     }
     if (lower.contains('lgs')) return 90;
     if (lower.contains('dgs') || lower.contains('ales')) return 100;
