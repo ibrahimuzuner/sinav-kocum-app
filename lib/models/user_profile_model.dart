@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'assignment_model.dart';
 import 'coach_message_model.dart';
+import 'mock_exam_model.dart';
 import 'student_study_stats_model.dart';
 
 class UserProfileModel {
@@ -32,6 +33,7 @@ class UserProfileModel {
   final String? studyStatsJson; // Öğrencinin çalışma özeti JSON verisi
   final String? assignmentsJson; // Öğretmenin verdiği ödevler JSON listesi
   final String? messagesJson; // Öğretmen-Öğrenci mesajları JSON listesi
+  final String? mockExamsJson; // Öğrencinin deneme sınavları JSON listesi
 
   // Kurum / Organizasyon Sistemi Alanları
   final String? institutionId; // Bağlı olduğu kurum ID
@@ -67,6 +69,7 @@ class UserProfileModel {
     this.studyStatsJson,
     this.assignmentsJson,
     this.messagesJson,
+    this.mockExamsJson,
     this.institutionId,
     this.institutionName,
     this.institutionRole,
@@ -182,6 +185,22 @@ class UserProfileModel {
     return [];
   }
 
+  List<MockExamModel> get mockExams {
+    if (mockExamsJson == null || mockExamsJson!.isEmpty) return [];
+    try {
+      final decoded = jsonDecode(mockExamsJson!);
+      if (decoded is List) {
+        final list = decoded
+            .whereType<Map<String, dynamic>>()
+            .map((e) => MockExamModel.fromJson(e))
+            .toList();
+        list.sort((a, b) => b.date.compareTo(a.date));
+        return list;
+      }
+    } catch (_) {}
+    return [];
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -210,6 +229,7 @@ class UserProfileModel {
       'studyStatsJson': studyStatsJson,
       'assignmentsJson': assignmentsJson,
       'messagesJson': messagesJson,
+      'mockExamsJson': mockExamsJson,
       'institutionId': institutionId,
       'institutionName': institutionName,
       'institutionRole': institutionRole,
@@ -258,6 +278,7 @@ class UserProfileModel {
       studyStatsJson: json['studyStatsJson'] as String?,
       assignmentsJson: json['assignmentsJson'] as String?,
       messagesJson: json['messagesJson'] as String?,
+      mockExamsJson: json['mockExamsJson'] as String?,
       institutionId: json['institutionId'] as String?,
       institutionName: json['institutionName'] as String?,
       institutionRole: json['institutionRole'] as String?,
@@ -295,6 +316,7 @@ class UserProfileModel {
     String? studyStatsJson,
     String? assignmentsJson,
     String? messagesJson,
+    String? mockExamsJson,
     String? institutionId,
     String? institutionName,
     String? institutionRole,
@@ -331,6 +353,7 @@ class UserProfileModel {
       studyStatsJson: studyStatsJson ?? this.studyStatsJson,
       assignmentsJson: assignmentsJson ?? this.assignmentsJson,
       messagesJson: messagesJson ?? this.messagesJson,
+      mockExamsJson: mockExamsJson ?? this.mockExamsJson,
       institutionId: clearInstitution ? null : (institutionId ?? this.institutionId),
       institutionName: clearInstitution ? null : (institutionName ?? this.institutionName),
       institutionRole: clearInstitution ? null : (institutionRole ?? this.institutionRole),

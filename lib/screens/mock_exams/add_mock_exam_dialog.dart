@@ -3,14 +3,23 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import '../../models/mock_exam_model.dart';
+import '../../models/user_profile_model.dart';
 import '../../providers/study_provider.dart';
 import '../../providers/user_provider.dart';
+import '../../services/firebase_service.dart';
 import '../../services/predefined_data.dart';
 
 class AddMockExamDialog extends StatefulWidget {
   final MockExamModel? initialExam;
+  final UserProfileModel? student;
+  final void Function(MockExamModel savedExam)? onStudentExamSaved;
 
-  const AddMockExamDialog({super.key, this.initialExam});
+  const AddMockExamDialog({
+    super.key,
+    this.initialExam,
+    this.student,
+    this.onStudentExamSaved,
+  });
 
   @override
   State<AddMockExamDialog> createState() => _AddMockExamDialogState();
@@ -56,6 +65,7 @@ class _AddMockExamDialogState extends State<AddMockExamDialog> {
   String _examType = 'Genel Deneme';
   final List<_CourseInputData> _courseInputs = [];
   bool _isLgs = false;
+  bool _isSaving = false;
 
   final List<String> _publisherSuggestions = [
     'Pegem',
@@ -69,12 +79,20 @@ class _AddMockExamDialogState extends State<AddMockExamDialog> {
     'Benim Hocam',
   ];
 
+  String get _effectiveTargetExam =>
+      widget.student?.targetExam ?? context.read<UserProvider>().targetExam;
+
+  double get _effectiveTargetScore =>
+      widget.student?.targetScore ?? context.read<UserProvider>().targetScore;
+
+  double get _effectiveTargetNet =>
+      widget.student?.targetNet ?? context.read<UserProvider>().targetNet;
+
   @override
   void initState() {
     super.initState();
     final studyProvider = context.read<StudyProvider>();
-    final userProvider = context.read<UserProvider>();
-    final targetExam = userProvider.targetExam;
+    final targetExam = widget.student?.targetExam ?? context.read<UserProvider>().targetExam;
     _isLgs = targetExam.toLowerCase().contains('lgs');
 
     if (widget.initialExam != null) {
@@ -93,7 +111,9 @@ class _AddMockExamDialogState extends State<AddMockExamDialog> {
       for (final score in exam.courseScores) {
         final courseMatch = studyProvider.allCourses.firstWhere(
           (c) => c.id == score.courseId,
-          orElse: () => studyProvider.courses.first,
+          orElse: () => studyProvider.courses.isNotEmpty
+              ? studyProvider.courses.first
+              : PredefinedData.courseMatematik,
         );
         final maxQ = PredefinedData.getMaxQuestionsForCourse(targetExam, score.courseId);
         final input = _CourseInputData(
@@ -114,8 +134,12 @@ class _AddMockExamDialogState extends State<AddMockExamDialog> {
       _selectedDate = DateTime.now();
       _durationController.text = _getDefaultDuration(targetExam);
 
-      // Populate courses from active exam's courses
-      for (final course in studyProvider.courses) {
+      // Populate courses from active exam's courses or student's predefined courses
+      final availableCourses = widget.student != null
+          ? PredefinedData.getCoursesForExam(targetExam)
+          : studyProvider.courses;
+
+      for (final course in availableCourses) {
         final maxQ = PredefinedData.getMaxQuestionsForCourse(targetExam, course.id);
         final input = _CourseInputData(
           courseId: course.id,
@@ -183,7 +207,6 @@ class _AddMockExamDialogState extends State<AddMockExamDialog> {
   }
 
   double get _totalLiveEstimatedScore {
-    final userProvider = context.read<UserProvider>();
     final courseScores = _courseInputs.map((c) {
       return MockExamCourseScore(
         courseId: c.courseId,
@@ -194,11 +217,10 @@ class _AddMockExamDialogState extends State<AddMockExamDialog> {
         netScore: c.calculateNet(_isLgs),
       );
     }).toList();
-    return MockExamModel.calculateEstimatedScore(userProvider.targetExam, courseScores);
+    return MockExamModel.calculateEstimatedScore(_effectiveTargetExam, courseScores);
   }
 
   String get _liveCoachAdvice {
-    final userProvider = context.read<UserProvider>();
     final courseScores = _courseInputs.map((c) {
       return MockExamCourseScore(
         courseId: c.courseId,
@@ -210,10 +232,10 @@ class _AddMockExamDialogState extends State<AddMockExamDialog> {
       );
     }).toList();
     return MockExamModel.generateCoachAdvice(
-      targetExam: userProvider.targetExam,
+      targetExam: _effectiveTargetExam,
       scores: courseScores,
-      targetScore: userProvider.targetScore,
-      targetNet: userProvider.targetNet,
+      targetScore: _effectiveTargetScore,
+      targetNet: _effectiveTargetNet,
     );
   }
 
@@ -234,7 +256,7 @@ class _AddMockExamDialogState extends State<AddMockExamDialog> {
     }
   }
 
-  void _saveMockExam() {
+  Future<void> _saveMockExam() async {
     if (!_formKey.currentState!.validate()) return;
 
     if (_totalLiveQuestions == 0) {
@@ -248,14 +270,12 @@ class _AddMockExamDialogState extends State<AddMockExamDialog> {
       return;
     }
 
-    final userProvider = context.read<UserProvider>();
-    final studyProvider = context.read<StudyProvider>();
-
-    final totalExamLimit = PredefinedData.getTotalQuestionsForExam(userProvider.targetExam);
+    final targetExam = _effectiveTargetExam;
+    final totalExamLimit = PredefinedData.getTotalQuestionsForExam(targetExam);
     if (_totalLiveQuestions > totalExamLimit) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Toplam soru sayısı ($_totalLiveQuestions), ${userProvider.targetExam} sınavının resmi soru sınırını ($totalExamLimit) aşamaz!'),
+          content: Text('Toplam soru sayısı ($_totalLiveQuestions), $targetExam sınavının resmi soru sınırını ($totalExamLimit) aşamaz!'),
           backgroundColor: Colors.redAccent,
           behavior: SnackBarBehavior.floating,
         ),
@@ -289,57 +309,138 @@ class _AddMockExamDialogState extends State<AddMockExamDialog> {
 
     final duration = int.tryParse(_durationController.text);
     final notes = _notesController.text.trim().isEmpty ? null : _notesController.text.trim();
-    final estScore = MockExamModel.calculateEstimatedScore(userProvider.targetExam, courseScores);
+    final estScore = MockExamModel.calculateEstimatedScore(targetExam, courseScores);
     final advice = MockExamModel.generateCoachAdvice(
-      targetExam: userProvider.targetExam,
+      targetExam: targetExam,
       scores: courseScores,
-      targetScore: userProvider.targetScore,
-      targetNet: userProvider.targetNet,
+      targetScore: _effectiveTargetScore,
+      targetNet: _effectiveTargetNet,
     );
 
-    if (widget.initialExam != null) {
-      final updated = widget.initialExam!.copyWith(
-        title: _titleController.text.trim(),
-        examType: _examType,
-        targetExam: userProvider.targetExam,
-        date: _selectedDate,
-        durationMinutes: duration,
-        notes: notes,
-        courseScores: courseScores,
-        estimatedScore: estScore,
-        coachAdvice: advice,
-      );
-      studyProvider.updateMockExam(updated);
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Deneme başarıyla güncellendi! 🎯'),
-          backgroundColor: Color(0xFF10B981),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    } else {
-      final newExam = MockExamModel(
-        id: const Uuid().v4(),
-        title: _titleController.text.trim(),
-        examType: _examType,
-        targetExam: userProvider.targetExam,
-        date: _selectedDate,
-        durationMinutes: duration,
-        notes: notes,
-        courseScores: courseScores,
-        estimatedScore: estScore,
-        coachAdvice: advice,
-      );
-      studyProvider.addMockExam(newExam);
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Deneme kaydedildi! Toplam Net: ${_totalLiveNet.toStringAsFixed(2)} (~$estScore Puan) 🚀'),
-          backgroundColor: const Color(0xFF10B981),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+    setState(() => _isSaving = true);
+
+    try {
+      if (widget.student != null) {
+        if (widget.initialExam != null) {
+          final updated = widget.initialExam!.copyWith(
+            title: _titleController.text.trim(),
+            examType: _examType,
+            targetExam: targetExam,
+            date: _selectedDate,
+            durationMinutes: duration,
+            notes: notes,
+            courseScores: courseScores,
+            estimatedScore: estScore,
+            coachAdvice: advice,
+          );
+          await AppFirebaseService().updateStudentMockExam(
+            studentId: widget.student!.id,
+            exam: updated,
+          );
+          widget.onStudentExamSaved?.call(updated);
+          if (mounted) {
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('${widget.student!.firstName} için deneme güncellendi! 🎯'),
+                backgroundColor: const Color(0xFF10B981),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        } else {
+          final newExam = MockExamModel(
+            id: const Uuid().v4(),
+            title: _titleController.text.trim(),
+            examType: _examType,
+            targetExam: targetExam,
+            date: _selectedDate,
+            durationMinutes: duration,
+            notes: notes,
+            courseScores: courseScores,
+            estimatedScore: estScore,
+            coachAdvice: advice,
+          );
+          await AppFirebaseService().addStudentMockExam(
+            studentId: widget.student!.id,
+            exam: newExam,
+          );
+          widget.onStudentExamSaved?.call(newExam);
+          if (mounted) {
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('${widget.student!.firstName} hesabına deneme kaydedildi! Net: ${_totalLiveNet.toStringAsFixed(2)} (~$estScore Puan) 🚀'),
+                backgroundColor: const Color(0xFF10B981),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        }
+        return;
+      }
+
+      final studyProvider = context.read<StudyProvider>();
+      final userProvider = context.read<UserProvider>();
+
+      if (widget.initialExam != null) {
+        final updated = widget.initialExam!.copyWith(
+          title: _titleController.text.trim(),
+          examType: _examType,
+          targetExam: targetExam,
+          date: _selectedDate,
+          durationMinutes: duration,
+          notes: notes,
+          courseScores: courseScores,
+          estimatedScore: estScore,
+          coachAdvice: advice,
+        );
+        studyProvider.updateMockExam(updated);
+        if (userProvider.userProfile != null && userProvider.userProfile!.isStudent) {
+          AppFirebaseService().syncStudentMockExams(userProvider.userProfile!.id, studyProvider.mockExams);
+        }
+        if (mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Deneme başarıyla güncellendi! 🎯'),
+              backgroundColor: Color(0xFF10B981),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } else {
+        final newExam = MockExamModel(
+          id: const Uuid().v4(),
+          title: _titleController.text.trim(),
+          examType: _examType,
+          targetExam: targetExam,
+          date: _selectedDate,
+          durationMinutes: duration,
+          notes: notes,
+          courseScores: courseScores,
+          estimatedScore: estScore,
+          coachAdvice: advice,
+        );
+        studyProvider.addMockExam(newExam);
+        if (userProvider.userProfile != null && userProvider.userProfile!.isStudent) {
+          AppFirebaseService().syncStudentMockExams(userProvider.userProfile!.id, studyProvider.mockExams);
+        }
+        if (mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Deneme kaydedildi! Toplam Net: ${_totalLiveNet.toStringAsFixed(2)} (~$estScore Puan) 🚀'),
+              backgroundColor: const Color(0xFF10B981),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
     }
   }
 
@@ -391,13 +492,19 @@ class _AddMockExamDialogState extends State<AddMockExamDialog> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        widget.initialExam != null ? 'Deneme Sınavını Düzenle' : 'Yeni Deneme Sınavı Ekle',
+                        widget.initialExam != null
+                            ? 'Deneme Sınavını Düzenle'
+                            : (widget.student != null
+                                ? '${widget.student!.firstName} İçin Deneme Ekle'
+                                : 'Yeni Deneme Sınavı Ekle'),
                         style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                       Text(
-                        _isLgs ? 'Formül: 3 Yanlış 1 Doğruyu Götürür' : 'Formül: 4 Yanlış 1 Doğruyu Götürür',
+                        widget.student != null
+                            ? '${widget.student!.targetExam} • ${_isLgs ? "3 Yanlış 1 Doğru" : "4 Yanlış 1 Doğru"}'
+                            : (_isLgs ? 'Formül: 3 Yanlış 1 Doğruyu Götürür' : 'Formül: 4 Yanlış 1 Doğruyu Götürür'),
                         style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
                       ),
                     ],
@@ -797,10 +904,18 @@ class _AddMockExamDialogState extends State<AddMockExamDialog> {
               width: double.infinity,
               height: 50,
               child: ElevatedButton.icon(
-                onPressed: _saveMockExam,
-                icon: const Icon(Icons.check_circle_rounded, color: Colors.white),
+                onPressed: _isSaving ? null : _saveMockExam,
+                icon: _isSaving
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.check_circle_rounded, color: Colors.white),
                 label: Text(
-                  widget.initialExam != null ? 'Değişiklikleri Kaydet' : 'Denemeyi Kaydet',
+                  _isSaving
+                      ? 'Kaydediliyor...'
+                      : (widget.initialExam != null ? 'Değişiklikleri Kaydet' : 'Denemeyi Kaydet'),
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                 ),
                 style: ElevatedButton.styleFrom(

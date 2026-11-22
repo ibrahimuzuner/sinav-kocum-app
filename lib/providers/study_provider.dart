@@ -124,6 +124,9 @@ class StudyProvider with ChangeNotifier {
     _validateStreak();
 
     if (userProfile != null && userProfile.isStudent) {
+      if (userProfile.mockExams.isNotEmpty) {
+        syncCloudMockExams(userProfile.mockExams);
+      }
       syncStudyStatsToCloud();
     }
   }
@@ -742,17 +745,29 @@ class StudyProvider with ChangeNotifier {
   // --- CRUD: DENEME SINAVLARI ---
   Future<void> addMockExam(MockExamModel exam) async {
     _mockExams.add(exam);
+    _mockExams.sort((a, b) => b.date.compareTo(a.date));
     _recordActivity();
     await _storage.saveMockExams(_mockExams);
     notifyListeners();
+    syncStudyStatsToCloud();
+    final profile = _storage.loadUserProfile();
+    if (profile != null && profile.isStudent) {
+      AppFirebaseService().syncStudentMockExams(profile.id, _mockExams);
+    }
   }
 
   Future<void> updateMockExam(MockExamModel updated) async {
     final idx = _mockExams.indexWhere((e) => e.id == updated.id);
     if (idx != -1) {
       _mockExams[idx] = updated;
+      _mockExams.sort((a, b) => b.date.compareTo(a.date));
       await _storage.saveMockExams(_mockExams);
       notifyListeners();
+      syncStudyStatsToCloud();
+      final profile = _storage.loadUserProfile();
+      if (profile != null && profile.isStudent) {
+        AppFirebaseService().syncStudentMockExams(profile.id, _mockExams);
+      }
     }
   }
 
@@ -760,5 +775,41 @@ class StudyProvider with ChangeNotifier {
     _mockExams.removeWhere((e) => e.id == id);
     await _storage.saveMockExams(_mockExams);
     notifyListeners();
+    syncStudyStatsToCloud();
+    final profile = _storage.loadUserProfile();
+    if (profile != null && profile.isStudent) {
+      AppFirebaseService().syncStudentMockExams(profile.id, _mockExams);
+    }
+  }
+
+  /// Buluttaki deneme sınavlarını yerel listeyle birleştirir ve kaydeder
+  Future<void> syncCloudMockExams(List<MockExamModel> cloudExams) async {
+    if (cloudExams.isEmpty) return;
+    bool changed = false;
+    final Map<String, int> existingMap = {};
+    for (int i = 0; i < _mockExams.length; i++) {
+      existingMap[_mockExams[i].id] = i;
+    }
+
+    for (final cloudExam in cloudExams) {
+      if (existingMap.containsKey(cloudExam.id)) {
+        final idx = existingMap[cloudExam.id]!;
+        if (_mockExams[idx].title != cloudExam.title ||
+            _mockExams[idx].totalNet != cloudExam.totalNet ||
+            _mockExams[idx].date != cloudExam.date) {
+          _mockExams[idx] = cloudExam;
+          changed = true;
+        }
+      } else {
+        _mockExams.add(cloudExam);
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      _mockExams.sort((a, b) => b.date.compareTo(a.date));
+      await _storage.saveMockExams(_mockExams);
+      notifyListeners();
+    }
   }
 }

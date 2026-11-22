@@ -3,11 +3,13 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../../models/assignment_model.dart';
 import '../../../models/coach_message_model.dart';
+import '../../../models/mock_exam_model.dart';
 import '../../../models/user_profile_model.dart';
 import '../../../providers/user_provider.dart';
 import '../../../services/firebase_service.dart';
 import '../../../services/pdf_report_service.dart';
 import '../../../utils/formatters.dart';
+import '../../mock_exams/add_mock_exam_dialog.dart';
 import '../../statistics/pdf_preview_screen.dart';
 
 class TeacherStudentDetailModal extends StatefulWidget {
@@ -33,6 +35,8 @@ class _TeacherStudentDetailModalState extends State<TeacherStudentDetailModal>
 
   late List<AssignmentModel> _assignments;
   late List<CoachMessageModel> _messages;
+  List<MockExamModel> _mockExams = [];
+  bool _isLoadingExams = false;
   late TextEditingController _coachNoteController;
   final TextEditingController _messageController = TextEditingController();
 
@@ -68,22 +72,94 @@ class _TeacherStudentDetailModalState extends State<TeacherStudentDetailModal>
   void initState() {
     super.initState();
     _tabController = TabController(
-      length: 3,
+      length: 4,
       vsync: this,
-      initialIndex: widget.initialTab.clamp(0, 2),
+      initialIndex: widget.initialTab.clamp(0, 3),
     );
     _assignments = List<AssignmentModel>.from(widget.student.assignments);
     _messages = List<CoachMessageModel>.from(widget.student.messages);
+    _mockExams = List<MockExamModel>.from(widget.student.mockExams);
     _coachNoteController = TextEditingController(text: widget.student.coachNote ?? '');
 
-    if (widget.initialTab == 2) {
+    _loadMockExams();
+
+    if (widget.initialTab == 3) {
       _markRead();
     }
     _tabController.addListener(() {
-      if (_tabController.index == 2 && !_tabController.indexIsChanging) {
+      if (_tabController.index == 3 && !_tabController.indexIsChanging) {
         _markRead();
       }
     });
+  }
+
+  Future<void> _loadMockExams() async {
+    setState(() => _isLoadingExams = true);
+    try {
+      final exams = await _firebaseService.fetchStudentMockExams(widget.student.id);
+      if (mounted) {
+        setState(() {
+          _mockExams = exams;
+          _isLoadingExams = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingExams = false);
+    }
+  }
+
+  void _openAddMockExamDialog([MockExamModel? exam]) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => AddMockExamDialog(
+        initialExam: exam,
+        student: widget.student,
+        onStudentExamSaved: (savedExam) {
+          _loadMockExams();
+          widget.onUpdated?.call();
+        },
+      ),
+    );
+  }
+
+  void _confirmDeleteMockExam(MockExamModel exam) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Deneme Sınavını Sil'),
+        content: Text('"${exam.title}" denemesini silmek istediğinize emin misiniz?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Vazgeç'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444)),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await _firebaseService.deleteStudentMockExam(
+                studentId: widget.student.id,
+                examId: exam.id,
+              );
+              _loadMockExams();
+              widget.onUpdated?.call();
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Deneme sınavı başarıyla silindi.'),
+                    backgroundColor: Color(0xFFEF4444),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            },
+            child: const Text('Sil', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _markRead() async {
@@ -420,8 +496,14 @@ class _TeacherStudentDetailModalState extends State<TeacherStudentDetailModal>
             labelColor: const Color(0xFF4F46E5),
             unselectedLabelColor: isDark ? Colors.white60 : const Color(0xFF64748B),
             indicatorColor: const Color(0xFF4F46E5),
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
             tabs: [
-              const Tab(icon: Icon(Icons.analytics_outlined, size: 18), text: 'Çalışma Durumu'),
+              const Tab(icon: Icon(Icons.analytics_outlined, size: 18), text: 'Çalışma'),
+              Tab(
+                icon: const Icon(Icons.assignment_turned_in_outlined, size: 18),
+                text: _mockExams.isNotEmpty ? 'Denemeler (${_mockExams.length})' : 'Denemeler',
+              ),
               Tab(
                 icon: const Icon(Icons.assignment_outlined, size: 18),
                 text: pendingCount > 0 ? 'Ödevler ($pendingCount)' : 'Ödevler',
@@ -438,6 +520,7 @@ class _TeacherStudentDetailModalState extends State<TeacherStudentDetailModal>
               controller: _tabController,
               children: [
                 _buildStatusTab(isDark, stats),
+                _buildMockExamsTab(isDark),
                 _buildAssignmentsTab(isDark),
                 _buildMessagesTab(isDark),
               ],
@@ -620,6 +703,405 @@ class _TeacherStudentDetailModalState extends State<TeacherStudentDetailModal>
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildMockExamsTab(bool isDark) {
+    final highestNet = _mockExams.isEmpty
+        ? 0.0
+        : _mockExams.map((e) => e.totalNet).reduce((a, b) => a > b ? a : b);
+    final latestExam = _mockExams.isNotEmpty ? _mockExams.first : null;
+
+    return RefreshIndicator(
+      onRefresh: _loadMockExams,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // Ekle Butonu & Başlık
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '🎯 Deneme Sınavları',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      'Öğrencinin deneme sonuçlarını buradan ekleyip takip edebilirsiniz',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              ElevatedButton.icon(
+                onPressed: () => _openAddMockExamDialog(),
+                icon: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
+                label: const Text('Deneme Ekle', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF4F46E5),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          // Özet İstatistik Kutuları
+          Row(
+            children: [
+              Expanded(
+                child: _statBox(
+                  isDark,
+                  'Toplam',
+                  '${_mockExams.length}',
+                  Icons.assignment_turned_in_rounded,
+                  const Color(0xFF4F46E5),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _statBox(
+                  isDark,
+                  'En Yüksek Net',
+                  highestNet.toStringAsFixed(1),
+                  Icons.military_tech_rounded,
+                  const Color(0xFF10B981),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _statBox(
+                  isDark,
+                  'Son Net',
+                  latestExam != null ? latestExam.totalNet.toStringAsFixed(1) : '-',
+                  Icons.speed_rounded,
+                  const Color(0xFFF59E0B),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          if (_isLoadingExams && _mockExams.isEmpty)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(32.0),
+                child: CircularProgressIndicator(),
+              ),
+            )
+          else if (_mockExams.isEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                ),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF4F46E5).withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.assignment_turned_in_outlined,
+                      color: Color(0xFF4F46E5),
+                      size: 32,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Henüz Kayıtlı Deneme Sınavı Yok',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Öğrencinin çözdüğü TYT, AYT, LGS, KPSS vb. deneme sınavı sonuçlarını '
+                    'yukarıdaki "Deneme Ekle" butonuna basarak girebilirsiniz. Girilen denemeler anında öğrencinin cihazına senkronize olur.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  OutlinedButton.icon(
+                    onPressed: () => _openAddMockExamDialog(),
+                    icon: const Icon(Icons.add_rounded, size: 18),
+                    label: const Text('İlk Deneme Sınavını Gir'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF4F46E5),
+                      side: const BorderSide(color: Color(0xFF4F46E5)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            ..._mockExams.map((exam) => _buildMockExamCard(isDark, exam)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMockExamCard(bool isDark, MockExamModel exam) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+          title: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      exam.title,
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 3),
+                    Row(
+                      children: [
+                        Text(
+                          DateFormat('dd MMMM yyyy', 'tr_TR').format(exam.date),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF4F46E5).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            exam.examType,
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF4F46E5),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+                ),
+                child: Text(
+                  '${exam.totalNet.toStringAsFixed(1)} Net',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF10B981),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          subtitle: Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: Row(
+              children: [
+                if (exam.estimatedScore != null) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF8B5CF6).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      '~${exam.estimatedScore!.toStringAsFixed(1)} Puan',
+                      style: const TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF8B5CF6),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                Text(
+                  '${exam.totalCorrect}D  ${exam.totalWrong}Y  ${exam.totalEmpty}B',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.white70 : const Color(0xFF475569),
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.edit_outlined, size: 18, color: Color(0xFF4F46E5)),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  tooltip: 'Düzenle',
+                  onPressed: () => _openAddMockExamDialog(exam),
+                ),
+                const SizedBox(width: 12),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Colors.redAccent),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  tooltip: 'Sil',
+                  onPressed: () => _confirmDeleteMockExam(exam),
+                ),
+              ],
+            ),
+          ),
+          children: [
+            const Divider(height: 16),
+            // Dersler Listesi
+            if (exam.courseScores.isNotEmpty) ...[
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Ders Bazlı Netler & Doğru-Yanlış:',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+              ),
+              const SizedBox(height: 8),
+              ...exam.courseScores.map((score) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 6.0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          score.courseName,
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                      Text(
+                        '${score.correctCount}D ${score.wrongCount}Y ${score.emptyCount}B',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Container(
+                        constraints: const BoxConstraints(minWidth: 50),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF4F46E5).withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          '${score.netScore.toStringAsFixed(1)} Net',
+                          textAlign: TextAlign.right,
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF4F46E5),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ],
+
+            if (exam.coachAdvice != null && exam.coachAdvice!.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF8B5CF6).withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFF8B5CF6).withValues(alpha: 0.2)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.auto_awesome, color: Color(0xFF8B5CF6), size: 14),
+                        SizedBox(width: 5),
+                        Text(
+                          'Yapay Zeka Koç Tavsiyesi & Analizi',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF8B5CF6),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      exam.coachAdvice!,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isDark ? Colors.white70 : const Color(0xFF334155),
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            if (exam.notes != null && exam.notes!.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  'Not: ${exam.notes!}',
+                  style: const TextStyle(fontSize: 11, fontStyle: FontStyle.italic),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 

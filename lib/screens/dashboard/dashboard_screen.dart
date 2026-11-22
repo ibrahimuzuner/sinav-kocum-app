@@ -135,6 +135,11 @@ class DashboardScreen extends StatelessWidget {
         onRefresh: () async {
           studyProvider.loadData();
           await userProvider.syncCloudUserData();
+          if (userProvider.userProfile != null && userProvider.userProfile!.isStudent) {
+            if (userProvider.userProfile!.mockExams.isNotEmpty) {
+              await studyProvider.syncCloudMockExams(userProvider.userProfile!.mockExams);
+            }
+          }
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),

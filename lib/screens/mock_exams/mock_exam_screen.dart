@@ -17,6 +17,20 @@ class MockExamScreen extends StatefulWidget {
 }
 
 class _MockExamScreenState extends State<MockExamScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final userProvider = context.read<UserProvider>();
+      final studyProvider = context.read<StudyProvider>();
+      if (userProvider.userProfile != null && userProvider.userProfile!.isStudent) {
+        if (userProvider.userProfile!.mockExams.isNotEmpty) {
+          await studyProvider.syncCloudMockExams(userProvider.userProfile!.mockExams);
+        }
+      }
+    });
+  }
+
   void _openAddDialog([MockExamModel? exam]) {
     final studyProvider = context.read<StudyProvider>();
     final userProvider = context.read<UserProvider>();
@@ -126,6 +140,12 @@ class _MockExamScreenState extends State<MockExamScreen> {
       body: RefreshIndicator(
         onRefresh: () async {
           studyProvider.loadData();
+          await userProvider.syncCloudUserData();
+          if (userProvider.userProfile != null && userProvider.userProfile!.isStudent) {
+            if (userProvider.userProfile!.mockExams.isNotEmpty) {
+              await studyProvider.syncCloudMockExams(userProvider.userProfile!.mockExams);
+            }
+          }
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),

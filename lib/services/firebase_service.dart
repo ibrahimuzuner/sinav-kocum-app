@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/assignment_model.dart';
 import '../models/coach_message_model.dart';
 import '../models/institution_model.dart';
+import '../models/mock_exam_model.dart';
 import '../models/student_study_stats_model.dart';
 import '../models/user_profile_model.dart';
 import '../utils/form_submit_helper.dart';
@@ -592,6 +593,188 @@ class AppFirebaseService {
     final jsonStr = jsonEncode(updated.map((e) => e.toJson()).toList());
     final ok = await _patchUserFields(studentId, {'assignmentsJson': jsonStr});
     return ok ? updated : null;
+  }
+
+  // --- DENEME SINAVI SİSTEMİ (ÖĞRETMEN & ÖĞRENCİ) ---
+
+  /// Öğrencinin buluttaki deneme sınavlarını okur
+  Future<List<MockExamModel>> fetchStudentMockExams(String studentId) async {
+    final cloud = await fetchCloudUserData(studentId);
+    if (cloud != null) {
+      final raw = cloud['mockExamsJson'] as String?;
+      if (raw != null && raw.isNotEmpty) {
+        try {
+          final decoded = jsonDecode(raw);
+          if (decoded is List) {
+            final list = decoded
+                .whereType<Map<String, dynamic>>()
+                .map((e) => MockExamModel.fromJson(e))
+                .toList();
+            list.sort((a, b) => b.date.compareTo(a.date));
+            return list;
+          }
+        } catch (e) {
+          debugPrint('fetchStudentMockExams hata: $e');
+        }
+      }
+    }
+    return [];
+  }
+
+  /// Öğrenciye koç veya öğrenci tarafından deneme sınavı ekler ve çalışma özetini günceller
+  Future<List<MockExamModel>?> addStudentMockExam({
+    required String studentId,
+    required MockExamModel exam,
+  }) async {
+    final current = await fetchStudentMockExams(studentId);
+    final updated = [exam, ...current.where((e) => e.id != exam.id)];
+    updated.sort((a, b) => b.date.compareTo(a.date));
+
+    final jsonStr = jsonEncode(updated.map((e) => e.toJson()).toList());
+
+    final highestNet = updated.map((e) => e.totalNet).fold(0.0, (a, b) => a > b ? a : b);
+    final latestExam = updated.first;
+
+    final cloud = await fetchCloudUserData(studentId);
+    StudentStudyStatsModel currentStats = const StudentStudyStatsModel();
+    if (cloud != null && cloud['studyStatsJson'] != null) {
+      try {
+        final dec = jsonDecode(cloud['studyStatsJson'] as String);
+        if (dec is Map<String, dynamic>) {
+          currentStats = StudentStudyStatsModel.fromJson(dec);
+        }
+      } catch (_) {}
+    }
+
+    final scorePart = latestExam.estimatedScore != null ? ' (~${latestExam.estimatedScore!.toStringAsFixed(1)} Puan)' : '';
+    final newActivity = '🎯 Deneme (${latestExam.title}): ${latestExam.totalNet.toStringAsFixed(1)} Net$scorePart';
+    final existingActivities = currentStats.recentActivities.where((a) => !a.contains('Deneme (${latestExam.title})')).toList();
+
+    final updatedStats = StudentStudyStatsModel(
+      todayStudyMinutes: currentStats.todayStudyMinutes,
+      todaySolvedQuestions: currentStats.todaySolvedQuestions,
+      todayNetScore: currentStats.todayNetScore,
+      totalStudyMinutes: currentStats.totalStudyMinutes,
+      totalSolvedQuestions: currentStats.totalSolvedQuestions,
+      streakDays: currentStats.streakDays,
+      mockExamCount: updated.length,
+      latestMockTitle: latestExam.title,
+      latestMockNet: latestExam.totalNet,
+      highestMockNet: highestNet,
+      lastStudiedAt: currentStats.lastStudiedAt ?? DateTime.now(),
+      recentActivities: [newActivity, ...existingActivities.take(3)],
+    );
+
+    final ok = await _patchUserFields(studentId, {
+      'mockExamsJson': jsonStr,
+      'studyStatsJson': jsonEncode(updatedStats.toJson()),
+    });
+
+    return ok ? updated : null;
+  }
+
+  /// Öğrencinin deneme sınavını günceller
+  Future<List<MockExamModel>?> updateStudentMockExam({
+    required String studentId,
+    required MockExamModel exam,
+  }) async {
+    final current = await fetchStudentMockExams(studentId);
+    final updated = current.map((e) => e.id == exam.id ? exam : e).toList();
+    updated.sort((a, b) => b.date.compareTo(a.date));
+
+    final jsonStr = jsonEncode(updated.map((e) => e.toJson()).toList());
+
+    final highestNet = updated.map((e) => e.totalNet).fold(0.0, (a, b) => a > b ? a : b);
+    final latestExam = updated.isNotEmpty ? updated.first : null;
+
+    final cloud = await fetchCloudUserData(studentId);
+    StudentStudyStatsModel currentStats = const StudentStudyStatsModel();
+    if (cloud != null && cloud['studyStatsJson'] != null) {
+      try {
+        final dec = jsonDecode(cloud['studyStatsJson'] as String);
+        if (dec is Map<String, dynamic>) {
+          currentStats = StudentStudyStatsModel.fromJson(dec);
+        }
+      } catch (_) {}
+    }
+
+    final updatedStats = StudentStudyStatsModel(
+      todayStudyMinutes: currentStats.todayStudyMinutes,
+      todaySolvedQuestions: currentStats.todaySolvedQuestions,
+      todayNetScore: currentStats.todayNetScore,
+      totalStudyMinutes: currentStats.totalStudyMinutes,
+      totalSolvedQuestions: currentStats.totalSolvedQuestions,
+      streakDays: currentStats.streakDays,
+      mockExamCount: updated.length,
+      latestMockTitle: latestExam?.title,
+      latestMockNet: latestExam?.totalNet,
+      highestMockNet: highestNet,
+      lastStudiedAt: currentStats.lastStudiedAt,
+      recentActivities: currentStats.recentActivities,
+    );
+
+    final ok = await _patchUserFields(studentId, {
+      'mockExamsJson': jsonStr,
+      'studyStatsJson': jsonEncode(updatedStats.toJson()),
+    });
+
+    return ok ? updated : null;
+  }
+
+  /// Öğrencinin deneme sınavını siler
+  Future<List<MockExamModel>?> deleteStudentMockExam({
+    required String studentId,
+    required String examId,
+  }) async {
+    final current = await fetchStudentMockExams(studentId);
+    final updated = current.where((e) => e.id != examId).toList();
+    updated.sort((a, b) => b.date.compareTo(a.date));
+
+    final jsonStr = jsonEncode(updated.map((e) => e.toJson()).toList());
+
+    final highestNet = updated.map((e) => e.totalNet).fold(0.0, (a, b) => a > b ? a : b);
+    final latestExam = updated.isNotEmpty ? updated.first : null;
+
+    final cloud = await fetchCloudUserData(studentId);
+    StudentStudyStatsModel currentStats = const StudentStudyStatsModel();
+    if (cloud != null && cloud['studyStatsJson'] != null) {
+      try {
+        final dec = jsonDecode(cloud['studyStatsJson'] as String);
+        if (dec is Map<String, dynamic>) {
+          currentStats = StudentStudyStatsModel.fromJson(dec);
+        }
+      } catch (_) {}
+    }
+
+    final updatedStats = StudentStudyStatsModel(
+      todayStudyMinutes: currentStats.todayStudyMinutes,
+      todaySolvedQuestions: currentStats.todaySolvedQuestions,
+      todayNetScore: currentStats.todayNetScore,
+      totalStudyMinutes: currentStats.totalStudyMinutes,
+      totalSolvedQuestions: currentStats.totalSolvedQuestions,
+      streakDays: currentStats.streakDays,
+      mockExamCount: updated.length,
+      latestMockTitle: latestExam?.title,
+      latestMockNet: latestExam?.totalNet,
+      highestMockNet: highestNet,
+      lastStudiedAt: currentStats.lastStudiedAt,
+      recentActivities: currentStats.recentActivities,
+    );
+
+    final ok = await _patchUserFields(studentId, {
+      'mockExamsJson': jsonStr,
+      'studyStatsJson': jsonEncode(updatedStats.toJson()),
+    });
+
+    return ok ? updated : null;
+  }
+
+  /// Öğrencinin tüm yerel denemelerini buluta toplu senkronize eder
+  Future<bool> syncStudentMockExams(String studentId, List<MockExamModel> exams) async {
+    final sorted = List<MockExamModel>.from(exams);
+    sorted.sort((a, b) => b.date.compareTo(a.date));
+    final jsonStr = jsonEncode(sorted.map((e) => e.toJson()).toList());
+    return _patchUserFields(studentId, {'mockExamsJson': jsonStr});
   }
 
   // --- MESAJLAŞMA SİSTEMİ ---
