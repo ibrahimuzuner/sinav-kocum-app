@@ -1032,18 +1032,42 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        if (_showAllInstitutionStudents && student.teacherName != null && student.teacherName!.isNotEmpty) ...[
+                        if (student.email.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              Icon(Icons.email_outlined, size: 12, color: isDark ? Colors.white54 : const Color(0xFF64748B)),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  student.email,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: isDark ? Colors.white54 : const Color(0xFF64748B),
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                        if (_showAllInstitutionStudents || student.hasInstitution) ...[
                           const SizedBox(height: 3),
                           Row(
                             children: [
                               const Icon(Icons.school_rounded, size: 12, color: Color(0xFF10B981)),
                               const SizedBox(width: 4),
-                              Text(
-                                'Sorumlu Koç: ${student.teacherName!}',
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF10B981),
+                              Expanded(
+                                child: Text(
+                                  (student.teacherName != null && student.teacherName!.trim().isNotEmpty)
+                                      ? 'Sorumlu Koç: ${student.teacherName!}'
+                                      : 'Kurum: ${student.institutionName ?? "Kurum Havuzu (Tüm Koçlar)"}',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF10B981),
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ],

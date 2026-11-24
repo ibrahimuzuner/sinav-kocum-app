@@ -781,14 +781,16 @@ class DashboardScreen extends StatelessWidget {
               children: [
                 Text(
                   hasTeacher
-                      ? 'Koçum: ${userProvider.teacherName ?? "Eğitim Koçu"}${userProvider.hasInstitution ? " • ${userProvider.institutionName}" : ""}'
+                      ? (userProvider.hasInstitution
+                          ? 'Kurumum: ${userProvider.institutionName ?? "Kurum"} (Tüm Koç Kadrosu)'
+                          : 'Koçum: ${userProvider.teacherName ?? "Eğitim Koçu"}')
                       : 'Öğretmen / Koç Bağlantısı',
                   style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   userProvider.hasInstitution
-                      ? '${userProvider.institutionName ?? "Kurum"} koç kadrosu ile ortak takip ediliyorsunuz.'
+                      ? '${userProvider.institutionName ?? "Kurum"} bünyesindeki tüm öğretmenlere otomatik bağlısınız. Kurum koçlarınızdan ortak ödev ve mesaj alabilirsiniz.'
                       : (hasTeacher
                           ? 'Çalışma durumun öğretmeninle otomatik paylaşılıyor.'
                           : 'Öğretmeninin KOC-XXXX kodunu girerek ödev ve mesaj al.'),
@@ -1046,6 +1048,7 @@ class DashboardScreen extends StatelessWidget {
                               const SizedBox(height: 2),
                               Text(
                                 [
+                                  if (a.teacherName.isNotEmpty) 'Koç: ${a.teacherName}',
                                   if (a.targetQuestions > 0) '${a.targetQuestions} soru',
                                   if (a.targetMinutes > 0) '${a.targetMinutes} dk',
                                   'Son: ${Formatters.formatDateTurkish(a.dueDate)}',

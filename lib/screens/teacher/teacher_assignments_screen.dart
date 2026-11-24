@@ -59,7 +59,10 @@ class _TeacherAssignmentsScreenState extends State<TeacherAssignmentsScreen> {
       return;
     }
     if (mounted) setState(() => _isLoading = true);
-    final list = await _firebaseService.fetchStudentsForTeacher(teacher.id);
+    final list = await _firebaseService.fetchStudentsForTeacher(
+      teacher.id,
+      institutionId: teacher.institutionId,
+    );
     if (mounted) {
       setState(() {
         _students = list;
@@ -136,7 +139,10 @@ class _TeacherAssignmentsScreenState extends State<TeacherAssignmentsScreen> {
                   items: _students
                       .map((s) => DropdownMenuItem(
                             value: s,
-                            child: Text(s.fullName, overflow: TextOverflow.ellipsis),
+                            child: Text(
+                              s.email.isNotEmpty ? '${s.fullName} (${s.email})' : s.fullName,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ))
                       .toList(),
                   onChanged: (val) {

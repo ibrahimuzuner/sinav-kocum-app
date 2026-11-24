@@ -48,7 +48,10 @@ class _TeacherMessagesScreenState extends State<TeacherMessagesScreen> {
       return;
     }
     if (mounted) setState(() => _isLoading = true);
-    final list = await _firebaseService.fetchStudentsForTeacher(teacher.id);
+    final list = await _firebaseService.fetchStudentsForTeacher(
+      teacher.id,
+      institutionId: teacher.institutionId,
+    );
     list.sort((a, b) {
       final aUnread = a.messages.where((m) => !m.isFromTeacher && !m.isRead).length;
       final bUnread = b.messages.where((m) => !m.isFromTeacher && !m.isRead).length;
@@ -242,7 +245,9 @@ class _TeacherMessagesScreenState extends State<TeacherMessagesScreen> {
                             children: [
                               Expanded(
                                 child: Text(
-                                  student.fullName,
+                                  student.email.isNotEmpty
+                                      ? '${student.fullName} (${student.email})'
+                                      : student.fullName,
                                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5),
                                   overflow: TextOverflow.ellipsis,
                                 ),

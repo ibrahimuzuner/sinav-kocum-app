@@ -375,13 +375,56 @@ class AppFirebaseService {
     return null;
   }
 
-  /// Öğretmene bağlı tüm öğrencileri getirir
-  Future<List<UserProfileModel>> fetchStudentsForTeacher(String teacherId) async {
+  /// Öğretmene bağlı tüm öğrencileri getirir.
+  /// Eğer öğretmen bir kuruma bağlıysa (veya [institutionId] verilmişse),
+  /// kurumdaki tüm koçlara bağlı veya kurum havuzundaki tüm öğrencileri de kapsar.
+  Future<List<UserProfileModel>> fetchStudentsForTeacher(String teacherId, {String? institutionId}) async {
     if (teacherId.isEmpty) return [];
     final all = await fetchAllUsers();
-    return all
-        .where((u) => u.teacherId == teacherId && u.id != teacherId)
+
+    // 1. Doğrudan bu öğretmene bağlı öğrenciler
+    final direct = all
+        .where((u) => u.teacherId == teacherId && u.id != teacherId && !u.isTeacher)
         .toList();
+
+    // 2. Kurum kimliği kontrolü
+    String? effectiveInstId = institutionId;
+    if (effectiveInstId == null || effectiveInstId.isEmpty) {
+      final teacherObj = all.where((u) => u.id == teacherId).firstOrNull;
+      if (teacherObj != null && teacherObj.hasInstitution && teacherObj.isInstitutionApproved) {
+        effectiveInstId = teacherObj.institutionId;
+      }
+    }
+
+    if (effectiveInstId != null && effectiveInstId.isNotEmpty) {
+      // Kurumdaki onaylı koçların ID seti
+      final instCoaches = all
+          .where((u) => u.isTeacher && u.institutionId == effectiveInstId && u.isInstitutionApproved)
+          .map((c) => c.id)
+          .toSet();
+      instCoaches.add(teacherId);
+
+      final Map<String, UserProfileModel> uniqueMap = {};
+      for (final s in direct) {
+        uniqueMap[s.id] = s;
+      }
+
+      for (final u in all) {
+        if (u.isTeacher || u.id == teacherId) continue;
+        final belongsByInst = u.institutionId == effectiveInstId;
+        final belongsByCoach = u.teacherId != null && instCoaches.contains(u.teacherId);
+        if (belongsByInst || belongsByCoach) {
+          uniqueMap[u.id] = u;
+        }
+      }
+
+      final merged = uniqueMap.values.toList();
+      merged.sort((a, b) => a.fullName.toLowerCase().compareTo(b.fullName.toLowerCase()));
+      return merged;
+    }
+
+    direct.sort((a, b) => a.fullName.toLowerCase().compareTo(b.fullName.toLowerCase()));
+    return direct;
   }
 
   /// Öğretmen, e-posta adresi ile öğrenciyi kendi altına ekler
@@ -1882,14 +1925,22 @@ class AppFirebaseService {
         studentIdSet.add(u.id);
         syncedStudents.add(u);
 
-        // Öğrencinin profilini kuruma bağla
+        // Öğrencinin profilini kuruma ve kurum koçlarına bağla
+        final patchMap = <String, dynamic>{};
         if (u.institutionId != inst.id || u.institutionName != inst.name) {
-          await _patchUserFields(u.id, {
-            'institutionId': inst.id,
-            'institutionName': inst.name,
-            'institutionRole': 'student',
-            'institutionStatus': inst.status,
-          });
+          patchMap['institutionId'] = inst.id;
+          patchMap['institutionName'] = inst.name;
+          patchMap['institutionRole'] = 'student';
+          patchMap['institutionStatus'] = inst.status;
+        }
+        if (u.teacherName == null || u.teacherName!.trim().isEmpty) {
+          patchMap['teacherName'] = '${inst.name} Koçluk Kadrosu';
+        }
+        if (u.teacherId == null || u.teacherId!.trim().isEmpty) {
+          patchMap['teacherId'] = inst.ownerCoachId;
+        }
+        if (patchMap.isNotEmpty) {
+          await _patchUserFields(u.id, patchMap);
         }
       }
     }

@@ -475,6 +475,16 @@ class _TeacherStudentDetailModalState extends State<TeacherStudentDetailModal>
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
+                          if (widget.student.email.isNotEmpty)
+                            Text(
+                              '📧 ${widget.student.email}',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: isDark ? Colors.white54 : const Color(0xFF64748B),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                         ],
                       ),
                     ),
