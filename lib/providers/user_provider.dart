@@ -133,6 +133,9 @@ class UserProvider with ChangeNotifier {
         final cloudAssignments = cloudData['assignmentsJson'] as String?;
         final cloudMessages = cloudData['messagesJson'] as String?;
         final cloudMockExams = cloudData['mockExamsJson'] as String?;
+        final cloudQuestionLogs = cloudData['questionLogsJson'] as String?;
+        final cloudStudySessions = cloudData['studySessionsJson'] as String?;
+        final cloudScheduleItems = cloudData['scheduleItemsJson'] as String?;
         final cloudStudyStats = cloudData['studyStatsJson'] as String?;
         final cloudEmailVerified = cloudData['isEmailVerified'] as bool? ?? _userProfile!.isEmailVerified;
 
@@ -163,6 +166,9 @@ class UserProvider with ChangeNotifier {
           assignmentsJson: cloudAssignments ?? _userProfile!.assignmentsJson,
           messagesJson: cloudMessages ?? _userProfile!.messagesJson,
           mockExamsJson: cloudMockExams ?? _userProfile!.mockExamsJson,
+          questionLogsJson: cloudQuestionLogs ?? _userProfile!.questionLogsJson,
+          studySessionsJson: cloudStudySessions ?? _userProfile!.studySessionsJson,
+          scheduleItemsJson: cloudScheduleItems ?? _userProfile!.scheduleItemsJson,
           studyStatsJson: cloudStudyStats ?? _userProfile!.studyStatsJson,
           isEmailVerified: cloudEmailVerified,
           clearInstitution: clearInst,

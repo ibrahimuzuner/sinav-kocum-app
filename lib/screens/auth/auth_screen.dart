@@ -310,6 +310,7 @@ class _AuthScreenState extends State<AuthScreen> {
                             if (targetExam.isNotEmpty) {
                               context.read<StudyProvider>().setCurrentExam(targetExam);
                             }
+                            context.read<StudyProvider>().syncAllFromCloud(profile: userProvider.userProfile);
                           }
                         }
                       },

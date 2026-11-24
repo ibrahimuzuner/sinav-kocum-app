@@ -2,7 +2,10 @@ import 'dart:convert';
 import 'assignment_model.dart';
 import 'coach_message_model.dart';
 import 'mock_exam_model.dart';
+import 'question_log_model.dart';
+import 'schedule_item_model.dart';
 import 'student_study_stats_model.dart';
+import 'study_session_model.dart';
 
 class UserProfileModel {
   final String id;
@@ -34,6 +37,9 @@ class UserProfileModel {
   final String? assignmentsJson; // Öğretmenin verdiği ödevler JSON listesi
   final String? messagesJson; // Öğretmen-Öğrenci mesajları JSON listesi
   final String? mockExamsJson; // Öğrencinin deneme sınavları JSON listesi
+  final String? questionLogsJson; // Öğrencinin soru çözümleri JSON listesi
+  final String? studySessionsJson; // Öğrencinin kronometre/pomodoro oturumları JSON listesi
+  final String? scheduleItemsJson; // Öğrencinin haftalık çalışma programı JSON listesi
 
   // Kurum / Organizasyon Sistemi Alanları
   final String? institutionId; // Bağlı olduğu kurum ID
@@ -70,6 +76,9 @@ class UserProfileModel {
     this.assignmentsJson,
     this.messagesJson,
     this.mockExamsJson,
+    this.questionLogsJson,
+    this.studySessionsJson,
+    this.scheduleItemsJson,
     this.institutionId,
     this.institutionName,
     this.institutionRole,
@@ -202,6 +211,52 @@ class UserProfileModel {
     return [];
   }
 
+  List<QuestionLogModel> get questionLogs {
+    if (questionLogsJson == null || questionLogsJson!.isEmpty) return [];
+    try {
+      final decoded = jsonDecode(questionLogsJson!);
+      if (decoded is List) {
+        final list = decoded
+            .whereType<Map<String, dynamic>>()
+            .map((e) => QuestionLogModel.fromJson(e))
+            .toList();
+        list.sort((a, b) => b.date.compareTo(a.date));
+        return list;
+      }
+    } catch (_) {}
+    return [];
+  }
+
+  List<StudySessionModel> get studySessions {
+    if (studySessionsJson == null || studySessionsJson!.isEmpty) return [];
+    try {
+      final decoded = jsonDecode(studySessionsJson!);
+      if (decoded is List) {
+        final list = decoded
+            .whereType<Map<String, dynamic>>()
+            .map((e) => StudySessionModel.fromJson(e))
+            .toList();
+        list.sort((a, b) => b.date.compareTo(a.date));
+        return list;
+      }
+    } catch (_) {}
+    return [];
+  }
+
+  List<ScheduleItemModel> get scheduleItems {
+    if (scheduleItemsJson == null || scheduleItemsJson!.isEmpty) return [];
+    try {
+      final decoded = jsonDecode(scheduleItemsJson!);
+      if (decoded is List) {
+        return decoded
+            .whereType<Map<String, dynamic>>()
+            .map((e) => ScheduleItemModel.fromJson(e))
+            .toList();
+      }
+    } catch (_) {}
+    return [];
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -231,6 +286,9 @@ class UserProfileModel {
       'assignmentsJson': assignmentsJson,
       'messagesJson': messagesJson,
       'mockExamsJson': mockExamsJson,
+      'questionLogsJson': questionLogsJson,
+      'studySessionsJson': studySessionsJson,
+      'scheduleItemsJson': scheduleItemsJson,
       'institutionId': institutionId,
       'institutionName': institutionName,
       'institutionRole': institutionRole,
@@ -280,6 +338,9 @@ class UserProfileModel {
       assignmentsJson: json['assignmentsJson'] as String?,
       messagesJson: json['messagesJson'] as String?,
       mockExamsJson: json['mockExamsJson'] as String?,
+      questionLogsJson: json['questionLogsJson'] as String?,
+      studySessionsJson: json['studySessionsJson'] as String?,
+      scheduleItemsJson: json['scheduleItemsJson'] as String?,
       institutionId: json['institutionId'] as String?,
       institutionName: json['institutionName'] as String?,
       institutionRole: json['institutionRole'] as String?,
@@ -318,6 +379,9 @@ class UserProfileModel {
     String? assignmentsJson,
     String? messagesJson,
     String? mockExamsJson,
+    String? questionLogsJson,
+    String? studySessionsJson,
+    String? scheduleItemsJson,
     String? institutionId,
     String? institutionName,
     String? institutionRole,
@@ -355,6 +419,9 @@ class UserProfileModel {
       assignmentsJson: assignmentsJson ?? this.assignmentsJson,
       messagesJson: messagesJson ?? this.messagesJson,
       mockExamsJson: mockExamsJson ?? this.mockExamsJson,
+      questionLogsJson: questionLogsJson ?? this.questionLogsJson,
+      studySessionsJson: studySessionsJson ?? this.studySessionsJson,
+      scheduleItemsJson: scheduleItemsJson ?? this.scheduleItemsJson,
       institutionId: clearInstitution ? null : (institutionId ?? this.institutionId),
       institutionName: clearInstitution ? null : (institutionName ?? this.institutionName),
       institutionRole: clearInstitution ? null : (institutionRole ?? this.institutionRole),

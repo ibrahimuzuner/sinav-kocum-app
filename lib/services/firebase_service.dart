@@ -9,7 +9,10 @@ import '../models/assignment_model.dart';
 import '../models/coach_message_model.dart';
 import '../models/institution_model.dart';
 import '../models/mock_exam_model.dart';
+import '../models/question_log_model.dart';
+import '../models/schedule_item_model.dart';
 import '../models/student_study_stats_model.dart';
+import '../models/study_session_model.dart';
 import '../models/user_profile_model.dart';
 import '../utils/form_submit_helper.dart';
 
@@ -113,6 +116,10 @@ class AppFirebaseService {
       if (profile.studyStatsJson != null) 'studyStatsJson': profile.studyStatsJson,
       if (profile.assignmentsJson != null) 'assignmentsJson': profile.assignmentsJson,
       if (profile.messagesJson != null) 'messagesJson': profile.messagesJson,
+      if (profile.mockExamsJson != null) 'mockExamsJson': profile.mockExamsJson,
+      if (profile.questionLogsJson != null) 'questionLogsJson': profile.questionLogsJson,
+      if (profile.studySessionsJson != null) 'studySessionsJson': profile.studySessionsJson,
+      if (profile.scheduleItemsJson != null) 'scheduleItemsJson': profile.scheduleItemsJson,
       if (profile.institutionId != null) 'institutionId': profile.institutionId,
       if (profile.institutionName != null) 'institutionName': profile.institutionName,
       if (profile.institutionRole != null) 'institutionRole': profile.institutionRole,
@@ -787,6 +794,31 @@ class AppFirebaseService {
     sorted.sort((a, b) => b.date.compareTo(a.date));
     final jsonStr = jsonEncode(sorted.map((e) => e.toJson()).toList());
     return _patchUserFields(studentId, {'mockExamsJson': jsonStr});
+  }
+
+  /// Öğrencinin soru çözümlerini buluta senkronize eder (Son 1000 kayıt)
+  Future<bool> syncStudentQuestionLogs(String studentId, List<QuestionLogModel> logs) async {
+    final sorted = List<QuestionLogModel>.from(logs);
+    sorted.sort((a, b) => b.date.compareTo(a.date));
+    final payload = sorted.take(1000).map((e) => e.toJson()).toList();
+    final jsonStr = jsonEncode(payload);
+    return _patchUserFields(studentId, {'questionLogsJson': jsonStr});
+  }
+
+  /// Öğrencinin çalışma seanslarını (kronometre/pomodoro) buluta senkronize eder (Son 1000 seans)
+  Future<bool> syncStudentStudySessions(String studentId, List<StudySessionModel> sessions) async {
+    final sorted = List<StudySessionModel>.from(sessions);
+    sorted.sort((a, b) => b.date.compareTo(a.date));
+    final payload = sorted.take(1000).map((e) => e.toJson()).toList();
+    final jsonStr = jsonEncode(payload);
+    return _patchUserFields(studentId, {'studySessionsJson': jsonStr});
+  }
+
+  /// Öğrencinin haftalık çalışma programını buluta senkronize eder
+  Future<bool> syncStudentScheduleItems(String studentId, List<ScheduleItemModel> items) async {
+    final payload = items.map((e) => e.toJson()).toList();
+    final jsonStr = jsonEncode(payload);
+    return _patchUserFields(studentId, {'scheduleItemsJson': jsonStr});
   }
 
   // --- MESAJLAŞMA SİSTEMİ ---

@@ -125,6 +125,7 @@ class SocialAuthHelper {
     if (exists && userProvider.userProfile != null) {
       final existing = userProvider.userProfile!;
       studyProvider.setCurrentExam(existing.targetExam);
+      await studyProvider.syncAllFromCloud(profile: existing);
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

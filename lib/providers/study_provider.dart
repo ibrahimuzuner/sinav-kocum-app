@@ -8,6 +8,7 @@ import '../models/study_session_model.dart';
 import '../models/schedule_item_model.dart';
 import '../models/mock_exam_model.dart';
 import '../models/student_study_stats_model.dart';
+import '../models/user_profile_model.dart';
 import '../services/firebase_service.dart';
 import '../services/storage_service.dart';
 import '../services/smart_scheduler_service.dart';
@@ -124,10 +125,7 @@ class StudyProvider with ChangeNotifier {
     _validateStreak();
 
     if (userProfile != null && userProfile.isStudent) {
-      if (userProfile.mockExams.isNotEmpty) {
-        syncCloudMockExams(userProfile.mockExams);
-      }
-      syncStudyStatsToCloud();
+      syncAllFromCloud(profile: userProfile);
     }
   }
 
@@ -463,12 +461,16 @@ class StudyProvider with ChangeNotifier {
     _recordActivity();
     await _storage.saveQuestionLogs(_questionLogs);
     notifyListeners();
+    _syncQuestionLogsToCloud();
+    syncStudyStatsToCloud();
   }
 
   Future<void> deleteQuestionLog(String id) async {
     _questionLogs.removeWhere((q) => q.id == id);
     await _storage.saveQuestionLogs(_questionLogs);
     notifyListeners();
+    _syncQuestionLogsToCloud();
+    syncStudyStatsToCloud();
   }
 
   // --- CRUD: ÇALIŞMA SEANSLARI (SAYAÇ) ---
@@ -497,12 +499,16 @@ class StudyProvider with ChangeNotifier {
     _recordActivity();
     await _storage.saveStudySessions(_studySessions);
     notifyListeners();
+    _syncStudySessionsToCloud();
+    syncStudyStatsToCloud();
   }
 
   Future<void> deleteStudySession(String id) async {
     _studySessions.removeWhere((s) => s.id == id);
     await _storage.saveStudySessions(_studySessions);
     notifyListeners();
+    _syncStudySessionsToCloud();
+    syncStudyStatsToCloud();
   }
 
   // --- CRUD: PROGRAM MADDELERİ ---
@@ -542,6 +548,7 @@ class StudyProvider with ChangeNotifier {
     _scheduleItems.add(item);
     await _storage.saveScheduleItems(_scheduleItems);
     notifyListeners();
+    _syncScheduleItemsToCloud();
   }
 
   Future<void> toggleScheduleCompleted(String id) async {
@@ -600,6 +607,7 @@ class StudyProvider with ChangeNotifier {
         notes: activityNote,
       );
 
+      _syncScheduleItemsToCloud();
       notifyListeners();
     }
   }
@@ -629,6 +637,7 @@ class StudyProvider with ChangeNotifier {
     _scheduleItems.removeWhere((i) => i.id == id);
     await _storage.saveScheduleItems(_scheduleItems);
     notifyListeners();
+    _syncScheduleItemsToCloud();
   }
 
   /// Haftalık çalışma programındaki tüm hedefleri temizler (kullanıcı isteği veya yeni üyelik)
@@ -636,6 +645,7 @@ class StudyProvider with ChangeNotifier {
     _scheduleItems.clear();
     await _storage.saveScheduleItems([]);
     notifyListeners();
+    _syncScheduleItemsToCloud();
   }
 
   /// Koçun verdiği bir ödev tamamlandığında öğrencinin bugünkü çalışma kayıtlarına ekler
@@ -739,6 +749,7 @@ class StudyProvider with ChangeNotifier {
 
     await _storage.saveScheduleItems(_scheduleItems);
     notifyListeners();
+    _syncScheduleItemsToCloud();
     return generated.length;
   }
 
@@ -811,5 +822,117 @@ class StudyProvider with ChangeNotifier {
       await _storage.saveMockExams(_mockExams);
       notifyListeners();
     }
+  }
+
+  /// Öğrencinin soru kayıtlarını buluta aktarır
+  void _syncQuestionLogsToCloud() {
+    final profile = _storage.loadUserProfile();
+    if (profile != null && profile.isStudent) {
+      AppFirebaseService().syncStudentQuestionLogs(profile.id, _questionLogs);
+    }
+  }
+
+  /// Öğrencinin çalışma oturumlarını (kronometre/pomodoro) buluta aktarır
+  void _syncStudySessionsToCloud() {
+    final profile = _storage.loadUserProfile();
+    if (profile != null && profile.isStudent) {
+      AppFirebaseService().syncStudentStudySessions(profile.id, _studySessions);
+    }
+  }
+
+  /// Öğrencinin haftalık çalışma programını buluta aktarır
+  void _syncScheduleItemsToCloud() {
+    final profile = _storage.loadUserProfile();
+    if (profile != null && profile.isStudent) {
+      AppFirebaseService().syncStudentScheduleItems(profile.id, _scheduleItems);
+    }
+  }
+
+  /// Buluttaki soru çözümlerini yerel listeyle birleştirir ve kaydeder
+  Future<void> syncCloudQuestionLogs(List<QuestionLogModel> cloudLogs) async {
+    if (cloudLogs.isEmpty) return;
+    bool changed = false;
+    final Set<String> existingIds = _questionLogs.map((q) => q.id).toSet();
+    for (final cl in cloudLogs) {
+      if (!existingIds.contains(cl.id)) {
+        _questionLogs.add(cl);
+        existingIds.add(cl.id);
+        changed = true;
+      }
+    }
+    if (changed) {
+      _questionLogs.sort((a, b) => b.date.compareTo(a.date));
+      await _storage.saveQuestionLogs(_questionLogs);
+      notifyListeners();
+    }
+  }
+
+  /// Buluttaki çalışma seanslarını (kronometre/pomodoro) yerel listeyle birleştirir ve kaydeder
+  Future<void> syncCloudStudySessions(List<StudySessionModel> cloudSessions) async {
+    if (cloudSessions.isEmpty) return;
+    bool changed = false;
+    final Set<String> existingIds = _studySessions.map((s) => s.id).toSet();
+    for (final cs in cloudSessions) {
+      if (!existingIds.contains(cs.id)) {
+        _studySessions.add(cs);
+        existingIds.add(cs.id);
+        changed = true;
+      }
+    }
+    if (changed) {
+      _studySessions.sort((a, b) => b.date.compareTo(a.date));
+      await _storage.saveStudySessions(_studySessions);
+      notifyListeners();
+    }
+  }
+
+  /// Buluttaki haftalık çalışma programını yerel listeyle birleştirir ve kaydeder
+  Future<void> syncCloudScheduleItems(List<ScheduleItemModel> cloudItems) async {
+    if (cloudItems.isEmpty) return;
+    bool changed = false;
+    if (_scheduleItems.isEmpty) {
+      _scheduleItems.addAll(cloudItems);
+      changed = true;
+    } else {
+      final Map<String, int> existingMap = {
+        for (int i = 0; i < _scheduleItems.length; i++) _scheduleItems[i].id: i
+      };
+      for (final ci in cloudItems) {
+        if (existingMap.containsKey(ci.id)) {
+          final idx = existingMap[ci.id]!;
+          if (ci.isCompleted && !_scheduleItems[idx].isCompleted) {
+            _scheduleItems[idx] = ci;
+            changed = true;
+          }
+        } else {
+          _scheduleItems.add(ci);
+          changed = true;
+        }
+      }
+    }
+    if (changed) {
+      await _storage.saveScheduleItems(_scheduleItems);
+      notifyListeners();
+    }
+  }
+
+  /// Kullanıcı yeni bir telefondan veya webden giriş yaptığında tüm bulut verilerini indirip yerelle senkronize eder
+  Future<void> syncAllFromCloud({UserProfileModel? profile}) async {
+    final userProfile = profile ?? _storage.loadUserProfile();
+    if (userProfile == null || !userProfile.isStudent) return;
+
+    if (userProfile.mockExams.isNotEmpty) {
+      await syncCloudMockExams(userProfile.mockExams);
+    }
+    if (userProfile.questionLogs.isNotEmpty) {
+      await syncCloudQuestionLogs(userProfile.questionLogs);
+    }
+    if (userProfile.studySessions.isNotEmpty) {
+      await syncCloudStudySessions(userProfile.studySessions);
+    }
+    if (userProfile.scheduleItems.isNotEmpty) {
+      await syncCloudScheduleItems(userProfile.scheduleItems);
+    }
+    syncStudyStatsToCloud();
   }
 }
