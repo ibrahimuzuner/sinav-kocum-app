@@ -377,10 +377,25 @@ class _TeacherStudentDetailModalState extends State<TeacherStudentDetailModal>
       );
 
       if (!mounted) return;
-      final fileName = 'Kocluk_Raporu_${widget.student.firstName}_${DateFormat('yyyyMMdd').format(DateTime.now())}.pdf';
+      final rawName = widget.student.firstName.trim();
+      final cleanName = rawName
+          .replaceAll('ı', 'i')
+          .replaceAll('İ', 'I')
+          .replaceAll('ğ', 'g')
+          .replaceAll('Ğ', 'G')
+          .replaceAll('ü', 'u')
+          .replaceAll('Ü', 'U')
+          .replaceAll('ş', 's')
+          .replaceAll('Ş', 'S')
+          .replaceAll('ö', 'o')
+          .replaceAll('Ö', 'O')
+          .replaceAll('ç', 'c')
+          .replaceAll('Ç', 'C')
+          .replaceAll(RegExp(r'[^a-zA-Z0-9_\-]'), '_');
+      final safeName = cleanName.isEmpty ? 'Ogrenci' : cleanName;
+      final fileName = 'Kocluk_Raporu_${safeName}_${DateFormat('yyyyMMdd').format(DateTime.now())}.pdf';
 
-      Navigator.push(
-        context,
+      Navigator.of(context, rootNavigator: true).push(
         MaterialPageRoute(
           builder: (_) => PdfPreviewScreen(
             pdfBytes: pdfBytes,

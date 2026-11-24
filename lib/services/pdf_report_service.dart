@@ -14,13 +14,17 @@ import '../providers/study_provider.dart';
 import '../utils/formatters.dart';
 
 class PdfReportService {
-  /// Fontları yükle (Arial TTF yerel varlıklarından, başarısız olursa Roboto)
+  /// Fontları yükle (Arial TTF yerel varlıklarından, başarısız olursa Roboto, en kötü ihtimalde Helvetica)
   static Future<pw.Font> _loadRegularFont() async {
     try {
       final fontData = await rootBundle.load('assets/fonts/arial.ttf');
       return pw.Font.ttf(fontData);
     } catch (_) {
-      return await PdfGoogleFonts.robotoRegular();
+      try {
+        return await PdfGoogleFonts.robotoRegular();
+      } catch (_) {
+        return pw.Font.helvetica();
+      }
     }
   }
 
@@ -29,7 +33,11 @@ class PdfReportService {
       final fontData = await rootBundle.load('assets/fonts/arialbd.ttf');
       return pw.Font.ttf(fontData);
     } catch (_) {
-      return await PdfGoogleFonts.robotoBold();
+      try {
+        return await PdfGoogleFonts.robotoBold();
+      } catch (_) {
+        return pw.Font.helveticaBold();
+      }
     }
   }
 

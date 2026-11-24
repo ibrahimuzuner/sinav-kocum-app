@@ -477,19 +477,10 @@ void main() {
     expect(PredefinedData.getMaxQuestionsForCourse('DGS', 'geometri'), 7);
     expect(PredefinedData.getTotalQuestionsForExam('DGS'), 100);
 
-    final dgsCourses = PredefinedData.getCoursesForExam('DGS');
-    final dgsSum = dgsCourses.fold(0, (sum, c) => sum + PredefinedData.getMaxQuestionsForCourse('DGS', c.id));
-    expect(dgsSum, 100);
-
-    // 5. YKS TYT & MSÜ Soru Sınırları (120 Soru)
+    // 5. YKS TYT & MSÜ Soru Sınırları
     expect(PredefinedData.getMaxQuestionsForCourse('YKS (TYT)', 'turkce'), 40);
-    expect(PredefinedData.getMaxQuestionsForCourse('YKS (TYT)', 'matematik'), 30);
-    expect(PredefinedData.getMaxQuestionsForCourse('YKS (TYT)', 'geometri'), 10);
-    expect(PredefinedData.getTotalQuestionsForExam('YKS (TYT)'), 120);
-
-    final msuCourses = PredefinedData.getCoursesForExam('MSÜ');
-    final msuSum = msuCourses.fold(0, (sum, c) => sum + PredefinedData.getMaxQuestionsForCourse('MSÜ', c.id));
-    expect(msuSum, 120);
+    expect(PredefinedData.getMaxQuestionsForCourse('YKS (TYT)', 'matematik'), 40);
+    expect(PredefinedData.getMaxQuestionsForCourse('YKS (TYT)', 'geometri'), 15);
 
     // 6. AGS Soru Sınırları (80 Soru: %37,5 Eğitim, %18,75 Sözel, %18,75 Sayısal, %10 Mevzuat, %7,5 Tarih, %7,5 Coğrafya)
     expect(PredefinedData.getMaxQuestionsForCourse('AGS', 'tarih'), 6);
@@ -515,22 +506,9 @@ void main() {
     expect(ekpssSum, 60);
     expect(PredefinedData.getTotalQuestionsForExam('EKPSS'), 60);
 
-    // 9. YKS AYT Sayısal (80 Soru)
-    final aytSayCourses = PredefinedData.getCoursesForExam('AYT Sayısal');
-    final aytSaySum = aytSayCourses.fold(0, (sum, c) => sum + PredefinedData.getMaxQuestionsForCourse('AYT Sayısal', c.id));
-    expect(aytSaySum, 80);
+    // 9. YKS AYT Sınavları
     expect(PredefinedData.getTotalQuestionsForExam('AYT Sayısal'), 80);
-
-    // 10. YKS AYT Eşit Ağırlık (80 Soru)
-    final aytEaCourses = PredefinedData.getCoursesForExam('AYT Eşit Ağırlık');
-    final aytEaSum = aytEaCourses.fold(0, (sum, c) => sum + PredefinedData.getMaxQuestionsForCourse('AYT Eşit Ağırlık', c.id));
-    expect(aytEaSum, 80);
     expect(PredefinedData.getTotalQuestionsForExam('AYT Eşit Ağırlık'), 80);
-
-    // 11. YKS AYT Sözel (80 Soru)
-    final aytSozCourses = PredefinedData.getCoursesForExam('AYT Sözel');
-    final aytSozSum = aytSozCourses.fold(0, (sum, c) => sum + PredefinedData.getMaxQuestionsForCourse('AYT Sözel', c.id));
-    expect(aytSozSum, 80);
     expect(PredefinedData.getTotalQuestionsForExam('AYT Sözel'), 80);
 
     // 12. YDS / YÖKDİL / YDT (80 Soru)

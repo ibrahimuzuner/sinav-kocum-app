@@ -34,6 +34,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
         if (userProvider.targetExam.isNotEmpty) {
           context.read<StudyProvider>().setCurrentExam(userProvider.targetExam);
         }
+        userProvider.syncCloudUserData();
       }
     });
   }
@@ -47,9 +48,10 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      // Uygulama arka plandan ön plana geldiğinde sayacı gerçek saatle eşitle
+      // Uygulama arka plandan ön plana geldiğinde sayacı gerçek saatle eşitle ve bulut verilerini tazele
       if (mounted) {
         context.read<TimerProvider>().syncTimeWithClock();
+        context.read<UserProvider>().syncCloudUserData();
       }
     }
   }

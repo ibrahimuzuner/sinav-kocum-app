@@ -381,18 +381,25 @@ class DashboardScreen extends StatelessWidget {
 
               // 👨‍🏫 Öğretmen & Koç Bölümü (En aşağıya taşındı)
               if (userProvider.isRegistered) ...[
-                // Koçun tavsiyesi: SADECE bir öğretmene/koça bağlanıldığında çıksın (Kullanıcı talebi)
-                if (userProvider.teacherId != null && userProvider.teacherId!.isNotEmpty) ...[
+                // Koçun tavsiyesi: Bir öğretmene veya kuruma bağlı olunduğunda görünsün
+                if ((userProvider.teacherId != null && userProvider.teacherId!.isNotEmpty) ||
+                    userProvider.hasInstitution) ...[
                   _buildCoachFeedbackCard(context, userProvider, isDark),
                   const SizedBox(height: 14),
-                  if (userProvider.studentAssignments.isNotEmpty) ...[
-                    _buildStudentAssignmentsCard(context, userProvider, isDark),
-                    const SizedBox(height: 14),
-                  ],
-                  if (userProvider.studentMessages.isNotEmpty || userProvider.teacherId != null) ...[
-                    _buildTeacherMessagesCard(context, userProvider, isDark),
-                    const SizedBox(height: 14),
-                  ],
+                ],
+
+                // Ödevler: Öğrenciye atanmış ödev varsa daima görünsün
+                if (userProvider.studentAssignments.isNotEmpty) ...[
+                  _buildStudentAssignmentsCard(context, userProvider, isDark),
+                  const SizedBox(height: 14),
+                ],
+
+                // Mesajlar: Öğrencinin mesajı varsa, kuruma veya koça bağlıysa görünsün
+                if (userProvider.studentMessages.isNotEmpty ||
+                    userProvider.hasInstitution ||
+                    (userProvider.teacherId != null && userProvider.teacherId!.isNotEmpty)) ...[
+                  _buildTeacherMessagesCard(context, userProvider, isDark),
+                  const SizedBox(height: 14),
                 ],
 
                 // Öğretmene / Koça Bağlan Kartı (En altta)
@@ -1183,7 +1190,10 @@ class DashboardScreen extends StatelessWidget {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              userProvider.teacherName ?? 'Öğretmenim',
+                              userProvider.teacherName ??
+                                  (userProvider.hasInstitution
+                                      ? '${userProvider.institutionName} Koçluk'
+                                      : 'Öğretmenim'),
                               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                             ),
                           ),
