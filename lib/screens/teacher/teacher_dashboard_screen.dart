@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import '../../models/assignment_model.dart';
 import '../../models/institution_model.dart';
 import '../../models/user_profile_model.dart';
 import '../../providers/settings_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../services/firebase_service.dart';
 import '../../utils/email_validator.dart';
+import '../../utils/formatters.dart';
 import '../../widgets/premium_upgrade_modal.dart';
 import '../admin/admin_dashboard_screen.dart';
 import 'widgets/institution_modals.dart';
@@ -336,6 +338,8 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
       }
       if (_selectedFilter == 'Bugün Çalışanlar') {
         return s.studyStats.studiedToday;
+      } else if (_selectedFilter == 'Bekleyen Ödevi Olanlar') {
+        return s.pendingAssignmentsCount > 0;
       } else if (_selectedFilter == 'Çalışmayanlar') {
         return !s.studyStats.studiedToday;
       } else if (_selectedFilter == 'YKS' || _selectedFilter == 'LGS' || _selectedFilter == 'KPSS') {
@@ -693,6 +697,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                     '${currentList.length}',
                     Icons.groups_rounded,
                     const Color(0xFF4F46E5),
+                    onTap: () => setState(() => _selectedFilter = 'Tümü'),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -703,6 +708,10 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                     '$studiedTodayCount',
                     Icons.local_fire_department_rounded,
                     const Color(0xFF10B981),
+                    onTap: () {
+                      setState(() => _selectedFilter = 'Bugün Çalışanlar');
+                      _showStudiedTodayModal();
+                    },
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -713,6 +722,10 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                     '$pendingHomeworkCount',
                     Icons.assignment_late_outlined,
                     const Color(0xFFF59E0B),
+                    onTap: () {
+                      setState(() => _selectedFilter = 'Bekleyen Ödevi Olanlar');
+                      _showPendingAssignmentsModal();
+                    },
                   ),
                 ),
               ],
@@ -824,6 +837,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                 children: [
                   'Tümü',
                   'Bugün Çalışanlar',
+                  'Bekleyen Ödevi Olanlar',
                   'Çalışmayanlar',
                   'YKS',
                   'LGS',
@@ -1160,9 +1174,8 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
     );
   }
 
-  Widget _summaryBox(bool isDark, String label, String value, IconData icon, Color color) {
+  Widget _summaryBox(bool isDark, String label, String value, IconData icon, Color color, {VoidCallback? onTap}) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -1170,23 +1183,35 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
           color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
         ),
       ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 22),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: color),
-          ),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              color: isDark ? Colors.white60 : const Color(0xFF64748B),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+            child: Column(
+              children: [
+                Icon(icon, color: color, size: 22),
+                const SizedBox(height: 6),
+                Text(
+                  value,
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: color),
+                ),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
-            textAlign: TextAlign.center,
           ),
-        ],
+        ),
       ),
     );
   }
@@ -1199,4 +1224,413 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
       ],
     );
   }
+
+  Widget _badge(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color),
+      ),
+    );
+  }
+
+  void _showStudiedTodayModal() {
+    final studiedStudents = _currentSourceList.where((s) => s.studyStats.studiedToday).toList();
+    studiedStudents.sort((a, b) => b.studyStats.todaySolvedQuestions.compareTo(a.studyStats.todaySolvedQuestions));
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        return Container(
+          height: MediaQuery.of(ctx).size.height * 0.8,
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF0F172A) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 14, 8),
+                child: Column(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withValues(alpha: 0.35),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.local_fire_department_rounded, color: Color(0xFF10B981), size: 24),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Bugün Çalışan Öğrenciler (${studiedStudents.length})',
+                                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                'Bugün soru çözen veya çalışma oturumu yapanlar:',
+                                style: TextStyle(fontSize: 12, color: isDark ? Colors.white60 : const Color(0xFF64748B)),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded),
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: studiedStudents.isEmpty
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.nightlight_round, size: 48, color: Colors.grey.withValues(alpha: 0.5)),
+                              const SizedBox(height: 12),
+                              const Text(
+                                'Bugün henüz çalışma kaydı giren öğrenci bulunmuyor.',
+                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.grey),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: studiedStudents.length,
+                        itemBuilder: (_, index) {
+                          final s = studiedStudents[index];
+                          final stats = s.studyStats;
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              side: BorderSide(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                            ),
+                            child: InkWell(
+                              onTap: () {
+                                Navigator.pop(ctx);
+                                _openStudentDetail(s, initialTab: 0);
+                              },
+                              borderRadius: BorderRadius.circular(16),
+                              child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Row(
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 20,
+                                      backgroundColor: const Color(0xFF10B981).withValues(alpha: 0.15),
+                                      child: Text(
+                                        s.firstName.isNotEmpty ? s.firstName[0].toUpperCase() : '?',
+                                        style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF10B981)),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            s.fullName,
+                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5),
+                                          ),
+                                          if (s.email.isNotEmpty)
+                                            Text(
+                                              s.email,
+                                              style: TextStyle(fontSize: 11, color: isDark ? Colors.white54 : const Color(0xFF64748B)),
+                                            ),
+                                          const SizedBox(height: 6),
+                                          Wrap(
+                                            spacing: 6,
+                                            runSpacing: 4,
+                                            children: [
+                                              _badge('Soru: ${stats.todaySolvedQuestions}', const Color(0xFF4F46E5)),
+                                              _badge('Süre: ${stats.todayStudyMinutes} dk', const Color(0xFF10B981)),
+                                              _badge('Seri: ${stats.streakDays} gün', const Color(0xFFF59E0B)),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showPendingAssignmentsModal() {
+    final List<_PendingHwWithStudent> allPending = [];
+    for (final s in _currentSourceList) {
+      for (final a in s.assignments) {
+        if (!a.isCompleted) {
+          allPending.add(_PendingHwWithStudent(student: s, assignment: a));
+        }
+      }
+    }
+
+    // Teslim tarihine göre sırala (en yakın teslim veya geciken en üstte)
+    allPending.sort((a, b) => a.assignment.dueDate.compareTo(b.assignment.dueDate));
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        return Container(
+          height: MediaQuery.of(ctx).size.height * 0.82,
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF0F172A) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 14, 8),
+                child: Column(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withValues(alpha: 0.35),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.assignment_late_outlined, color: Color(0xFFF59E0B), size: 24),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Bekleyen Ödevler Listesi (${allPending.length})',
+                                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                'Ödev kimde bekliyor ve son teslim tarihleri:',
+                                style: TextStyle(fontSize: 12, color: isDark ? Colors.white60 : const Color(0xFF64748B)),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded),
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: allPending.isEmpty
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.check_circle_outline_rounded, size: 48, color: Color(0xFF10B981)),
+                              const SizedBox(height: 12),
+                              const Text(
+                                'Tebrikler! Şu anda bekleyen hiçbir ödev bulunmuyor.',
+                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF10B981)),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: allPending.length,
+                        itemBuilder: (_, index) {
+                          final item = allPending[index];
+                          final s = item.student;
+                          final a = item.assignment;
+                          final isOverdue = a.isOverdue;
+
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              side: BorderSide(
+                                color: isOverdue
+                                    ? Colors.redAccent.withValues(alpha: 0.4)
+                                    : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                              ),
+                            ),
+                            child: InkWell(
+                              onTap: () {
+                                Navigator.pop(ctx);
+                                _openStudentDetail(s, initialTab: 1); // 1: Ödevler sekmesi
+                              },
+                              borderRadius: BorderRadius.circular(16),
+                              child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        CircleAvatar(
+                                          radius: 16,
+                                          backgroundColor: const Color(0xFF4F46E5).withValues(alpha: 0.15),
+                                          child: Text(
+                                            s.firstName.isNotEmpty ? s.firstName[0].toUpperCase() : '?',
+                                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5)),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                s.fullName,
+                                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                              ),
+                                              if (s.email.isNotEmpty)
+                                                Text(
+                                                  s.email,
+                                                  style: TextStyle(fontSize: 11, color: isDark ? Colors.white54 : const Color(0xFF64748B)),
+                                                ),
+                                            ],
+                                          ),
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: (isOverdue ? Colors.redAccent : const Color(0xFFF59E0B)).withValues(alpha: 0.15),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Text(
+                                            isOverdue ? 'Gecikti!' : 'Bekliyor',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                              color: isOverdue ? Colors.redAccent : const Color(0xFFF59E0B),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            '${a.courseName} • ${a.title}',
+                                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                                          ),
+                                          if (a.description.isNotEmpty) ...[
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              a.description,
+                                              style: TextStyle(fontSize: 11.5, color: isDark ? Colors.white60 : const Color(0xFF64748B)),
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ],
+                                          const SizedBox(height: 6),
+                                          Row(
+                                            children: [
+                                              if (a.targetQuestions > 0)
+                                                Text('${a.targetQuestions} soru • ', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                                              if (a.targetMinutes > 0)
+                                                Text('${a.targetMinutes} dk • ', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                                              Text(
+                                                'Son: ${Formatters.formatDateTurkish(a.dueDate)}',
+                                                style: TextStyle(fontSize: 11, color: isOverdue ? Colors.redAccent : Colors.grey),
+                                              ),
+                                              const Spacer(),
+                                              if (a.teacherName.isNotEmpty)
+                                                Text(
+                                                  'Koç: ${a.teacherName}',
+                                                  style: const TextStyle(fontSize: 10.5, color: Color(0xFF10B981), fontWeight: FontWeight.w600),
+                                                ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _PendingHwWithStudent {
+  final UserProfileModel student;
+  final AssignmentModel assignment;
+  const _PendingHwWithStudent({required this.student, required this.assignment});
 }
