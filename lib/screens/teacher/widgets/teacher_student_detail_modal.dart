@@ -617,14 +617,14 @@ class _TeacherStudentDetailModalState extends State<TeacherStudentDetailModal>
               const SizedBox(height: 12),
               _infoRow('Toplam Çalışma Süresi', '$totalHours Saat (${stats.totalStudyMinutes} dk)'),
               _infoRow('Toplam Çözülen Soru', '${stats.totalSolvedQuestions} Soru'),
-              _infoRow('Bugünkü Net', stats.todayNetScore.toStringAsFixed(1)),
+              _infoRow('Bugünkü Net', Formatters.formatNet(stats.todayNetScore)),
               _infoRow('Girilen Deneme Sayısı', '${stats.mockExamCount} Deneme'),
               if (stats.latestMockTitle != null)
                 _infoRow(
                   'Son Deneme (${stats.latestMockTitle})',
-                  '${(stats.latestMockNet ?? 0).toStringAsFixed(1)} Net',
+                  '${Formatters.formatNet(stats.latestMockNet ?? 0)} Net',
                 ),
-              _infoRow('En Yüksek Deneme Neti', '${stats.highestMockNet.toStringAsFixed(1)} Net'),
+              _infoRow('En Yüksek Deneme Neti', '${Formatters.formatNet(stats.highestMockNet)} Net'),
               _infoRow(
                 'Hedef Net / Puan',
                 '${widget.student.targetNet.toStringAsFixed(0)} Net • ${widget.student.targetScore.toStringAsFixed(0)} Puan',
@@ -794,7 +794,7 @@ class _TeacherStudentDetailModalState extends State<TeacherStudentDetailModal>
                 child: _statBox(
                   isDark,
                   'En Yüksek Net',
-                  highestNet.toStringAsFixed(1),
+                  Formatters.formatNet(highestNet),
                   Icons.military_tech_rounded,
                   const Color(0xFF10B981),
                 ),
@@ -804,7 +804,7 @@ class _TeacherStudentDetailModalState extends State<TeacherStudentDetailModal>
                 child: _statBox(
                   isDark,
                   'Son Net',
-                  latestExam != null ? latestExam.totalNet.toStringAsFixed(1) : '-',
+                  latestExam != null ? Formatters.formatNet(latestExam.totalNet) : '-',
                   Icons.speed_rounded,
                   const Color(0xFFF59E0B),
                 ),
@@ -955,7 +955,7 @@ class _TeacherStudentDetailModalState extends State<TeacherStudentDetailModal>
                   border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
                 ),
                 child: Text(
-                  '${exam.totalNet.toStringAsFixed(1)} Net',
+                  '${Formatters.formatNet(exam.totalNet)} Net',
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w800,
@@ -1046,14 +1046,14 @@ class _TeacherStudentDetailModalState extends State<TeacherStudentDetailModal>
                       ),
                       const SizedBox(width: 12),
                       Container(
-                        constraints: const BoxConstraints(minWidth: 50),
+                        constraints: const BoxConstraints(minWidth: 55),
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
                           color: const Color(0xFF4F46E5).withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
-                          '${score.netScore.toStringAsFixed(1)} Net',
+                          '${Formatters.formatNet(score.netScore)} Net',
                           textAlign: TextAlign.right,
                           style: const TextStyle(
                             fontSize: 11.5,

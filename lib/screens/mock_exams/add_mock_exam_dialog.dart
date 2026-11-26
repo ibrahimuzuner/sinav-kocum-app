@@ -8,6 +8,7 @@ import '../../providers/study_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../services/firebase_service.dart';
 import '../../services/predefined_data.dart';
+import '../../utils/formatters.dart';
 
 class AddMockExamDialog extends StatefulWidget {
   final MockExamModel? initialExam;
@@ -910,15 +911,15 @@ class _AddMockExamDialogState extends State<AddMockExamDialog> {
 
                             // Net rozeti
                             Container(
-                              width: 58,
-                              padding: const EdgeInsets.symmetric(vertical: 4),
+                              constraints: const BoxConstraints(minWidth: 58),
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                               decoration: BoxDecoration(
                                 color: (net > 0 ? const Color(0xFF10B981) : Colors.grey)
                                     .withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
-                                '${net.toStringAsFixed(1)}N',
+                                '${Formatters.formatNet(net)}N',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontSize: 11,

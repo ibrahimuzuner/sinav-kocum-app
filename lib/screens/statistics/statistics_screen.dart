@@ -188,7 +188,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                 Expanded(
                   child: _buildMetricTile(
                     title: 'Toplam Net',
-                    value: totalNet.toStringAsFixed(1),
+                    value: Formatters.formatNet(totalNet),
                     subtitle: _periodLabel,
                     color: const Color(0xFF10B981),
                     icon: Icons.auto_graph_rounded,
@@ -410,7 +410,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            '${net.toStringAsFixed(1)} Net',
+                            '${Formatters.formatNet(net)} Net',
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.bold,
@@ -605,7 +605,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
       if (q > 0) {
         if (net > bestNet) {
           bestNet = net;
-          bestCourse = '${c.name} (${net.toStringAsFixed(1)} Net)';
+          bestCourse = '${c.name} (${Formatters.formatNet(net)} Net)';
         }
         final acc = (cor / q) * 100;
         if (acc < lowestAccuracy) {
@@ -725,7 +725,7 @@ Sınav Koçum ile hedefine emin adımlarla ilerle! 🚀
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
                           _buildReportStat('Toplam Soru', '$totalQ', const Color(0xFF4F46E5)),
-                          _buildReportStat('Toplam Net', totalNet.toStringAsFixed(1), const Color(0xFF10B981)),
+                          _buildReportStat('Toplam Net', Formatters.formatNet(totalNet), const Color(0xFF10B981)),
                           _buildReportStat('Doğruluk', '%$overallAccuracy', const Color(0xFFF59E0B)),
                         ],
                       ),

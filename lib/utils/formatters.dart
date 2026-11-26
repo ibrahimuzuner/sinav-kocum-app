@@ -87,4 +87,19 @@ class Formatters {
   static bool isSameDay(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;
   }
+
+  /// Sınav kurallarına uygun net formatlama (Örn: YKS/KPSS 0.25, 0.5, 0.75 veya LGS 0.33, 0.67).
+  /// Tek basamağa yuvarlanmasını (.toStringAsFixed(1)) önleyerek 0.75'in 0.8 veya -0.25'in -0.3
+  /// şeklinde yanlış/LGS gibi görünmesini engeller.
+  static String formatNet(double net) {
+    if (net == 0 || net.abs() < 0.001) return '0';
+    final s = net.toStringAsFixed(2);
+    if (s.endsWith('.00')) {
+      return s.substring(0, s.length - 3);
+    }
+    if (s.endsWith('0')) {
+      return s.substring(0, s.length - 1);
+    }
+    return s;
+  }
 }

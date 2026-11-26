@@ -6,6 +6,7 @@ import '../../models/mock_exam_model.dart';
 import '../../providers/study_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../services/predefined_data.dart';
+import '../../utils/formatters.dart';
 import '../../widgets/premium_upgrade_modal.dart';
 import 'add_mock_exam_dialog.dart';
 
@@ -206,7 +207,7 @@ class _MockExamScreenState extends State<MockExamScreen> {
                   Expanded(
                     child: _buildMetricTile(
                       title: 'Son Net',
-                      value: latest != null ? latest.totalNet.toStringAsFixed(1) : '-',
+                      value: latest != null ? Formatters.formatNet(latest.totalNet) : '-',
                       subtitle: 'Son Sınav',
                       icon: Icons.trending_up_rounded,
                       color: const Color(0xFF0EA5E9),
@@ -663,7 +664,7 @@ class _MockExamScreenState extends State<MockExamScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      '${exam.totalNet.toStringAsFixed(2)} Net',
+                      '${Formatters.formatNet(exam.totalNet)} Net',
                       style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
@@ -835,7 +836,7 @@ class _MockExamScreenState extends State<MockExamScreen> {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        '${score.netScore.toStringAsFixed(1)} Net',
+                        '${Formatters.formatNet(score.netScore)} Net',
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,

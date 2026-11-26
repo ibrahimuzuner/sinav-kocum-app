@@ -33,6 +33,19 @@ void main() {
     expect(Formatters.formatSecondsToTime(3665), '01:01:05');
   });
 
+  test('Formatters formats net score accurately without false rounding (0.25 steps preserved)', () {
+    expect(Formatters.formatNet(0.0), '0');
+    expect(Formatters.formatNet(17.0), '17');
+    expect(Formatters.formatNet(0.75), '0.75');
+    expect(Formatters.formatNet(-0.25), '-0.25');
+    expect(Formatters.formatNet(0.25), '0.25');
+    expect(Formatters.formatNet(0.50), '0.5');
+    expect(Formatters.formatNet(-0.75), '-0.75');
+    expect(Formatters.formatNet(28.25), '28.25');
+    expect(Formatters.formatNet(0.33), '0.33');
+    expect(Formatters.formatNet(0.67), '0.67');
+  });
+
   test('KPSS GK-GY courses do not contain Kimya, Fizik, or Biyoloji', () {
     final kpssCourses = PredefinedData.getCoursesForExam('KPSS (Genel Yetenek - Kültür)');
     final courseIds = kpssCourses.map((c) => c.id).toList();

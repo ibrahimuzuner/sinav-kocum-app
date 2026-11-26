@@ -1126,7 +1126,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                     _miniMetric(
                       'Son Deneme',
                       stats.latestMockNet != null
-                          ? '${stats.latestMockNet!.toStringAsFixed(1)} net'
+                          ? '${Formatters.formatNet(stats.latestMockNet!)} net'
                           : '-',
                     ),
                   ],
