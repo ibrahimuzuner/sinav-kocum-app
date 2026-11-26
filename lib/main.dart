@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/study_provider.dart';
@@ -16,6 +17,14 @@ import 'theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Türkçe tarih ve saat yerelleştirmesini başlat (intl LocaleDataException önleme)
+  try {
+    await initializeDateFormatting('tr_TR', null);
+    await initializeDateFormatting('tr', null);
+  } catch (e) {
+    debugPrint('DateFormatting başlatma hatası: $e');
+  }
 
   // Flutter hata yakalama (Gri ekran çıkmasını engeller, okunabilir arayüz sunar)
   FlutterError.onError = (FlutterErrorDetails details) {
@@ -35,13 +44,21 @@ void main() async {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.school_rounded, color: Color(0xFF4F46E5), size: 64),
+                  const Icon(Icons.error_outline_rounded, color: Color(0xFFEF4444), size: 64),
                   const SizedBox(height: 16),
-                  const Text('Sınav Koçum 🎓', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 12),
-                  const Text('Uygulama başlatılıyor, lütfen bekleyin...', style: TextStyle(fontSize: 14, color: Colors.black54)),
+                  const Text('Bir Hata Oluştu', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+                  const SizedBox(height: 8),
+                  const Text('Arayüz yüklenirken beklenmeyen bir durum meydana geldi.', textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: Colors.black54)),
                   const SizedBox(height: 16),
-                  Text(details.exceptionAsString(), textAlign: TextAlign.center, style: const TextStyle(color: Colors.redAccent, fontSize: 11)),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF2F2),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFFCA5A5)),
+                    ),
+                    child: Text(details.exceptionAsString(), textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFFDC2626), fontSize: 11)),
+                  ),
                 ],
               ),
             ),

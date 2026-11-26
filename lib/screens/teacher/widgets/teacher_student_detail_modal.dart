@@ -920,7 +920,7 @@ class _TeacherStudentDetailModalState extends State<TeacherStudentDetailModal>
                     Row(
                       children: [
                         Text(
-                          DateFormat('dd MMMM yyyy', 'tr_TR').format(exam.date),
+                          Formatters.formatDateTurkish(exam.date),
                           style: TextStyle(
                             fontSize: 11,
                             color: isDark ? Colors.white60 : const Color(0xFF64748B),
