@@ -11,6 +11,7 @@ import '../../../services/pdf_report_service.dart';
 import '../../../utils/formatters.dart';
 import '../../mock_exams/add_mock_exam_dialog.dart';
 import '../../statistics/pdf_preview_screen.dart';
+import 'pdf_exam_import_dialog.dart';
 
 class TeacherStudentDetailModal extends StatefulWidget {
   final UserProfileModel student;
@@ -763,6 +764,28 @@ class _TeacherStudentDetailModalState extends State<TeacherStudentDetailModal>
                   ],
                 ),
               ),
+              OutlinedButton.icon(
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (ctx) => PdfExamImportDialog(
+                      registeredStudents: [widget.student],
+                      onImportCompleted: () {
+                        _loadMockExams();
+                        widget.onUpdated?.call();
+                      },
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.picture_as_pdf_rounded, size: 16),
+                label: const Text('PDF Yükle', style: TextStyle(fontWeight: FontWeight.bold)),
+                style: OutlinedButton.styleFrom(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                ),
+              ),
+              const SizedBox(width: 8),
               ElevatedButton.icon(
                 onPressed: () => _openAddMockExamDialog(),
                 icon: const Icon(Icons.add_rounded, size: 18, color: Colors.white),

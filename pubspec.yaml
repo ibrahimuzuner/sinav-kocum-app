@@ -2,7 +2,7 @@ name: exam_tracker
 description: "A new Flutter project."
 publish_to: 'none'
 
-version: 1.0.29+30
+version: 1.0.30+31
 
 environment:
   sdk: ^3.7.2
@@ -28,6 +28,8 @@ dependencies:
   http: ^1.6.0
   google_sign_in: ^7.2.0
   sign_in_with_apple: ^7.0.1
+  file_picker: ^11.0.3
+  syncfusion_flutter_pdf: ^31.1.19
 
 dev_dependencies:
   flutter_test:

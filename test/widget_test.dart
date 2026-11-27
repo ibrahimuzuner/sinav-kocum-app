@@ -9,6 +9,8 @@ import 'package:exam_tracker/models/user_profile_model.dart';
 import 'package:exam_tracker/services/predefined_data.dart';
 import 'package:exam_tracker/services/target_departments_data.dart';
 import 'package:exam_tracker/services/smart_scheduler_service.dart';
+import 'package:exam_tracker/services/pdf_exam_parser_service.dart';
+import 'package:exam_tracker/models/pdf_parsed_exam_model.dart';
 import 'package:exam_tracker/utils/formatters.dart';
 
 void main() {
@@ -561,5 +563,95 @@ void main() {
 
     final today = DateTime.now().toIso8601String().substring(0, 10);
     expect(today.length, 10);
+  });
+
+  test('PdfExamParserService parses Turkish numbers and matches student names accurately', () {
+    // 1. Türkçe sayı dönüşümü
+    expect(PdfExamParserService.parseTurkishDouble('28 ,50'), 28.5);
+    expect(PdfExamParserService.parseTurkishDouble('221,296'), 221.296);
+    expect(PdfExamParserService.parseTurkishDouble('-0,25'), -0.25);
+    expect(PdfExamParserService.parseTurkishDouble('17'), 17.0);
+
+    // 2. Türkçe isim normalizasyonu
+    expect(PdfExamParserService.normalize('DURU ÖZTÜRK'), 'duru ozturk');
+    expect(PdfExamParserService.normalize('SELİN YILMAZ'), 'selin yilmaz');
+    expect(PdfExamParserService.normalize('ARDA  YARAMIŞ'), 'arda yaramis');
+    expect(PdfExamParserService.normalize('EZGİNAZ KÜÇÜKBAĞCI'), 'ezginaz kucukbagci');
+
+    // 3. Kurumdaki öğrenciyle akıllı eşleşme
+    final List<UserProfileModel> students = [
+      UserProfileModel(
+        id: 'st_1',
+        email: 'duru@gmail.com',
+        firstName: 'Duru',
+        lastName: 'Öztürk',
+        role: 'student',
+        birthDate: DateTime(2006, 1, 1),
+        targetExam: 'YKS (TYT)',
+        createdAt: DateTime(2026, 1, 1),
+      ),
+      UserProfileModel(
+        id: 'st_2',
+        email: 'selin@gmail.com',
+        firstName: 'Selin',
+        lastName: 'Yılmaz',
+        role: 'student',
+        birthDate: DateTime(2006, 1, 1),
+        targetExam: 'YKS (TYT)',
+        createdAt: DateTime(2026, 1, 1),
+      ),
+      UserProfileModel(
+        id: 'st_3',
+        email: 'omer@gmail.com',
+        firstName: 'Ömer C',
+        lastName: 'Karataş',
+        role: 'student',
+        birthDate: DateTime(2006, 1, 1),
+        targetExam: 'YKS (TYT)',
+        createdAt: DateTime(2026, 1, 1),
+      ),
+    ];
+
+    final match1 = PdfExamParserService.matchStudent('DURU ÖZTÜRK', students);
+    expect(match1?.id, 'st_1');
+
+    final match2 = PdfExamParserService.matchStudent('SELİN YILMAZ', students);
+    expect(match2?.id, 'st_2');
+
+    final match3 = PdfExamParserService.matchStudent('ÖMER C KARATAŞ', students);
+    expect(match3?.id, 'st_3');
+
+    final matchNone = PdfExamParserService.matchStudent('MEHMET DEMİR', students);
+    expect(matchNone, isNull);
+
+    // 4. ParsedStudentExam -> MockExamModel dönüşümü
+    final parsed = ParsedStudentExam(
+      rawStudentName: 'DURU ÖZTÜRK',
+      normalizedStudentName: 'duru ozturk',
+      examTitle: 'BİLGİ SARMAL TYT TG 1',
+      score: 228.486,
+      totalQuestions: 120,
+      totalCorrect: 30,
+      totalWrong: 6,
+      totalEmpty: 84,
+      totalNet: 28.5,
+      courseScores: const [
+        MockExamCourseScore(
+          courseId: 'turkce',
+          courseName: 'Türkçe',
+          correctCount: 21,
+          wrongCount: 5,
+          emptyCount: 14,
+          netScore: 19.75,
+        ),
+      ],
+      generalRank: 79622,
+    );
+
+    final mock = parsed.toMockExamModel(id: 'exam_duru');
+    expect(mock.title, 'BİLGİ SARMAL TYT TG 1');
+    expect(mock.estimatedScore, 228.486);
+    expect(mock.courseScores.first.netScore, 19.75);
+    expect(mock.notes?.contains('79622'), true);
   });
 }

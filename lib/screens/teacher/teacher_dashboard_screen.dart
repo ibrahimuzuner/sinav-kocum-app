@@ -12,6 +12,7 @@ import '../../utils/formatters.dart';
 import '../../widgets/premium_upgrade_modal.dart';
 import '../admin/admin_dashboard_screen.dart';
 import 'widgets/institution_modals.dart';
+import 'widgets/pdf_exam_import_dialog.dart';
 import 'widgets/teacher_institution_card.dart';
 import 'widgets/teacher_student_detail_modal.dart';
 
@@ -310,6 +311,31 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
         student: student,
         initialTab: initialTab,
         onUpdated: () {
+          _loadStudents();
+          widget.onDataChanged?.call();
+        },
+      ),
+    );
+  }
+
+  List<UserProfileModel> get _allTargetStudents {
+    final Map<String, UserProfileModel> map = {};
+    for (final s in _students) {
+      map[s.id] = s;
+    }
+    for (final s in _institutionStudents) {
+      map[s.id] = s;
+    }
+    return map.values.toList();
+  }
+
+  void _showPdfImportDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => PdfExamImportDialog(
+        registeredStudents: _allTargetStudents,
+        onImportCompleted: () {
           _loadStudents();
           widget.onDataChanged?.call();
         },
@@ -656,6 +682,25 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _showPdfImportDialog,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF4F46E5),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 1,
+                      ),
+                      icon: const Icon(Icons.picture_as_pdf_rounded, size: 18),
+                      label: const Text(
+                        '📄 PDF ile Toplu Sınav Yükle (Optik Karne / Net Listesi)',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                      ),
+                    ),
                   ),
                 ],
               ),
